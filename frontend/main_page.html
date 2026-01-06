@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Food Estimator</title>
+    <style>
+      :root {
+        --bg: #fff7e6;
+        --ink: #1a1a1a;
+
+        --card: #ffffff;
+        --shadow: rgba(0, 0, 0, 0.22);
+
+        --red: #ff3b30;
+        --blue: #1e88ff;
+        --yellow: #ffd60a;
+        --green: #34c759;
+        --pink: #ff4fd8;
+        --purple: #7c4dff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial,
+          "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+        min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      /* 像素点背景 */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+        background-size: 18px 18px;
+        opacity: 0.45;
+        pointer-events: none;
+      }
+
+      /* 彩色块装饰 */
+      body::after {
+        content: "";
+        position: fixed;
+        inset: -120px;
+        background:
+          radial-gradient(circle at 15% 15%, rgba(255, 59, 48, 0.20), transparent 40%),
+          radial-gradient(circle at 85% 20%, rgba(30, 136, 255, 0.18), transparent 42%),
+          radial-gradient(circle at 20% 85%, rgba(255, 214, 10, 0.22), transparent 45%),
+          radial-gradient(circle at 80% 80%, rgba(52, 199, 89, 0.18), transparent 46%);
+        pointer-events: none;
+        z-index: 0;
+        filter: saturate(1.2);
+      }
+
+      .page {
+        position: relative;
+        z-index: 1;
+        width: min(980px, 92vw);
+        margin: 56px auto 80px;
+      }
+
+      .brand-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 900;
+        letter-spacing: 0.5px;
+      }
+
+      .brand-badge {
+        width: 16px;
+        height: 16px;
+        background: repeating-linear-gradient(
+          45deg,
+          var(--red),
+          var(--red) 6px,
+          var(--yellow) 6px,
+          var(--yellow) 12px
+        );
+        border-radius: 2px;
+        box-shadow: 3px 3px 0 var(--shadow);
+        border: 2px solid #000;
+      }
+
+      .subtitle {
+        font-size: 12px;
+        opacity: 0.8;
+        font-weight: 700;
+      }
+
+      /* 像素边框风格 */
+      .pixel-box {
+        border: 4px solid #000;
+        box-shadow: 10px 10px 0 var(--shadow);
+        border-radius: 12px;
+        background: var(--card);
+      }
+
+      /* 顶部搜索区 */
+      .search-wrap {
+        padding: 16px;
+      }
+
+      .search-bar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .search-input {
+        flex: 1;
+        height: 56px;
+        padding: 0 16px;
+        font-size: 16px;
+        font-weight: 700;
+        border: 4px solid #000;
+        border-radius: 12px;
+        outline: none;
+        background: #fff;
+        box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.18);
+      }
+
+      .search-input::placeholder {
+        font-weight: 700;
+        opacity: 0.65;
+      }
+
+      .search-input:focus {
+        background: #fffdf5;
+        box-shadow: 0 0 0 4px rgba(30, 136, 255, 0.22), 6px 6px 0 rgba(0, 0, 0, 0.18);
+      }
+
+      .search-btn {
+        height: 56px;
+        padding: 0 18px;
+        border: 4px solid #000;
+        border-radius: 12px;
+        font-weight: 900;
+        font-size: 14px;
+        cursor: pointer;
+        background: linear-gradient(180deg, var(--yellow), #ffb703);
+        box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.18);
+        transition: transform 0.08s ease;
+        user-select: none;
+        white-space: nowrap;
+      }
+
+      .search-btn:active {
+        transform: translate(2px, 2px);
+        box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.18);
+      }
+
+      /* 标题 hot */
+      .section-title {
+        margin: 22px 4px 14px;
+        font-size: 34px;
+        font-weight: 1000;
+        letter-spacing: 1px;
+        text-transform: lowercase;
+      }
+
+      .section-title span {
+        display: inline-block;
+        padding: 6px 10px;
+        border: 4px solid #000;
+        border-radius: 10px;
+        background: linear-gradient(90deg, var(--red), var(--pink), var(--purple), var(--blue));
+        color: #fff;
+        box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.18);
+      }
+
+      /* 2x2 卡片区 */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 26px;
+      }
+
+      .card {
+        padding: 18px;
+        min-height: 260px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 18% 20%, rgba(255, 59, 48, 0.10), transparent 45%),
+          radial-gradient(circle at 80% 30%, rgba(30, 136, 255, 0.10), transparent 48%),
+          radial-gradient(circle at 30% 85%, rgba(52, 199, 89, 0.10), transparent 50%);
+        pointer-events: none;
+      }
+
+      .card-top {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .tag {
+        font-size: 12px;
+        font-weight: 900;
+        padding: 6px 10px;
+        border: 3px solid #000;
+        border-radius: 999px;
+        background: #fff;
+        box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.18);
+      }
+
+      .rank {
+        font-size: 12px;
+        font-weight: 1000;
+        padding: 6px 10px;
+        border: 3px solid #000;
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.18);
+      }
+
+      .logo-wrap {
+        position: relative;
+        height: 160px;
+        display: grid;
+        place-items: center;
+        margin-top: 10px;
+      }
+
+      .logo {
+        width: 160px;
+        height: 160px;
+        object-fit: contain;
+        image-rendering: pixelated;
+        filter: drop-shadow(8px 8px 0 rgba(0, 0, 0, 0.18));
+      }
+
+      .placeholder {
+        width: 160px;
+        height: 160px;
+        border: 4px dashed #000;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        font-weight: 900;
+        background: rgba(255, 255, 255, 0.7);
+        box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.18);
+      }
+
+      .card-name {
+        position: relative;
+        margin-top: 14px;
+        font-weight: 1000;
+        font-size: 18px;
+        letter-spacing: 0.2px;
+      }
+
+      .card-desc {
+        position: relative;
+        margin-top: 6px;
+        font-size: 13px;
+        font-weight: 700;
+        opacity: 0.85;
+        line-height: 1.5;
+      }
+
+      .accent-red {
+        background: linear-gradient(180deg, rgba(255, 59, 48, 0.18), rgba(255, 255, 255, 0.75));
+      }
+      .accent-blue {
+        background: linear-gradient(180deg, rgba(30, 136, 255, 0.18), rgba(255, 255, 255, 0.75));
+      }
+      .accent-yellow {
+        background: linear-gradient(180deg, rgba(255, 214, 10, 0.22), rgba(255, 255, 255, 0.75));
+      }
+      .accent-green {
+        background: linear-gradient(180deg, rgba(52, 199, 89, 0.18), rgba(255, 255, 255, 0.75));
+      }
+
+      /* 小屏幕 */
+      @media (max-width: 720px) {
+        .page {
+          margin: 26px auto 60px;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .section-title {
+          font-size: 30px;
+        }
+        .search-bar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .search-btn {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="page">
+      <div class="brand-row">
+        <div class="brand">
+          <span class="brand-badge" aria-hidden="true"></span>
+          <div>
+            <div style="font-size: 22px;">Food Estimator</div>
+            <div class="subtitle">pixel flavored calories finder</div>
+          </div>
+        </div>
+        <div class="subtitle">demo</div>
+      </div>
+
+      <!-- 顶部搜索框 -->
+      <section class="pixel-box search-wrap" aria-label="Search">
+        <div class="search-bar">
+          <input
+            class="search-input"
+            type="text"
+            placeholder="输入餐厅或菜品名称，例如 KFC 原味鸡腿堡"
+            aria-label="Search input"
+          />
+          <button class="search-btn" type="button">Search</button>
+        </div>
+      </section>
+
+      <!-- hot 标题 -->
+      <h2 class="section-title"><span>hot</span></h2>
+
+      <!-- 四个热门餐厅卡片 -->
+      <section class="grid" aria-label="Hot restaurants">
+        <!-- Card 1: KFC -->
+        <article class="pixel-box card accent-red">
+          <div class="card-top">
+            <div class="tag">Trending</div>
+            <div class="rank">No.1</div>
+          </div>
+
+          <div class="logo-wrap">
+            <!-- 把图片放到你的项目里，例如 assets/kfc.png，然后改这里路径 -->
+            <img class="logo" src="C:\Users\胡晓奕\Desktop\Food_Estimator\Food_Estimator\docs\KFC_logo.svg.png" alt="KFC logo" />
+          </div>
+
+          <div class="card-name">KFC</div>
+          <div class="card-desc">经典快餐选项，适合用作最初的数据源展示。</div>
+        </article>
+
+        <!-- Card 2 -->
+        <article class="pixel-box card accent-blue">
+          <div class="card-top">
+            <div class="tag">Popular</div>
+            <div class="rank">No.2</div>
+          </div>
+
+          <div class="logo-wrap">
+            <div class="placeholder">Logo</div>
+          </div>
+
+          <div class="card-name">Restaurant 2</div>
+          <div class="card-desc">这里放第二个热门餐厅，后面可以接你的数据。</div>
+        </article>
+
+        <!-- Card 3 -->
+        <article class="pixel-box card accent-yellow">
+          <div class="card-top">
+            <div class="tag">Hot</div>
+            <div class="rank">No.3</div>
+          </div>
+
+          <div class="logo-wrap">
+            <div class="placeholder">Logo</div>
+          </div>
+
+          <div class="card-name">Restaurant 3</div>
+          <div class="card-desc">保持卡片内容简洁，视觉上更像产品主页。</div>
+        </article>
+
+        <!-- Card 4 -->
+        <article class="pixel-box card accent-green">
+          <div class="card-top">
+            <div class="tag">New</div>
+            <div class="rank">No.4</div>
+          </div>
+
+          <div class="logo-wrap">
+            <div class="placeholder">Logo</div>
+          </div>
+
+          <div class="card-name">Restaurant 4</div>
+          <div class="card-desc">可以放未来想扩展的餐厅，例如麦当劳或星巴克。</div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
