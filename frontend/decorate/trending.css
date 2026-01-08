@@ -111,12 +111,10 @@ body {
 
 .pillBtn:nth-child(1) {
   background: linear-gradient(180deg, #ffffff, #ffe5ea);
-  border-color: var(--px-border);
 }
 
 .pillBtn:nth-child(2) {
   background: linear-gradient(180deg, #ffffff, #e6efff);
-  border-color: var(--px-border);
 }
 
 .pillBtn:active {
@@ -124,14 +122,13 @@ body {
   box-shadow: 2px 2px 0 var(--px-border);
 }
 
-/* ========== Scroll Area ========== */
+/* ========== Middle Scroll Area ========== */
 .scrollArea {
-  height: calc(100vh - 76px); /* 让中间可滚动 */
+  height: calc(100vh - 76px);
   overflow-y: auto;
-  padding: 16px 14px 96px; /* 底部留给购物车按钮 */
+  padding: 16px 14px 96px;
 }
 
-/* nice chunky scroll bar (optional) */
 .scrollArea::-webkit-scrollbar {
   width: 14px;
 }
@@ -143,33 +140,40 @@ body {
   background: transparent;
 }
 
-/* ========== Store Card ========== */
-.storeCard {
+/* ========== Store List + Store Item ========== */
+.storeList {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* 每个商店：一整块卡片 */
+.storeItem {
   background: var(--card);
   border: 4px solid var(--px-border);
   box-shadow: 6px 6px 0 var(--px-border);
   padding: 14px;
-  margin: 0 0 18px 0;
 }
 
-.storeCard:nth-of-type(1) {
+/* 彩色外框点缀：更马里奥一些 */
+.storeItem:nth-child(1) {
   outline: 4px solid var(--accent3);
   outline-offset: 4px;
 }
-.storeCard:nth-of-type(2) {
+.storeItem:nth-child(2) {
   outline: 4px solid var(--accent2);
   outline-offset: 4px;
 }
-.storeCard:nth-of-type(3) {
+.storeItem:nth-child(3) {
   outline: 4px solid var(--accent4);
   outline-offset: 4px;
 }
 
-.storeHeader {
+/* 上层：logo + info */
+.storeTop {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
 }
 
 .storeLogoSlot {
@@ -182,12 +186,18 @@ body {
   background: #fff;
   border: 4px solid var(--px-border);
   box-shadow: 4px 4px 0 var(--px-border);
+  flex: 0 0 auto;
 }
 
 .storeLogoSlot span {
   font-size: 10px;
   text-align: center;
   padding: 0 6px;
+}
+
+.storeInfo {
+  min-width: 0;
+  flex: 1;
 }
 
 .storeName {
@@ -199,18 +209,46 @@ body {
   white-space: nowrap;
 }
 
-/* ========== Dish Grid ========== */
-.dishGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+.storeMeta {
+  margin: 8px 0 0 0;
+  font-size: 10px;
+  line-height: 1.4;
+  opacity: 0.75;
 }
 
-.dishItem {
+/* 下层：dishes */
+.storeBottom {
+  margin-top: 12px;
+}
+
+/* 横向滚动的菜品行（像你截图那样一排滑动） */
+.dishRow {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x mandatory;
+}
+
+.dishRow::-webkit-scrollbar {
+  height: 12px;
+}
+.dishRow::-webkit-scrollbar-thumb {
+  background: #ffe5ea;
+  border: 4px solid var(--px-border);
+}
+.dishRow::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 每个菜品小卡片 */
+.dishCard {
+  flex: 0 0 150px; /* 控制每个 dish 宽度，像外卖那样 */
   border: 4px solid var(--px-border);
   background: #fff;
   box-shadow: 4px 4px 0 var(--px-border);
   padding: 10px;
+  scroll-snap-align: start;
 }
 
 .dishImgSlot {
@@ -267,7 +305,7 @@ body {
   .pageLogoSlot {
     min-width: 64px;
   }
-  .dishGrid {
-    grid-template-columns: 1fr; /* 小屏单列更舒服 */
+  .dishCard {
+    flex-basis: 140px;
   }
 }
