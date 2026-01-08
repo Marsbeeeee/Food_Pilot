@@ -1,125 +1,123 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trending Stores</title>
-
-    <!-- 你之后会把样式写到这个文件里 -->
-    <link rel="stylesheet" href="../decorate/trending.css" />
-  </head>
-
-  <body>
-    <!-- 顶部栏：返回 + 页面标题/Logo 占位 +（可选）小标签位 -->
-    <header class="topBar">
-      <button class="backBtn" type="button" aria-label="返回上一页">
-        ←
-      </button>
-
-      <div class="topCenter">
-        <!-- 预留：页面 logo 或标题 -->
-        <div class="pageLogoSlot" aria-label="页面Logo占位">
+<main class="scrollArea" aria-label="Trending 商店列表">
+  <!-- 大的父div：装所有商店 -->
+  <div class="storeList">
+    <!-- 商店 1 -->
+    <div class="storeItem" aria-label="商店 1">
+      <!-- 上层：logo + 店名 -->
+      <div class="storeTop">
+        <div class="storeLogoSlot" aria-label="商店Logo占位">
+          <!-- 未来替换成 <img src="..." alt="商店Logo"> -->
           <span>Logo</span>
         </div>
 
-        <!-- 预留：你图里上方的两个小块（比如筛选/分类/菜品标签） -->
-        <nav class="topPills" aria-label="顶部快捷入口">
-          <button class="pillBtn" type="button">dish</button>
-          <button class="pillBtn" type="button">dish</button>
-        </nav>
-      </div>
-    </header>
-
-    <!-- 中间可上下滑动区域（滚动用 CSS 实现：overflow-y: auto;） -->
-    <main class="scrollArea" aria-label="Trending 商店列表">
-      <!-- 商店容器 1 -->
-      <section class="storeCard" aria-label="商店 1">
-        <div class="storeHeader">
-          <!-- 预留：商店 logo 图片 -->
-          <div class="storeLogoSlot" aria-label="商店Logo占位">
-            <!-- 未来替换成 <img src="..." alt="商店Logo"> -->
-            <span>Store Logo</span>
-          </div>
-
-          <!-- 预留：商店名字 -->
+        <div class="storeInfo">
           <h2 class="storeName">Store Name 1</h2>
+          <!-- 可选：你以后如果想放 月售/距离/时间 之类 -->
+          <p class="storeMeta">Meta info placeholder</p>
         </div>
+      </div>
 
-        <!-- 菜品展示区：图片 + 名称（仅示例两个，你未来可以加更多） -->
-        <div class="dishGrid" aria-label="商店 1 菜品预览">
-          <article class="dishItem" aria-label="菜品 1">
-            <div class="dishImgSlot" aria-label="菜品图片占位">
-              <!-- 未来替换成 <img src="..." alt="菜品图片"> -->
-              <span>Dish Img</span>
-            </div>
-            <p class="dishName">Dish Name</p>
-          </article>
-
-          <article class="dishItem" aria-label="菜品 2">
+      <!-- 下层：展示部分 dishes（建议以后做横向滑动） -->
+      <div class="storeBottom" aria-label="商店 1 菜品预览">
+        <div class="dishRow">
+          <div class="dishCard" aria-label="菜品 1">
             <div class="dishImgSlot" aria-label="菜品图片占位">
               <span>Dish Img</span>
             </div>
             <p class="dishName">Dish Name</p>
-          </article>
-        </div>
-      </section>
-
-      <!-- 商店容器 2 -->
-      <section class="storeCard" aria-label="商店 2">
-        <div class="storeHeader">
-          <div class="storeLogoSlot" aria-label="商店Logo占位">
-            <span>Store Logo</span>
           </div>
+
+          <div class="dishCard" aria-label="菜品 2">
+            <div class="dishImgSlot" aria-label="菜品图片占位">
+              <span>Dish Img</span>
+            </div>
+            <p class="dishName">Dish Name</p>
+          </div>
+
+          <div class="dishCard" aria-label="菜品 3">
+            <div class="dishImgSlot" aria-label="菜品图片占位">
+              <span>Dish Img</span>
+            </div>
+            <p class="dishName">Dish Name</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 商店 2 -->
+    <div class="storeItem" aria-label="商店 2">
+      <div class="storeTop">
+        <div class="storeLogoSlot" aria-label="商店Logo占位">
+          <span>Logo</span>
+        </div>
+        <div class="storeInfo">
           <h2 class="storeName">Store Name 2</h2>
+          <p class="storeMeta">Meta info placeholder</p>
         </div>
+      </div>
 
-        <div class="dishGrid" aria-label="商店 2 菜品预览">
-          <article class="dishItem" aria-label="菜品 1">
+      <div class="storeBottom" aria-label="商店 2 菜品预览">
+        <div class="dishRow">
+          <div class="dishCard" aria-label="菜品 1">
             <div class="dishImgSlot" aria-label="菜品图片占位">
               <span>Dish Img</span>
             </div>
             <p class="dishName">Dish Name</p>
-          </article>
-
-          <article class="dishItem" aria-label="菜品 2">
-            <div class="dishImgSlot" aria-label="菜品图片占位">
-              <span>Dish Img</span>
-            </div>
-            <p class="dishName">Dish Name</p>
-          </article>
-        </div>
-      </section>
-
-      <!-- 商店容器 3 -->
-      <section class="storeCard" aria-label="商店 3">
-        <div class="storeHeader">
-          <div class="storeLogoSlot" aria-label="商店Logo占位">
-            <span>Store Logo</span>
           </div>
+
+          <div class="dishCard" aria-label="菜品 2">
+            <div class="dishImgSlot" aria-label="菜品图片占位">
+              <span>Dish Img</span>
+            </div>
+            <p class="dishName">Dish Name</p>
+          </div>
+
+          <div class="dishCard" aria-label="菜品 3">
+            <div class="dishImgSlot" aria-label="菜品图片占位">
+              <span>Dish Img</span>
+            </div>
+            <p class="dishName">Dish Name</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 商店 3 -->
+    <div class="storeItem" aria-label="商店 3">
+      <div class="storeTop">
+        <div class="storeLogoSlot" aria-label="商店Logo占位">
+          <span>Logo</span>
+        </div>
+        <div class="storeInfo">
           <h2 class="storeName">Store Name 3</h2>
+          <p class="storeMeta">Meta info placeholder</p>
         </div>
+      </div>
 
-        <div class="dishGrid" aria-label="商店 3 菜品预览">
-          <article class="dishItem" aria-label="菜品 1">
+      <div class="storeBottom" aria-label="商店 3 菜品预览">
+        <div class="dishRow">
+          <div class="dishCard" aria-label="菜品 1">
             <div class="dishImgSlot" aria-label="菜品图片占位">
               <span>Dish Img</span>
             </div>
             <p class="dishName">Dish Name</p>
-          </article>
+          </div>
 
-          <article class="dishItem" aria-label="菜品 2">
+          <div class="dishCard" aria-label="菜品 2">
             <div class="dishImgSlot" aria-label="菜品图片占位">
               <span>Dish Img</span>
             </div>
             <p class="dishName">Dish Name</p>
-          </article>
-        </div>
-      </section>
-    </main>
+          </div>
 
-    <!-- 右下角购物篮按钮：只做按钮占位，不实现功能 -->
-    <button class="cartBtn" type="button" aria-label="购物篮">
-      🛒
-    </button>
-  </body>
-</html>
+          <div class="dishCard" aria-label="菜品 3">
+            <div class="dishImgSlot" aria-label="菜品图片占位">
+              <span>Dish Img</span>
+            </div>
+            <p class="dishName">Dish Name</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
