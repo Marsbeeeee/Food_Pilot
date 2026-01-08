@@ -1,7 +1,8 @@
-/* trending.css */
+/* trending.css (clean for Trending page) */
+
 /* NES.css core */
 @import url("https://unpkg.com/nes.css@latest/css/nes.min.css");
-/* Pixel font (optional but very NES) */
+/* Pixel font */
 @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 
 :root {
@@ -9,7 +10,7 @@
   --paper: #fffdf7;
   --bg: #f2f6ff;
   --card: #ffffff;
-  --accent1: #ff4d6d;
+
   --accent2: #3a86ff;
   --accent3: #ffbe0b;
   --accent4: #8338ec;
@@ -34,15 +35,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ========== Top Bar ========== */
+/* ===== Top Bar (only back button) ===== */
 .topBar {
   position: sticky;
   top: 0;
   z-index: 10;
-
-  display: flex;
-  align-items: center;
-  gap: 12px;
 
   padding: 12px 14px;
   background: var(--paper);
@@ -65,64 +62,7 @@ body {
   box-shadow: 2px 2px 0 var(--px-border);
 }
 
-.topCenter {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
-
-.pageLogoSlot {
-  display: grid;
-  place-items: center;
-  min-width: 84px;
-  height: 44px;
-  padding: 6px 10px;
-
-  background: #fff;
-  border: 4px solid var(--px-border);
-  box-shadow: 4px 4px 0 var(--px-border);
-}
-
-.pageLogoSlot span {
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.topPills {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.pillBtn {
-  appearance: none;
-  border: 4px solid var(--px-border);
-  background: #fff;
-  padding: 10px 12px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 12px;
-  box-shadow: 4px 4px 0 var(--px-border);
-  white-space: nowrap;
-}
-
-.pillBtn:nth-child(1) {
-  background: linear-gradient(180deg, #ffffff, #ffe5ea);
-}
-
-.pillBtn:nth-child(2) {
-  background: linear-gradient(180deg, #ffffff, #e6efff);
-}
-
-.pillBtn:active {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0 var(--px-border);
-}
-
-/* ========== Middle Scroll Area ========== */
+/* ===== Middle Scroll Area ===== */
 .scrollArea {
   height: calc(100vh - 76px);
   overflow-y: auto;
@@ -140,14 +80,13 @@ body {
   background: transparent;
 }
 
-/* ========== Store List + Store Item ========== */
+/* ===== Store List ===== */
 .storeList {
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
-/* 每个商店：一整块卡片 */
 .storeItem {
   background: var(--card);
   border: 4px solid var(--px-border);
@@ -155,7 +94,7 @@ body {
   padding: 14px;
 }
 
-/* 彩色外框点缀：更马里奥一些 */
+/* colorful outline accents */
 .storeItem:nth-child(1) {
   outline: 4px solid var(--accent3);
   outline-offset: 4px;
@@ -169,7 +108,7 @@ body {
   outline-offset: 4px;
 }
 
-/* 上层：logo + info */
+/* ===== Store Top: logo + name/meta ===== */
 .storeTop {
   display: flex;
   align-items: center;
@@ -179,10 +118,8 @@ body {
 .storeLogoSlot {
   display: grid;
   place-items: center;
-
   width: 64px;
   height: 64px;
-
   background: #fff;
   border: 4px solid var(--px-border);
   box-shadow: 4px 4px 0 var(--px-border);
@@ -216,12 +153,11 @@ body {
   opacity: 0.75;
 }
 
-/* 下层：dishes */
+/* ===== Store Bottom: horizontal dish row ===== */
 .storeBottom {
   margin-top: 12px;
 }
 
-/* 横向滚动的菜品行（像你截图那样一排滑动） */
 .dishRow {
   display: flex;
   gap: 12px;
@@ -241,9 +177,8 @@ body {
   background: transparent;
 }
 
-/* 每个菜品小卡片 */
 .dishCard {
-  flex: 0 0 150px; /* 控制每个 dish 宽度，像外卖那样 */
+  flex: 0 0 150px;
   border: 4px solid var(--px-border);
   background: #fff;
   box-shadow: 4px 4px 0 var(--px-border);
@@ -254,10 +189,8 @@ body {
 .dishImgSlot {
   display: grid;
   place-items: center;
-
   width: 100%;
   aspect-ratio: 1 / 1;
-
   background: linear-gradient(180deg, #ffffff, #f4f7ff);
   border: 4px dashed var(--px-border);
 }
@@ -275,7 +208,7 @@ body {
   word-break: break-word;
 }
 
-/* ========== Cart Button ========== */
+/* ===== Cart Button ===== */
 .cartBtn {
   position: fixed;
   right: 18px;
@@ -300,11 +233,8 @@ body {
   box-shadow: 4px 4px 0 var(--px-border);
 }
 
-/* ========== Responsive ========== */
+/* ===== Responsive ===== */
 @media (max-width: 420px) {
-  .pageLogoSlot {
-    min-width: 64px;
-  }
   .dishCard {
     flex-basis: 140px;
   }
