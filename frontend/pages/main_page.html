@@ -41,77 +41,120 @@
       </div>
 
       <section class="grid" aria-label="Game Worlds">
-        
+  
         <a href="../pages/trending.html" class="card-link">
-          <article class="nes-container is-rounded card is-warning-shadow">
-            <div class="card-top">
-              <span class="nes-text is-error">World 1-1</span>
-              <div class="nes-badge"><span class="is-warning">HOT</span></div>
-            </div>
-            
-            <div class="icon-wrap hot-icon">
-              <div class="pixel-fire"></div>
+          <article class="nes-container is-rounded game-card mode-hot">
+            <div class="hud-top">
+              <span class="nes-badge is-splited">
+                <span class="is-dark">LV</span>
+                <span class="is-warning">1-1</span>
+              </span>
             </div>
 
-            <div class="card-tags">
-              <span class="nes-text is-warning">#Trending</span>
+            <div class="visual-stage">
+              <div class="spotlight"></div>
+              <svg viewBox="0 0 32 32" class="pixel-svg hero-icon">
+                <path fill="#C0C0C0" d="M14 6h4v16h-4z" />
+                <path fill="#808080" d="M15 6h2v16h-2z" />
+                <path fill="#8B4513" d="M12 22h8v2h-8z M15 24h2v4h-2z M13 28h6v2h-6z" />
+                <g class="fire-anim">
+                  <path fill="#FF4500" opacity="0.9" d="M12 18h-2v-4h2z M22 18h2v-4h-2z M14 4h4v-2h-4z M10 14h2v-4h-2z" />
+                  <path fill="#FFD700" opacity="0.8" d="M13 10h6v-2h-6z M11 16h2v-2h-2z M19 16h2v-2h-2z" />
+                </g>
+              </svg>
             </div>
-            <p class="card-desc">最热门的挑战关卡。计算脆皮炸鸡和汉堡的热量。</p>
+
+            <div class="data-panel">
+              <h3 class="level-title">Trending</h3>
+              <p class="level-desc">CHALLENGE MODE</p> <div class="pixel-bar is-warning"></div> </div>
           </article>
         </a>
 
         <a href="#" class="card-link">
-          <article class="nes-container is-rounded card is-success-shadow">
-            <div class="card-top">
-              <span class="nes-text is-success">World 1-2</span>
-              <div class="nes-badge"><span class="is-success">EASY</span></div>
-            </div>
-            
-            <div class="icon-wrap diet-icon">
-              <i class="nes-icon heart is-medium"></i>
-              <div class="pixel-leaf"></div>
+          <article class="nes-container is-rounded game-card mode-diet">
+            <div class="hud-top">
+              <span class="nes-badge is-splited">
+                <span class="is-dark">LV</span>
+                <span class="is-success">1-2</span>
+              </span>
             </div>
 
-            <div class="card-tags">
-              <span class="nes-text is-success">#Diet-Mode</span>
+            <div class="visual-stage">
+              <div class="spotlight"></div>
+              <svg viewBox="0 0 32 32" class="pixel-svg hero-icon">
+                <path fill="#212529" d="M14 4h4v2h2v2h2v4h2v14H8V12h2V8h2V6h2V4z" />
+                <path fill="#CCFFFF" opacity="0.5" d="M14 6h4v2h-4z M10 12h12v14H10z" />
+                <path fill="#FF0055" d="M11 16h10v10H11z" />
+                <path fill="#FF6699" d="M11 16h10v2H11z" />
+                <rect x="14" y="18" width="2" height="2" fill="#FFF" class="bubble b1"/>
+                <rect x="18" y="22" width="2" height="2" fill="#FFF" class="bubble b2"/>
+              </svg>
             </div>
-            <p class="card-desc">减脂期的安全屋。寻找低 HP (热量) 的食物。</p>
+
+            <div class="data-panel">
+              <h3 class="level-title">Diet Mode</h3>
+              <p class="level-desc">SAFE ZONE</p>
+              <div class="pixel-bar is-success"></div>
+            </div>
           </article>
         </a>
 
         <a href="#" class="card-link">
-          <article class="nes-container is-rounded card is-primary-shadow">
-            <div class="card-top">
-              <span class="nes-text is-primary">World 2-1</span>
-              <div class="nes-badge"><span class="is-primary">PRO</span></div>
-            </div>
-            
-            <div class="icon-wrap gains-icon">
-              <div class="pixel-biceps"></div>
+          <article class="nes-container is-rounded game-card mode-gains">
+            <div class="hud-top">
+              <span class="nes-badge is-splited">
+                <span class="is-dark">LV</span>
+                <span class="is-primary">2-1</span>
+              </span>
             </div>
 
-            <div class="card-tags">
-              <span class="nes-text is-primary">#Gains</span>
+            <div class="visual-stage">
+              <div class="spotlight"></div>
+              <svg viewBox="0 0 32 32" class="pixel-svg hero-icon">
+                <path fill="#EEE" d="M2 12h4v-4h4v4h4v8H10v4H6v-4H2v-8z M22 12h4v-4h4v4h-4v8h4v4h-4v-4h-4v-8z" />
+                <path fill="#8B0000" d="M10 10h12v12H10z" />
+                <path fill="#CD5C5C" d="M11 11h10v10H11z" />
+                <path fill="#209cee" class="steam" d="M12 6h2v-2h-2z M18 6h2v-2h-2z" />
+              </svg>
             </div>
-            <p class="card-desc">提升力量属性。适合训练后的高蛋白恢复餐。</p>
+
+            <div class="data-panel">
+              <h3 class="level-title">PREDATOR</h3>
+              <p class="level-desc">POWER UP</p>
+              <div class="pixel-bar is-primary"></div>
+            </div>
           </article>
         </a>
 
         <a href="#" class="card-link">
-          <article class="nes-container is-rounded card is-error-shadow">
-            <div class="card-top">
-              <span class="nes-text is-error">Save Room</span>
-               <i class="nes-icon heart is-small"></i>
-            </div>
-            
-            <div class="icon-wrap save-icon">
-              <div class="pixel-floppy"></div>
+          <article class="nes-container is-rounded game-card mode-save">
+            <div class="hud-top">
+              <span class="nes-badge is-splited">
+                <span class="is-dark">💾</span>
+                <span class="is-error">SAVE</span>
+              </span>
             </div>
 
-            <div class="card-tags">
-              <span class="nes-text is-error">#Favorites</span>
+            <div class="visual-stage">
+              <div class="spotlight"></div>
+              <svg viewBox="0 0 32 32" class="pixel-svg hero-icon">
+                <path fill="#8B4513" d="M4 14h24v14H4z" />
+                <path fill="#A0522D" d="M6 16h20v10H6z" />
+                <path fill="#FFD700" d="M4 14h24v2H4z M14 20h4v4h-4z M4 26h24v2H4z" />
+                <g class="chest-lid">
+                  <path fill="#8B4513" d="M4 8h24v6H4z" />
+                  <path fill="#FFD700" d="M14 10h4v4h-4z" />
+                </g>
+                <rect x="10" y="4" width="2" height="2" fill="#FFF" class="sparkle"/>
+                <rect x="22" y="2" width="2" height="2" fill="#FFF" class="sparkle s2"/>
+              </svg>
             </div>
-            <p class="card-desc">你的存档点。快速读取你常去的餐厅。</p>
+
+            <div class="data-panel">
+              <h3 class="level-title">Favorites</h3>
+              <p class="level-desc">LOAD GAME</p>
+              <div class="pixel-bar is-error"></div>
+            </div>
           </article>
         </a>
 
