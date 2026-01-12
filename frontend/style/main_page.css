@@ -1,6 +1,9 @@
 :root {
-  --bg: #fff7e6;
+  --bg-color: #fff8f0;
+  --dot-color: #e6dace;
   --ink: #212529;
+  
+  /* 功能色 */
   --primary: #209cee;
   --success: #92cc41;
   --warning: #f7d51d;
@@ -12,43 +15,34 @@
 /* --- 页面基础 & 字体 --- */
 body {
   margin: 0;
-  font-family: "DotGothic16", sans-serif; /* 正文使用高瘦像素字 */
+  font-family: "Press Start 2P", "DotGothic16", sans-serif;
   line-height: 1.6;
   color: var(--ink);
-  background-color: var(--bg);
+  background-color: var(--bg-color);
   min-height: 100vh;
   position: relative;
+  
+  background-image: radial-gradient(var(--dot-color) 20%, transparent 20%);
+  background-size: 20px 20px;
+  
+  /* 【特有】主页背景轻微移动，增加“世界地图”的感觉，但颜色不突兀 */
+  animation: bg-pan 60s linear infinite;
+  
   -webkit-font-smoothing: none;
 }
 
-/* 标题强制使用厚重像素字 */
+/* 背景移动动画 */
+@keyframes bg-pan {
+  from { background-position: 0 0; }
+  to { background-position: -400px 400px; }
+}
+
+/* 标题样式 */
 h1, h2, h3, .title, .main-title, .card-top span:first-child {
-  font-family: "Press Start 2P", cursive;
+  /* 确保标题也使用这个字体栈 */
+  font-family: "Press Start 2P", "DotGothic16", cursive;
   text-transform: uppercase;
   letter-spacing: -1px;
-}
-
-/* --- 动态背景 --- */
-body::before { /* 移动的像素网格 */
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
-  background-size: 20px 20px;
-  z-index: -2;
-  animation: bg-scroll 20s linear infinite;
-}
-
-body::after { /* 呼吸的彩色光晕 */
-  content: "";
-  position: fixed;
-  inset: -50%;
-  background: radial-gradient(circle at 20% 30%, rgba(255, 59, 48, 0.15), transparent 40%),
-    radial-gradient(circle at 80% 20%, rgba(30, 136, 255, 0.15), transparent 40%);
-  z-index: -1;
-  filter: blur(40px);
-  animation: bg-pulse 8s ease-in-out infinite alternate;
 }
 
 /* --- 布局 & Header --- */
@@ -62,19 +56,28 @@ body::after { /* 呼吸的彩色光晕 */
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 30px;
+  margin-bottom: 40px; /* 增加间距 */
 }
 
 .main-title {
-  font-size: clamp(20px, 4vw, 28px);
-  text-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+  font-size: clamp(20px, 4vw, 32px); /* 稍微加大 */
+  text-shadow: 4px 4px 0 rgba(0,0,0,0.1); /* 加强像素阴影 */
   margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: #666;
+  font-family: "Press Start 2P", monospace;
 }
 
 /* --- 搜索区 & 史莱姆 --- */
 .search-section {
-  margin-bottom: 40px;
+  margin-bottom: 50px;
   position: relative;
+  background-color: #fff;
+  border-width: 4px;
 }
 
 .search-row {
@@ -84,8 +87,13 @@ body::after { /* 呼吸的彩色光晕 */
 }
 
 .search-row .nes-field { flex: 1; }
+/* 修正输入框字体，防止输入时变成默认字体 */
+.nes-input {
+  font-family: "Press Start 2P", "DotGothic16", monospace !important;
+  font-size: 14px;
+}
 
-.mascot-container { /* 史莱姆容器定位 */
+.mascot-container {
   position: absolute;
   top: -35px;
   right: 20px;
@@ -93,34 +101,26 @@ body::after { /* 呼吸的彩色光晕 */
   animation: bounce 2s infinite ease-in-out;
 }
 
-.pixel-slime { /* 纯CSS绘制史莱姆 */
-  width: 40px;
-  height: 30px;
+.pixel-slime {
+  width: 40px; height: 30px;
   background: var(--success);
   box-shadow: -4px 0 0 var(--ink), 4px 0 0 var(--ink), 0 -4px 0 var(--ink), 0 4px 0 var(--ink), inset 4px 4px 0 rgba(255,255,255,0.5);
   position: relative;
 }
-
-.pixel-slime::before { /* 眼睛 */
-  content: "";
-  position: absolute;
-  top: 8px; left: 8px;
-  width: 4px; height: 4px;
-  background: var(--ink);
+.pixel-slime::before {
+  content: ""; position: absolute; top: 8px; left: 8px;
+  width: 4px; height: 4px; background: var(--ink);
   box-shadow: 18px 0 0 var(--ink);
 }
 
-.speech-bubble { /* 对话气泡 */
-  position: absolute;
-  top: -30px; right: 20px;
-  background: #fff;
-  border: 2px solid var(--ink);
-  padding: 4px 8px;
-  font-size: 8px;
-  white-space: nowrap;
+.speech-bubble {
+  position: absolute; top: -35px; right: 10px;
+  background: #fff; border: 2px solid var(--ink);
+  padding: 6px 8px; font-size: 10px; white-space: nowrap;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
 }
 
-/* --- 卡片网格系统 --- */
+/* --- 关卡选择 Grid --- */
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr; 
@@ -129,65 +129,67 @@ body::after { /* 呼吸的彩色光晕 */
 
 .section-title {
   margin: 30px 0 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  display: flex; align-items: center; gap: 12px;
 }
-
-.section-title h2 { color: var(--primary); font-size: 14px; margin: 0; }
+.section-title h2 { color: var(--primary); font-size: 16px; margin: 0; }
 
 /* --- 交互式卡片 --- */
 .card-link {
-  text-decoration: none;
-  color: inherit;
-  display: block;
-  height: 100%;
+  text-decoration: none; color: inherit; display: block; height: 100%;
 }
 
 .card {
   height: 100%;
-  transition: all 0.2s cubic-bezier(0.3, 0.7, 0.4, 1);
+  background-color: #fff; /* 纯白卡片 */
+  border-width: 4px; /* 统一粗边框 */
+  transition: all 0.2s;
   cursor: pointer;
   padding-bottom: 20px;
 }
 
-.card:hover { /* 悬浮效果核心 */
+.card:hover {
   transform: translateY(-6px);
-  box-shadow: 8px 8px 0 rgba(0,0,0,0.15);
+  box-shadow: 8px 8px 0 var(--ink); /* 统一黑色阴影 */
   z-index: 10;
 }
 
 .card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 2px dashed #eee;
-  padding-bottom: 8px;
-  margin-bottom: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 4px dashed #eee; /* 加粗分割线 */
+  padding-bottom: 8px; margin-bottom: 12px;
 }
 
 .logo-wrap {
   margin: 10px auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 140px;
-  width: 100%;
-  background: transparent;
-  border: none;  
-  position: relative;
-  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  height: 140px; width: 100%;
+  background: transparent; border: none;  
+  position: relative; overflow: hidden;
+}
+
+.logo {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
 .card-desc {
-  font-size: 14px;
-  color: #555;
+  font-size: 12px;
+  color: #666;
+  margin-top: 12px;
   margin-bottom: 0;
+  line-height: 1.8;
+  font-family: "DotGothic16", sans-serif; 
 }
 
-/* --- 关键帧动画 --- */
-@keyframes bg-scroll { to { background-position: 20px 20px; } }
-@keyframes bg-pulse { to { opacity: 1; transform: scale(1.02); } }
+/* 占位符文字 */
+.placeholder {
+  font-family: "Press Start 2P", cursive;
+  color: #ccc; font-size: 16px; text-align: center; width: 100%;
+}
+
+/* --- 动画 --- */
 @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
 /* --- 响应式 --- */
@@ -195,20 +197,5 @@ body::after { /* 呼吸的彩色光晕 */
   .brand-row, .search-row { flex-direction: column; align-items: flex-start; }
   .search-row .nes-btn { width: 100%; margin-top: 10px; }
   .mascot-container { top: -45px; right: 0; }
-}
-
-.logo {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  image-rendering: pixelated;
-  filter: drop-shadow(4px 4px 0 rgba(0,0,0,0.15));
-}
-
-.placeholder {
-  font-family: "Press Start 2P", cursive;
-  color: #ccc;
-  font-size: 16px;
-  text-align: center;
-  width: 100%;
+  .grid { grid-template-columns: 1fr; } /* 手机端单列 */
 }
