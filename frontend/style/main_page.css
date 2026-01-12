@@ -3,16 +3,16 @@
   --dot-color: #e6dace;
   --ink: #212529;
   
-  /* 功能色 */
+  /* 功能色 (与 NES.css 保持一致) */
   --primary: #209cee;
   --success: #92cc41;
   --warning: #f7d51d;
   --error: #e76e55;
+  --grey: #d3d3d3;
 }
 
 * { box-sizing: border-box; }
 
-/* --- 页面基础 & 字体 --- */
 body {
   margin: 0;
   font-family: "Press Start 2P", "DotGothic16", sans-serif;
@@ -20,174 +20,145 @@ body {
   color: var(--ink);
   background-color: var(--bg-color);
   min-height: 100vh;
-  position: relative;
-  
   background-image: radial-gradient(var(--dot-color) 20%, transparent 20%);
   background-size: 20px 20px;
-  
-  /* 【特有】主页背景轻微移动，增加“世界地图”的感觉，但颜色不突兀 */
-  animation: bg-pan 60s linear infinite;
-  
+  /* 背景缓慢移动 */
+  animation: bg-pan 120s linear infinite; 
   -webkit-font-smoothing: none;
 }
 
-/* 背景移动动画 */
 @keyframes bg-pan {
   from { background-position: 0 0; }
   to { background-position: -400px 400px; }
 }
 
-/* 标题样式 */
 h1, h2, h3, .title, .main-title, .card-top span:first-child {
-  /* 确保标题也使用这个字体栈 */
-  font-family: "Press Start 2P", "DotGothic16", cursive;
-  text-transform: uppercase;
-  letter-spacing: -1px;
+  font-family: "Press Start 2P", cursive;
+  text-transform: uppercase; letter-spacing: -1px;
 }
 
 /* --- 布局 & Header --- */
-.page {
-  width: min(980px, 92vw);
-  margin: 40px auto 80px;
-  position: relative;
-}
+.page { width: min(980px, 92vw); margin: 40px auto 80px; }
+.brand-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; }
+.main-title { font-size: clamp(20px, 4vw, 32px); text-shadow: 4px 4px 0 rgba(0,0,0,0.1); margin-bottom: 8px; line-height: 1.4; }
+.subtitle { font-size: 12px; color: #666; }
 
-.brand-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 40px; /* 增加间距 */
-}
-
-.main-title {
-  font-size: clamp(20px, 4vw, 32px); /* 稍微加大 */
-  text-shadow: 4px 4px 0 rgba(0,0,0,0.1); /* 加强像素阴影 */
-  margin-bottom: 8px;
-  line-height: 1.4;
-}
-
-.subtitle {
-  font-size: 12px;
-  color: #666;
-  font-family: "Press Start 2P", monospace;
-}
-
-/* --- 搜索区 & 史莱姆 --- */
-.search-section {
-  margin-bottom: 50px;
-  position: relative;
-  background-color: #fff;
-  border-width: 4px;
-}
-
-.search-row {
-  display: flex;
-  gap: 16px;
-  align-items: flex-end;
-}
-
+/* --- 搜索区 --- */
+.search-section { margin-bottom: 50px; position: relative; background-color: #fff; border-width: 4px; }
+.search-row { display: flex; gap: 16px; align-items: flex-end; }
 .search-row .nes-field { flex: 1; }
-/* 修正输入框字体，防止输入时变成默认字体 */
-.nes-input {
-  font-family: "Press Start 2P", "DotGothic16", monospace !important;
-  font-size: 14px;
-}
+.nes-input { font-family: "Press Start 2P", "DotGothic16", monospace !important; font-size: 14px; }
+.mascot-container { position: absolute; top: -35px; right: 20px; z-index: 5; animation: bounce 2s infinite ease-in-out; }
+.pixel-slime { width: 40px; height: 30px; background: var(--success); box-shadow: -4px 0 0 var(--ink), 4px 0 0 var(--ink), 0 -4px 0 var(--ink), 0 4px 0 var(--ink), inset 4px 4px 0 rgba(255,255,255,0.5); position: relative; }
+.pixel-slime::before { content: ""; position: absolute; top: 8px; left: 8px; width: 4px; height: 4px; background: var(--ink); box-shadow: 18px 0 0 var(--ink); }
+.speech-bubble { position: absolute; top: -35px; right: 10px; background: #fff; border: 2px solid var(--ink); padding: 6px 8px; font-size: 10px; white-space: nowrap; box-shadow: 2px 2px 0 rgba(0,0,0,0.1); }
 
-.mascot-container {
-  position: absolute;
-  top: -35px;
-  right: 20px;
-  z-index: 5;
-  animation: bounce 2s infinite ease-in-out;
-}
-
-.pixel-slime {
-  width: 40px; height: 30px;
-  background: var(--success);
-  box-shadow: -4px 0 0 var(--ink), 4px 0 0 var(--ink), 0 -4px 0 var(--ink), 0 4px 0 var(--ink), inset 4px 4px 0 rgba(255,255,255,0.5);
-  position: relative;
-}
-.pixel-slime::before {
-  content: ""; position: absolute; top: 8px; left: 8px;
-  width: 4px; height: 4px; background: var(--ink);
-  box-shadow: 18px 0 0 var(--ink);
-}
-
-.speech-bubble {
-  position: absolute; top: -35px; right: 10px;
-  background: #fff; border: 2px solid var(--ink);
-  padding: 6px 8px; font-size: 10px; white-space: nowrap;
-  box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
-}
-
-/* --- 关卡选择 Grid --- */
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr; 
-  gap: 28px;
-}
-
-.section-title {
-  margin: 30px 0 20px;
-  display: flex; align-items: center; gap: 12px;
-}
+/* --- 关卡 Grid & 卡片通用 --- */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.section-title { margin: 30px 0 20px; display: flex; align-items: center; gap: 12px; }
 .section-title h2 { color: var(--primary); font-size: 16px; margin: 0; }
 
-/* --- 交互式卡片 --- */
-.card-link {
-  text-decoration: none; color: inherit; display: block; height: 100%;
-}
-
+.card-link { text-decoration: none; color: inherit; display: block; height: 100%; }
 .card {
-  height: 100%;
-  background-color: #fff; /* 纯白卡片 */
-  border-width: 4px; /* 统一粗边框 */
-  transition: all 0.2s;
-  cursor: pointer;
-  padding-bottom: 20px;
+  height: 100%; background-color: #fff; border-width: 4px; transition: all 0.2s; cursor: pointer; padding-bottom: 20px;
+  /* 默认黑色阴影 */
+  box-shadow: 8px 8px 0 var(--ink);
+}
+.card:hover { transform: translateY(-6px); z-index: 10; }
+
+/* 不同卡片的主题色阴影 hover 效果 */
+.card.is-warning-shadow:hover { box-shadow: 8px 8px 0 var(--warning); }
+.card.is-success-shadow:hover { box-shadow: 8px 8px 0 var(--success); }
+.card.is-primary-shadow:hover { box-shadow: 8px 8px 0 var(--primary); }
+.card.is-error-shadow:hover { box-shadow: 8px 8px 0 var(--error); }
+
+.card-top { display: flex; justify-content: space-between; align-items: center; border-bottom: 4px dashed #eee; padding-bottom: 8px; margin-bottom: 12px; }
+.card-tags { margin-top: 15px; }
+.card-desc { font-size: 12px; color: #666; margin-top: 12px; margin-bottom: 0; line-height: 1.8; font-family: "DotGothic16", sans-serif; }
+
+/* 图标容器 */
+.icon-wrap {
+  height: 120px; /* 固定高度 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  /* 轻微的背景色，突出图标 */
+  background: #f8f8f8;
+  border: 4px solid #eee;
+  margin: 15px 0;
 }
 
-.card:hover {
-  transform: translateY(-6px);
-  box-shadow: 8px 8px 0 var(--ink); /* 统一黑色阴影 */
-  z-index: 10;
+/* --- 1. 火焰 (Fire) --- */
+.hot-icon { color: var(--warning); }
+.pixel-fire {
+  width: 20px; height: 20px;
+  background: var(--warning);
+  box-shadow: 
+    0 -10px 0 var(--error), 
+    10px 0 0 var(--error), 
+    -10px 0 0 var(--error), 
+    0 10px 0 var(--warning),
+    10px -10px 0 var(--error),
+    -10px -10px 0 var(--error),
+    0 -20px 0 var(--error),
+    0 20px 0 var(--warning);
+  animation: flicker 0.5s infinite alternate;
+}
+@keyframes flicker {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.1); opacity: 0.8; }
 }
 
-.card-top {
-  display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 4px dashed #eee; /* 加粗分割线 */
-  padding-bottom: 8px; margin-bottom: 12px;
+/* --- 2. 爱心与叶子 (Heart & Leaf) --- */
+.diet-icon { color: var(--success); gap: 8px; }
+/* 叶子 */
+.pixel-leaf {
+  width: 15px; height: 15px; background: var(--success);
+  box-shadow: 5px -5px 0 var(--success), 10px -10px 0 var(--success), 0 5px 0 var(--success), 5px 0 0 var(--success);
+  transform: rotate(-30deg);
 }
 
-.logo-wrap {
-  margin: 10px auto;
-  display: flex; align-items: center; justify-content: center;
-  height: 140px; width: 100%;
-  background: transparent; border: none;  
-  position: relative; overflow: hidden;
+/* --- 3. 肌肉手臂 (Biceps) --- */
+.gains-icon { color: var(--primary); }
+.pixel-biceps {
+  width: 30px; height: 20px; background: var(--primary);
+  box-shadow: 
+    -10px 10px 0 var(--primary), /* 前臂 */
+    -20px 10px 0 var(--primary),
+    -20px 0 0 var(--primary),
+    -10px -10px 0 var(--primary), /* 二头肌峰 */
+    0 -10px 0 var(--primary),
+    10px 0 0 var(--primary), /* 肩膀 */
+    10px 10px 0 var(--primary);
+  position: relative; top: -5px;
+  animation: flex 1s infinite alternate ease-in-out;
+}
+@keyframes flex {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-5deg) scale(1.05); }
 }
 
-.logo {
-  width: 90px;
-  height: 90px;
-  object-fit: contain;
-  image-rendering: pixelated;
+/* --- 4. 软盘 (Floppy Disk) --- */
+.save-icon { color: var(--error); }
+.pixel-floppy {
+  width: 50px; height: 60px;
+  background: var(--error);
+  border: 4px solid var(--ink);
+  position: relative;
+}
+/* 金属滑盖 */
+.pixel-floppy::before {
+  content: ""; position: absolute; top: 4px; left: 8px;
+  width: 26px; height: 20px; background: var(--grey);
+  border: 4px solid var(--ink);
+}
+.pixel-floppy::after {
+  content: ""; position: absolute;
+  top: 4px; right: 4px; width: 6px; height: 6px; background: var(--ink);
+  box-shadow: -20px 38px 0 -2px #fff, -20px 38px 0 2px var(--ink);
 }
 
-.card-desc {
-  font-size: 12px;
-  color: #666;
-  margin-top: 12px;
-  margin-bottom: 0;
-  line-height: 1.8;
-  font-family: "DotGothic16", sans-serif; 
-}
-
-/* 占位符文字 */
-.placeholder {
-  font-family: "Press Start 2P", cursive;
-  color: #ccc; font-size: 16px; text-align: center; width: 100%;
-}
 
 /* --- 动画 --- */
 @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
@@ -197,5 +168,5 @@ h1, h2, h3, .title, .main-title, .card-top span:first-child {
   .brand-row, .search-row { flex-direction: column; align-items: flex-start; }
   .search-row .nes-btn { width: 100%; margin-top: 10px; }
   .mascot-container { top: -45px; right: 0; }
-  .grid { grid-template-columns: 1fr; } /* 手机端单列 */
+  .grid { grid-template-columns: 1fr; } 
 }

@@ -4,17 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Food Estimator</title>
-
-    <link rel="stylesheet" href="https://unpkg.com/nes.css@latest/css/nes.min.css" />
-    
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&display=swap" rel="stylesheet">
-    
+    <link rel="stylesheet" href="https://unpkg.com/nes.css@latest/css/nes.min.css" />
     <link rel="stylesheet" href="../style/main_page.css" />
   </head>
 
   <body>
     <main class="page">
-      
       <header class="brand-row">
         <div class="brand-left">
           <i class="nes-icon star is-medium"></i>
@@ -27,29 +23,18 @@
 
       <section class="nes-container with-title search-section" aria-label="Search">
         <h3 class="title">Mission Start</h3>
-
         <div class="mascot-container">
             <div class="speech-bubble">I'm hungry!</div>
             <div class="pixel-slime"></div>
         </div>
-
         <div class="search-row">
           <div class="nes-field">
             <label for="q">Target (Food Name)</label>
-            <input
-              id="q"
-              class="nes-input"
-              type="text"
-              placeholder="e.g. KFC Spicy Burger"
-            />
+            <input id="q" class="nes-input" type="text" placeholder="e.g. KFC Spicy Burger" />
           </div>
-
-          <button class="nes-btn is-primary" type="button">
-            Go!
-          </button>
+          <button class="nes-btn is-primary" type="button">Go!</button>
         </div>
       </section>
-
       <div class="section-title">
         <h2>Select Stage</h2>
         <i class="nes-icon heart is-small is-empty"></i>
@@ -58,88 +43,75 @@
       <section class="grid" aria-label="Game Worlds">
         
         <a href="../pages/trending.html" class="card-link">
-          <article class="nes-container is-rounded card">
+          <article class="nes-container is-rounded card is-warning-shadow">
             <div class="card-top">
               <span class="nes-text is-error">World 1-1</span>
-              <div class="nes-badge">
-                <span class="is-warning">HOT</span>
-              </div>
+              <div class="nes-badge"><span class="is-warning">HOT</span></div>
+            </div>
+            
+            <div class="icon-wrap hot-icon">
+              <div class="pixel-fire"></div>
             </div>
 
-            <div class="logo-wrap">
-              <img class="logo" src="/assets/stores/kfc/KFC_logo.png" onerror="this.style.display='none'" alt="KFC" />
+            <div class="card-tags">
+              <span class="nes-text is-warning">#Trending</span>
             </div>
-
-            <div style="margin-top:10px;">
-              <span class="nes-text is-primary">#Trending</span>
-            </div>
-            <p class="card-desc">
-              最热门的挑战关卡。计算脆皮炸鸡和汉堡的热量。
-            </p>
+            <p class="card-desc">最热门的挑战关卡。计算脆皮炸鸡和汉堡的热量。</p>
           </article>
         </a>
 
         <a href="#" class="card-link">
-          <article class="nes-container is-rounded card">
+          <article class="nes-container is-rounded card is-success-shadow">
             <div class="card-top">
               <span class="nes-text is-success">World 1-2</span>
-              <div class="nes-badge">
-                <span class="is-success">EASY</span>
-              </div>
+              <div class="nes-badge"><span class="is-success">EASY</span></div>
+            </div>
+            
+            <div class="icon-wrap diet-icon">
+              <i class="nes-icon heart is-medium"></i>
+              <div class="pixel-leaf"></div>
             </div>
 
-            <div class="logo-wrap">
-              <div class="placeholder">Subway?</div>
-            </div>
-
-            <div style="margin-top:10px;">
+            <div class="card-tags">
               <span class="nes-text is-success">#Diet-Mode</span>
             </div>
-            <p class="card-desc">
-              减脂期的安全屋。寻找低 HP (热量) 的食物。
-            </p>
+            <p class="card-desc">减脂期的安全屋。寻找低 HP (热量) 的食物。</p>
           </article>
         </a>
 
         <a href="#" class="card-link">
-          <article class="nes-container is-rounded card">
+          <article class="nes-container is-rounded card is-primary-shadow">
             <div class="card-top">
               <span class="nes-text is-primary">World 2-1</span>
-              <div class="nes-badge">
-                <span class="is-primary">PRO</span>
-              </div>
+              <div class="nes-badge"><span class="is-primary">PRO</span></div>
+            </div>
+            
+            <div class="icon-wrap gains-icon">
+              <div class="pixel-biceps"></div>
             </div>
 
-            <div class="logo-wrap">
-               <div class="placeholder">Beef?</div>
-            </div>
-
-            <div style="margin-top:10px;">
+            <div class="card-tags">
               <span class="nes-text is-primary">#Gains</span>
             </div>
-            <p class="card-desc">
-              提升力量属性。适合训练后的高蛋白恢复餐。
-            </p>
+            <p class="card-desc">提升力量属性。适合训练后的高蛋白恢复餐。</p>
           </article>
         </a>
 
         <a href="#" class="card-link">
-          <article class="nes-container is-rounded card">
+          <article class="nes-container is-rounded card is-error-shadow">
             <div class="card-top">
               <span class="nes-text is-error">Save Room</span>
                <i class="nes-icon heart is-small"></i>
             </div>
-
-            <div class="logo-wrap">
-               <div class="placeholder">Saved</div>
+            
+            <div class="icon-wrap save-icon">
+              <div class="pixel-floppy"></div>
             </div>
 
-            <div style="margin-top:10px;">
+            <div class="card-tags">
               <span class="nes-text is-error">#Favorites</span>
             </div>
-            <p class="card-desc">
-              你的存档点。快速读取你常去的餐厅。
-            </p>
+            <p class="card-desc">你的存档点。快速读取你常去的餐厅。</p>
           </article>
         </a>
 
