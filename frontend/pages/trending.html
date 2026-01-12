@@ -3,151 +3,97 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trending Stores</title>
-
-    <!-- 你之后会把样式写到这个文件里 -->
+    <title>Top Stores Leaderboard</title>
     <link rel="stylesheet" href="../style/trending.css" />
   </head>
 
   <body>
-    <!-- 顶部栏：返回 + 页面标题/Logo 占位 +（可选）小标签位 -->
     <header class="topBar">
-      <a href="../pages/main_page.html" class="backBtn" aria-label="返回主页面">
-        ←
-      </a>
+      <a href="../pages/main_page.html" class="backBtn" aria-label="返回">←</a>
     </header>
 
-    <!-- 中间可上下滑动区域（滚动用 CSS 实现：overflow-y: auto;） -->
-    <main class="scrollArea" aria-label="Trending 商店列表">
-      <!-- 大的父div：装所有商店 -->
-      <div class="storeList">
-        <!-- 商店 1 -->
-        <div class="storeItem" aria-label="商店 1">
-          <!-- 上层：logo + 店名 -->
-          <div class="storeTop">
-            <div class="storeLogoSlot" aria-label="商店Logo">
-              <img
-              src="/assets/stores/kfc/KFC_logo.png"
-              alt = "商店Logo"
-              class = "storeLogo"
-              >
-            </div>
+    <main class="scrollArea">
+      <h1 class="pageTitle">WEEKLY TOP</h1>
 
-            <div class="storeInfo">
-              <h2 class="storeName">Store Name 1</h2>
-              <!-- 可选：你以后如果想放 月售/距离/时间 之类 -->
-              <p class="storeMeta">Meta info placeholder</p>
-            </div>
+      <div class="podium">
+        
+        <div class="rankCard second">
+          <div class="rankLogoSlot">
+            <span>S2</span>
           </div>
+          <h3 class="rankName">Ocean Sushi</h3>
+          <p class="rankMeta">★ 4.7</p>
+          <div class="rankBadge">No.2</div>
+        </div>
 
-          <!-- 下层：展示部分 dishes（建议以后做横向滑动） -->
-          <div class="storeBottom" aria-label="商店 1 菜品预览">
-            <div class="dishRow">
-              <div class="dishCard" aria-label="菜品 1">
-                <div class="dishImgSlot" aria-label="菜品图片占位">
-                  <span>Dish Img</span>
-                </div>
-                <p class="dishName">Dish Name</p>
-              </div>
-
-              <div class="dishCard" aria-label="菜品 2">
-                <div class="dishImgSlot" aria-label="菜品图片占位">
-                  <span>Dish Img</span>
-                </div>
-                <p class="dishName">Dish Name</p>
-              </div>
-
-              <div class="dishCard" aria-label="菜品 3">
-                <div class="dishImgSlot" aria-label="菜品图片占位">
-                  <span>Dish Img</span>
-                </div>
-                <p class="dishName">Dish Name</p>
-              </div>
-            </div>
+        <div class="rankCard first">
+          <div class="crown">👑</div> <div class="rankLogoSlot">
+            <img src="/assets/stores/kfc/KFC_logo.png" alt="KFC" onerror="this.style.display='none';this.parentNode.querySelector('span').style.display='block'">
+            <span style="display:none">KFC</span>
+          </div>
+          <h3 class="rankName">Pixel KFC</h3>
+          <p class="rankMeta">★ 4.9 🔥</p>
+          <div class="championBanner">
+            CHAMPION
           </div>
         </div>
 
-        <!-- 商店 2 -->
-        <div class="storeItem" aria-label="商店 2">
-          <div class="storeTop">
-            <div class="storeLogoSlot" aria-label="商店Logo占位">
-              <span>Logo</span>
-            </div>
-            <div class="storeInfo">
-              <h2 class="storeName">Store Name 2</h2>
-              <p class="storeMeta">Meta info placeholder</p>
-            </div>
+        <div class="rankCard third">
+          <div class="rankLogoSlot">
+            <span>PZ</span>
           </div>
-
-          <div class="storeBottom" aria-label="商店 2 菜品预览">
-            <div class="dishRow">
-              <div class="dishCard" aria-label="菜品 1">
-                <div class="dishImgSlot" aria-label="菜品图片占位">
-                  <span>Dish Img</span>
-                </div>
-                <p class="dishName">Dish Name</p>
-              </div>
-
-              <div class="dishCard" aria-label="菜品 2">
-                <div class="dishImgSlot" aria-label="菜品图片占位">
-                  <span>Dish Img</span>
-                </div>
-                <p class="dishName">Dish Name</p>
-              </div>
-
-              <div class="dishCard" aria-label="菜品 3">
-                <div class="dishImgSlot" aria-label="菜品图片占位">
-                  <span>Dish Img</span>
-                </div>
-                <p class="dishName">Dish Name</p>
-              </div>
-            </div>
-          </div>
+          <h3 class="rankName">Retro Pizza</h3>
+          <p class="rankMeta">★ 4.5</p>
+          <div class="rankBadge">No.3</div>
         </div>
 
-        <!-- 商店 3 -->
-        <div class="storeItem" aria-label="商店 3">
-          <div class="storeTop">
-            <div class="storeLogoSlot" aria-label="商店Logo占位">
-              <span>Logo</span>
-            </div>
-            <div class="storeInfo">
-              <h2 class="storeName">Store Name 3</h2>
-              <p class="storeMeta">Meta info placeholder</p>
-            </div>
-          </div>
-
-          <div class="storeBottom" aria-label="商店 3 菜品预览">
-            <div class="dishRow">
-              <div class="dishCard" aria-label="菜品 1">
-                <div class="dishImgSlot" aria-label="菜品图片占位">
-                  <span>Dish Img</span>
-                </div>
-                <p class="dishName">Dish Name</p>
-              </div>
-
-              <div class="dishCard" aria-label="菜品 2">
-                <div class="dishImgSlot" aria-label="菜品图片占位">
-                  <span>Dish Img</span>
-                </div>
-                <p class="dishName">Dish Name</p>
-              </div>
-
-              <div class="dishCard" aria-label="菜品 3">
-                <div class="dishImgSlot" aria-label="菜品图片占位">
-                  <span>Dish Img</span>
-                </div>
-                <p class="dishName">Dish Name</p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
+
+      <div class="rankingList">
+        
+        <div class="listItem">
+          <span class="rankNum">4</span>
+          <img class="listLogo" src="" alt="logo" onerror="this.style.display='none'">
+          <div class="listInfo">
+            <h4 class="listName">Burger King Pixel</h4>
+            <p class="listMeta">★ 4.4 • American</p>
+          </div>
+          <span class="listArrow">></span>
+        </div>
+
+        <div class="listItem">
+          <span class="rankNum">5</span>
+          <img class="listLogo" src="" alt="logo" onerror="this.style.display='none'">
+          <div class="listInfo">
+            <h4 class="listName">Taco Bell 8-Bit</h4>
+            <p class="listMeta">★ 4.3 • Mexican</p>
+          </div>
+          <span class="listArrow">></span>
+        </div>
+
+        <div class="listItem">
+          <span class="rankNum">6</span>
+          <img class="listLogo" src="" alt="logo" onerror="this.style.display='none'">
+          <div class="listInfo">
+            <h4 class="listName">Subway Station</h4>
+            <p class="listMeta">★ 4.1 • Sandwich</p>
+          </div>
+          <span class="listArrow">></span>
+        </div>
+
+        <div class="listItem">
+          <span class="rankNum">7</span>
+          <div class="listInfo">
+            <h4 class="listName">Starbucks Coffee</h4>
+            <p class="listMeta">★ 4.0 • Drinks</p>
+          </div>
+          <span class="listArrow">></span>
+        </div>
+
+      </div>
+
     </main>
 
-    <!-- 右下角购物篮按钮：只做按钮占位，不实现功能 -->
-    <button class="cartBtn" type="button" aria-label="购物篮">
-      🛒
-    </button>
+    <button class="cartBtn">🛒</button>
   </body>
 </html>

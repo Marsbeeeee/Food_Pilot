@@ -1,247 +1,236 @@
-/* trending.css (clean for Trending page) */
+/* trending.css - Game Leaderboard Style with Animations */
 
-/* NES.css core */
 @import url("https://unpkg.com/nes.css@latest/css/nes.min.css");
-/* Pixel font */
 @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 
 :root {
-  --px-border: #212121;
-  --paper: #fffdf7;
-  --bg: #f2f6ff;
-  --card: #ffffff;
+  --bg-color: #fff8f0;
+  --dot-color: #e6dace;
+  --text-main: #212529;
+  --border-color: #212529;
 
-  --accent2: #3a86ff;
-  --accent3: #ffbe0b;
-  --accent4: #8338ec;
+  /* 奖牌色 */
+  --gold: #ffd700;
+  --silver: #c0c0c0;
+  --bronze: #cd7f32;
+  
+  --list-bg: #ffffff;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  height: 100%;
-}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
 
 body {
   margin: 0;
-  font-family: "Press Start 2P", ui-monospace, SFMono-Regular, Menlo, Monaco,
-    Consolas, "Liberation Mono", "Courier New", monospace;
-  background: var(--bg);
-  color: #111;
-  -webkit-font-smoothing: none;
-  -moz-osx-font-smoothing: grayscale;
+  /* 【改动1】整体放大：提高基准字体大小 */
+  font-size: 18px; 
+  font-family: "Press Start 2P", monospace;
+  background-color: var(--bg-color);
+  background-image: radial-gradient(var(--dot-color) 20%, transparent 20%);
+  background-position: 0 0;
+  background-size: 20px 20px;
+  color: var(--text-main);
 }
 
-/* ===== Top Bar (only back button) ===== */
+/* ===== 顶部栏 ===== */
 .topBar {
+  padding: 16px;
   position: sticky;
   top: 0;
-  z-index: 10;
-
-  padding: 12px 14px;
-  background: var(--paper);
-  border-bottom: 4px solid var(--px-border);
+  z-index: 100;
 }
 
 .backBtn {
-  appearance: none;
-  border: 4px solid var(--px-border);
   background: #fff;
-  padding: 10px 12px;
-  cursor: pointer;
-  font-family: inherit;
-  line-height: 1;
-  box-shadow: 4px 4px 0 var(--px-border);
+  border: 4px solid var(--border-color);
+  padding: 8px 12px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 4px 4px 0 var(--border-color);
+  display: inline-block;
+  transition: transform 0.1s;
 }
+.backBtn:active { transform: translate(4px, 4px); box-shadow: none; }
 
-.backBtn:active {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0 var(--px-border);
-}
-
-/* ===== Middle Scroll Area ===== */
+/* ===== 滚动区域 ===== */
 .scrollArea {
-  height: calc(100vh - 76px);
-  overflow-y: auto;
-  padding: 16px 14px 96px;
+  padding: 10px 20px 120px; /* 底部留白更多 */
+  /* 【改动1】整体放大：增加最大宽度 */
+  max-width: 900px;
+  margin: 0 auto;
 }
 
-.scrollArea::-webkit-scrollbar {
-  width: 14px;
-}
-.scrollArea::-webkit-scrollbar-thumb {
-  background: #c9d6ff;
-  border: 4px solid var(--px-border);
-}
-.scrollArea::-webkit-scrollbar-track {
-  background: transparent;
+.pageTitle {
+  text-align: center;
+  font-size: 24px; /* 放大标题 */
+  margin-bottom: 40px;
+  text-shadow: 3px 3px 0 #fff;
 }
 
-/* ===== Store List ===== */
-.storeList {
+/* ============================
+   SECTION 1: 前三名 (Podium)
+   ============================ */
+.podium {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 20px; /* 增加间距 */
+  margin-bottom: 50px;
+  flex-wrap: wrap;
+}
+
+.rankCard {
+  background: #fff;
+  border: 4px solid var(--border-color);
+  padding: 20px; /* 增加内边距 */
   display: flex;
   flex-direction: column;
-  gap: 18px;
-}
-
-.storeItem {
-  background: var(--card);
-  border: 4px solid var(--px-border);
-  box-shadow: 6px 6px 0 var(--px-border);
-  padding: 14px;
-}
-
-/* colorful outline accents */
-.storeItem:nth-child(1) {
-  outline: 4px solid var(--accent3);
-  outline-offset: 4px;
-}
-.storeItem:nth-child(2) {
-  outline: 4px solid var(--accent2);
-  outline-offset: 4px;
-}
-.storeItem:nth-child(3) {
-  outline: 4px solid var(--accent4);
-  outline-offset: 4px;
-}
-
-/* ===== Store Top: logo + name/meta ===== */
-.storeTop {
-  display: flex;
   align-items: center;
-  gap: 12px;
+  text-align: center;
+  position: relative;
+  /* 【改动1】整体放大：增加卡片宽度 */
+  width: 160px; 
+  transition: transform 0.2s;
+  cursor: pointer; /* 提示可交互 */
 }
 
-.storeLogoSlot {
+.rankCard:active { transform: scale(0.98); }
+
+/* Logo 容器 */
+.rankLogoSlot {
+  /* 【改动1】整体放大：增加Logo容器尺寸 */
+  width: 90px;
+  height: 90px;
+  border: 3px solid var(--border-color);
+  margin-bottom: 16px;
+  background: #fff;
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
-  background: #fff;
-  border: 4px solid var(--px-border);
-  box-shadow: 4px 4px 0 var(--px-border);
-  flex: 0 0 auto;
-}
-
-.storeLogoSlot span {
-  font-size: 10px;
-  text-align: center;
-  padding: 0 6px;
-}
-
-.storeLogo {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.storeInfo {
-  min-width: 0;
-  flex: 1;
-}
-
-.storeName {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+/* 确保图片或文字都能受到动画影响 */
+.rankLogoSlot > * {
+  width: 100%; height: 100%; object-fit: contain;
+  display: grid; place-items: center;
+  transition: transform 0.2s; /* 平滑过渡 */
 }
 
-.storeMeta {
-  margin: 8px 0 0 0;
-  font-size: 10px;
-  line-height: 1.4;
-  opacity: 0.75;
+.rankName { font-size: 12px; margin: 0 0 10px 0; line-height: 1.4; height: 34px; overflow: hidden;}
+.rankMeta { font-size: 10px; color: #666; margin: 0 0 8px 0;}
+.rankBadge { font-size:10px; color:#aaa; margin-top:4px; }
+
+/* --- 冠军 (Gold) --- */
+.rankCard.first {
+  order: 2;
+  /* 【改动1】整体放大：冠军卡片更大 */
+  width: 190px;
+  padding-top: 30px;
+  padding-bottom: 30px;
+  box-shadow: 10px 10px 0 var(--gold);
+  z-index: 2;
+  transform: translateY(-20px); /* 抬得更高 */
+}
+.rankCard.first .rankLogoSlot { width: 110px; height: 110px; border-width: 4px; }
+
+.crown {
+  position: absolute;
+  top: -28px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 32px; /* 放大皇冠 */
+  filter: drop-shadow(3px 3px 0 #000);
+}
+.championBanner {
+  background:var(--gold); color:#000; font-size:10px; padding:4px 8px; border:3px solid #000;
 }
 
-/* ===== Store Bottom: horizontal dish row ===== */
-.storeBottom {
-  margin-top: 12px;
+/* --- 亚军 (Silver) --- */
+.rankCard.second { order: 1; box-shadow: 8px 8px 0 var(--silver); }
+
+/* --- 季军 (Bronze) --- */
+.rankCard.third { order: 3; box-shadow: 8px 8px 0 var(--bronze); }
+
+
+/* ============================
+   【改动2】可爱小动画定义
+   ============================ */
+
+/* 动画1：冠军跳跃旋转 */
+@keyframes champion-jump {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-12px) rotate(-6deg); }
+  50% { transform: translateY(-4px) rotate(0deg); }
+  75% { transform: translateY(-8px) rotate(6deg); }
 }
 
-.dishRow {
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  scroll-snap-type: x mandatory;
+/* 动画2：亚军左右摇摆 */
+@keyframes silver-sway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
 }
 
-.dishRow::-webkit-scrollbar {
-  height: 12px;
-}
-.dishRow::-webkit-scrollbar-thumb {
-  background: #ffe5ea;
-  border: 4px solid var(--px-border);
-}
-.dishRow::-webkit-scrollbar-track {
-  background: transparent;
+/* 动画3：季军呼吸脉冲 */
+@keyframes bronze-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
 }
 
-.dishCard {
-  flex: 0 0 150px;
-  border: 4px solid var(--px-border);
-  background: #fff;
-  box-shadow: 4px 4px 0 var(--px-border);
-  padding: 10px;
-  scroll-snap-align: start;
+/* 应用动画：鼠标悬停在卡片上时，触发 Logo 的动画 */
+.rankCard.first:hover .rankLogoSlot > * {
+  animation: champion-jump 0.7s ease-in-out infinite;
 }
 
-.dishImgSlot {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  background: linear-gradient(180deg, #ffffff, #f4f7ff);
-  border: 4px dashed var(--px-border);
+.rankCard.second:hover .rankLogoSlot > * {
+  animation: silver-sway 0.8s ease-in-out infinite;
 }
 
-.dishImgSlot span {
-  font-size: 10px;
-  text-align: center;
-  padding: 0 8px;
+.rankCard.third:hover .rankLogoSlot > * {
+  animation: bronze-pulse 1s ease-in-out infinite;
 }
 
-.dishName {
-  margin: 10px 0 0 0;
-  font-size: 11px;
-  line-height: 1.3;
-  word-break: break-word;
-}
 
-/* ===== Cart Button ===== */
+/* ============================
+   SECTION 2: 普通列表 (4th+)
+   ============================ */
+.rankingList { display: flex; flex-direction: column; gap: 16px; }
+
+.listItem {
+  display: flex; align-items: center;
+  background: var(--list-bg);
+  border: 3px solid var(--border-color);
+  padding: 12px;
+  box-shadow: 5px 5px 0 #ddd;
+  transition: transform 0.1s;
+}
+.listItem:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 #ddd; }
+
+.rankNum { font-size: 16px; width: 36px; text-align: center; font-weight: bold; color: #888; }
+.listLogo {
+  /* 【改动1】整体放大：列表图标 */
+  width: 50px; height: 50px;
+  border: 3px solid #eee; margin: 0 16px; object-fit: contain;
+}
+.listInfo { flex: 1; }
+.listName { font-size: 12px; margin: 0; }
+.listMeta { font-size: 10px; color: #888; margin-top: 6px; }
+.listArrow { font-size: 16px; padding: 0 10px; color: #aaa; }
+
+/* ===== 购物车按钮 ===== */
 .cartBtn {
-  position: fixed;
-  right: 18px;
-  bottom: 18px;
-  z-index: 20;
-
-  width: 64px;
-  height: 64px;
-
-  border: 4px solid var(--px-border);
-  background: linear-gradient(180deg, #fff, #eafff5);
-  box-shadow: 6px 6px 0 var(--px-border);
-
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 26px;
-  line-height: 1;
+  position: fixed; right: 24px; bottom: 24px;
+  /* 【改动1】整体放大：按钮尺寸 */
+  width: 72px; height: 72px;
+  border-radius: 50%; border: 4px solid var(--border-color);
+  background: #90ee90; box-shadow: 5px 5px 0 var(--border-color);
+  font-size: 28px; cursor: pointer; z-index: 99;
 }
+.cartBtn:active { transform: translate(5px, 5px); box-shadow: none; }
 
-.cartBtn:active {
-  transform: translate(2px, 2px);
-  box-shadow: 4px 4px 0 var(--px-border);
-}
-
-/* ===== Responsive ===== */
-@media (max-width: 420px) {
-  .dishCard {
-    flex-basis: 140px;
-  }
+/* 手机端适配 */
+@media (max-width: 600px) {
+  .podium { flex-direction: column; align-items: center; gap: 30px;}
+  .rankCard.first { order: 1; width: 100%; max-width: 240px; transform: none; }
+  .rankCard.second { order: 2; width: 100%; max-width: 200px; }
+  .rankCard.third { order: 3; width: 100%; max-width: 200px; }
+  .crown { top: -32px; }
 }
