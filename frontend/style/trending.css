@@ -152,8 +152,48 @@ body {
   border-radius: 50%; border: 4px solid var(--border-color); background: #90ee90;
   box-shadow: 5px 5px 0 var(--border-color); font-size: 28px; cursor: pointer; z-index: 99; transition: transform 0.1s;
 }
-.cartBtn:active { transform: translate(5px, 5px); box-shadow: none; }
 
+.cartBtn {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 72px;
+  height: 72px;
+
+  /* 保持圆角和边框 */
+  border-radius: 12px;
+  border: 4px solid var(--border-color);
+  
+  /* --- 核心修改 --- */
+  /* 1. 背景色改为纯白，与其他卡片保持一致 */
+  background-color: #ffffff;
+  
+  /* 2. 图片不变 */
+  background-image: url('/assets/trending_page/picnic_basket_pixel.jpg');
+  
+  /* 3. 【重要】删除了之前的 background-blend-mode: multiply; 
+     现在让图片直接显示在白色背景上 */
+  /* ---------------- */
+
+  background-repeat: no-repeat;
+  background-position: center;
+  /* 稍微调大一点比例，效果更好 */
+  background-size: 85%; 
+
+  box-shadow: 6px 6px 0 rgba(0,0,0,0.2);
+  cursor: pointer;
+  z-index: 99;
+  transition: transform 0.1s;
+  
+  /* 隐藏文字 */
+  color: transparent;
+  font-size: 0;
+}
+
+.cartBtn:active {
+  transform: translate(6px, 6px);
+  box-shadow: none;
+}
 
 .mario-firework {
   position: fixed; z-index: 200; pointer-events: none;
