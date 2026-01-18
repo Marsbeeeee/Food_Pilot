@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KFC Pixel Store</title>
+    <link href="https://unpkg.com/nes.css@latest/css/nes.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/frontend/style/kfc_dishes_page.css">
+</head>
+<body>
+
+    <nav class="top-bar">
+        <a href="/frontend/pages/trending.html" class="nes-btn is-error">< Back</a>
+        <span class="store-title">PIXEL KFC</span>
+    </nav>
+
+    <section class="npc-section">
+        <div class="npc-container">
+            <div class="nes-balloon from-left npc-bubble">
+                <p id="npc-text">Welcome! Fresh chicken!</p>
+            </div>
+            <div class="npc-sprite" id="npc-sprite">
+                <img src="https://placehold.co/100x100/fff/000?text=KFC+NPC" alt="Colonel" id="colonel-img">
+            </div>
+        </div>
+    </section>
+
+    <main class="menu-grid">
+        <div class="food-card" onclick="orderItem(this)" data-name="Bucket" data-price="15" data-type="meat">
+            <div class="food-icon-slot">
+                <img src="https://placehold.co/60x60/e4002b/fff?text=Bucket" class="food-img">
+            </div>
+            <div class="food-info">
+                <span class="food-name">Family Bucket</span>
+                <span class="food-price">$15</span>
+            </div>
+        </div>
+
+        <div class="food-card" onclick="orderItem(this)" data-name="Burger" data-price="8" data-type="meat">
+            <div class="food-icon-slot">
+                <img src="https://placehold.co/60x60/ffa500/fff?text=Burger" class="food-img">
+            </div>
+            <div class="food-info">
+                <span class="food-name">Zinger Burger</span>
+                <span class="food-price">$8</span>
+            </div>
+        </div>
+
+        <div class="food-card" onclick="orderItem(this)" data-name="Fries" data-price="4" data-type="side">
+            <div class="food-icon-slot">
+                <img src="https://placehold.co/60x60/ffd700/000?text=Fries" class="food-img">
+            </div>
+            <div class="food-info">
+                <span class="food-name">Pixel Fries</span>
+                <span class="food-price">$4</span>
+            </div>
+        </div>
+
+        <div class="food-card" onclick="orderItem(this)" data-name="Cola" data-price="3" data-type="drink">
+            <div class="food-icon-slot">
+                <img src="https://placehold.co/60x60/000/fff?text=Cola" class="food-img">
+            </div>
+            <div class="food-info">
+                <span class="food-name">Diet Cola</span>
+                <span class="food-price">$3</span>
+            </div>
+        </div>
+        
+        <div class="food-card" onclick="orderItem(this)" data-name="Corn" data-price="5" data-type="diet">
+            <div class="food-icon-slot">
+                <img src="https://placehold.co/60x60/92cc41/fff?text=Corn" class="food-img">
+            </div>
+            <div class="food-info">
+                <span class="food-name">Corn Salad</span>
+                <span class="food-price">$5</span>
+            </div>
+        </div>
+    </main>
+
+    <footer class="tray-bar" id="tray-bar">
+        <div class="tray-label">MY TRAY:</div>
+        <div class="tray-slots" id="tray-slots">
+            <span class="empty-msg">Hungry...</span>
+        </div>
+        <div class="tray-total">
+            Total: $<span id="total-price">0</span>
+            <button class="nes-btn is-primary checkout-btn">PAY</button>
+        </div>
+    </footer>
+
+    <script src="/frontend/scripts/kfc_dishes_page.js"></script>
+</body>
+</html>

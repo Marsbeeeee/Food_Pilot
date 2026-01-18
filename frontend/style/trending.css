@@ -61,6 +61,8 @@ body {
   cursor: pointer;
   opacity: 0;
   animation: podium-entrance 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  text-decoration: none;
+  color: inherit;
 }
 .rankCard.second { animation-delay: 0.2s; }
 .rankCard.first { animation-delay: 0.4s; }
