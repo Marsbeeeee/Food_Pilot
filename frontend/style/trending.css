@@ -1,6 +1,6 @@
 /* trending.css - Game Leaderboard with Entrance Animations & Fireworks */
 
-@import url("https://unpkg.com/nes.css@latest/css/nes.min.css");
+@import url("https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 
 :root {
@@ -80,8 +80,18 @@ body {
   background: #fff; border: 3px solid var(--border-color); position: relative; z-index: 2;
   animation-duration: 1s; animation-fill-mode: both;
 }
-.rankName { font-size: 12px; margin: 0 0 10px 0; line-height: 1.4; height: 34px; overflow: hidden;}
-.rankMeta { font-size: 10px; color: #666; margin: 0 0 8px 0;}
+.rankName { 
+  font-family: "DotGothic16", sans-serif;
+  font-size: 18px; 
+  margin: 0 0 10px 0; 
+  line-height: 1.4; 
+  height: auto; /* 取消固定高度限制，防止字体变大被切掉 */
+  overflow: visible;
+  font-weight: bold;}
+
+.rankMeta { 
+  font-family: "DotGothic16", sans-serif;
+  font-size: 12px;}
 .rankBadge { font-size:10px; color:#aaa; margin-top:4px; }
 
 /* --- 1. 冠军 (Gold) --- */
@@ -145,7 +155,23 @@ body {
 .listItem:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 #ddd; }
 .rankNum { font-size: 16px; width: 36px; text-align: center; font-weight: bold; color: #888; }
 .listLogo { width: 50px; height: 50px; border: 3px solid #eee; margin: 0 16px; object-fit: contain; background: #fff; }
-.listInfo { flex: 1; } .listName { font-size: 12px; margin: 0; } .listMeta { font-size: 10px; color: #888; margin-top: 6px; }
+.listInfo { flex: 1; } 
+
+.listName { 
+  font-family: "DotGothic16", sans-serif; 
+  font-size: 16px; 
+  font-weight: bold;
+  letter-spacing: 1px;
+  margin: 0; 
+  line-height: 1.2; }
+
+.listMeta { 
+  font-family: "DotGothic16", sans-serif;
+  font-size: 12px; /* 同时也稍微调大描述文字 */
+  color: #666; 
+  margin-top: 6px; 
+  text-transform: uppercase;
+}
 .listArrow { font-size: 16px; padding: 0 10px; color: #aaa; }
 .cartBtn {
   position: fixed; right: 24px; bottom: 24px; width: 72px; height: 72px;
