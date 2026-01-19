@@ -137,7 +137,7 @@ body {
 .tray-bar {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  height: 100px;
+  height: 150 px;
   background: #fff;
   border-top: 4px solid var(--text-main);
   display: flex;
