@@ -16,6 +16,31 @@ body {
   cursor: url("https://unpkg.com/nes.css@latest/assets/cursor.png"), auto;
 }
 
+/* Top bar + back button */
+.topBar {
+  padding: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.backBtn {
+  background: #fff;
+  border: 4px solid var(--text-main);
+  padding: 8px 12px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 4px 4px 0 var(--text-main);
+  display: inline-block;
+  transition: transform 0.1s;
+}
+.backBtn:hover {
+  cursor: url("https://unpkg.com/nes.css@latest/assets/cursor-click.png"), pointer;
+}
+.backBtn:active {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+
 /* NPC 区域 */
 .npc-section {
   display: flex;
