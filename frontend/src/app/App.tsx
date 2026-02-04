@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Header } from '../components/Header';
 import { Workspace } from '../pages/Workspace';
 import { Explorer } from '../pages/Explorer';
@@ -22,13 +21,13 @@ const MOCK_USER_SESSIONS: ChatSession[] = [
         role: 'assistant',
         isResult: true,
         title: '分析完成',
-        confidence: '高准确度',
-        description: "根据标准份量，这顿餐食是瘦肉蛋白、健康脂肪和纤维的均衡组合。",
+        confidence: '高置信度',
+        description: '根据标准份量，这顿餐食是瘦肉蛋白、健康脂肪和纤维的均衡组合。',
         items: [
           { name: '烤鸡胸肉', portion: '150g', energy: '248 kcal' },
           { name: '新鲜混合生菜', portion: '2 杯', energy: '20 kcal' },
           { name: '哈斯牛油果', portion: '0.5 个', energy: '160 kcal' },
-          { name: '嘎啦苹果', portion: '1 个（小）', energy: '75 kcal' }
+          { name: '小苹果', portion: '1 个（小）', energy: '75 kcal' }
         ],
         total: '503 kcal',
         time: '下午 12:46'
@@ -40,7 +39,7 @@ const MOCK_USER_SESSIONS: ChatSession[] = [
 const MOCK_USER_LOG: FoodLogEntry[] = [
   {
     id: '1',
-    name: '香草鸡肉能量碗',
+    name: '香草鸡胸能量碗',
     description: '烤鸡胸肉配藜麦、羽衣甘蓝和柠檬芝麻酱。',
     calories: '480',
     date: '今天',
@@ -50,7 +49,7 @@ const MOCK_USER_LOG: FoodLogEntry[] = [
     carbs: '45g',
     fat: '18g',
     breakdown: [
-      { name: '烤鸡肉', portion: '150g', energy: '248 kcal' },
+      { name: '烤鸡胸', portion: '150g', energy: '248 kcal' },
       { name: '藜麦', portion: '1 杯', energy: '222 kcal' },
       { name: '羽衣甘蓝 & 芝麻酱', portion: '1.5 杯', energy: '10 kcal' }
     ]
@@ -122,9 +121,9 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col overflow-hidden bg-[#FFFDF5]">
-      <Header 
-        currentView={currentView} 
-        onViewChange={setCurrentView} 
+      <Header
+        currentView={currentView}
+        onViewChange={setCurrentView}
         isLoggedIn={isLoggedIn}
         onLogin={handleLogin}
         onLogout={handleLogout}
