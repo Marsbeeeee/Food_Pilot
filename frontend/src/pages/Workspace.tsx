@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChatSession, Message, IngredientResult } from '../types';
+import { ChatSession, Message, IngredientResult } from '../main';
 import { GoogleGenAI, Type } from "@google/genai";
 
 interface WorkspaceProps {

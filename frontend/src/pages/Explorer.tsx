@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { FoodLogEntry } from '../types';
+import { FoodLogEntry } from '../main';
 
 interface ExplorerProps {
   logEntries: FoodLogEntry[];

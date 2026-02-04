@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Logo } from './Logo';
-import { AppView } from '../types';
+import { AppView } from '../main';
 
 interface HeaderProps {
   currentView: AppView;
