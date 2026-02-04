@@ -48,6 +48,7 @@ const MOCK_USER_LOG: FoodLogEntry[] = [
     protein: '32g',
     carbs: '45g',
     fat: '18g',
+    sessionId: '8291',
     breakdown: [
       { name: '烤鸡胸', portion: '150g', energy: '248 kcal' },
       { name: '藜麦', portion: '1 杯', energy: '222 kcal' },
@@ -90,6 +91,7 @@ const App: React.FC = () => {
   const [sessions, setSessions] = useState<ChatSession[]>(MOCK_USER_SESSIONS);
   const [foodLog, setFoodLog] = useState<FoodLogEntry[]>(MOCK_USER_LOG);
   const [profile, setProfile] = useState<UserProfile>(USER_PROFILE);
+  const [activeSessionId, setActiveSessionId] = useState<string>(MOCK_USER_SESSIONS[0]?.id || '');
 
   const handleLogout = () => {
     setIsLoggedIn(false);
@@ -97,6 +99,7 @@ const App: React.FC = () => {
     setFoodLog([]);
     setProfile(DEFAULT_PROFILE);
     setCurrentView(AppView.WORKSPACE);
+    setActiveSessionId('');
   };
 
   const handleLogin = () => {
@@ -104,18 +107,43 @@ const App: React.FC = () => {
     setSessions(MOCK_USER_SESSIONS);
     setFoodLog(MOCK_USER_LOG);
     setProfile(USER_PROFILE);
+    setActiveSessionId(MOCK_USER_SESSIONS[0]?.id || '');
+  };
+
+  const handleNavigateToSession = (sessionId: string) => {
+    setActiveSessionId(sessionId);
+    setCurrentView(AppView.WORKSPACE);
   };
 
   const renderView = () => {
     switch (currentView) {
       case AppView.WORKSPACE:
-        return <Workspace sessions={sessions} setSessions={setSessions} />;
+        return (
+          <Workspace 
+            sessions={sessions} 
+            setSessions={setSessions} 
+            activeSessionId={activeSessionId}
+            setActiveSessionId={setActiveSessionId}
+          />
+        );
       case AppView.EXPLORER:
-        return <Explorer logEntries={foodLog} />;
+        return (
+          <Explorer 
+            logEntries={foodLog} 
+            onNavigateToSession={handleNavigateToSession}
+          />
+        );
       case AppView.PROFILE:
         return <Profile profile={profile} setProfile={setProfile} />;
       default:
-        return <Workspace sessions={sessions} setSessions={setSessions} />;
+        return (
+          <Workspace 
+            sessions={sessions} 
+            setSessions={setSessions} 
+            activeSessionId={activeSessionId}
+            setActiveSessionId={setActiveSessionId}
+          />
+        );
     }
   };
 

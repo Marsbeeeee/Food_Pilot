@@ -1,15 +1,17 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChatSession, Message, IngredientResult } from '../main';
+import { ChatSession, Message, IngredientResult } from '../types/types';
 import { GoogleGenAI, Type } from "@google/genai";
 
 interface WorkspaceProps {
   sessions: ChatSession[];
   setSessions: React.Dispatch<React.SetStateAction<ChatSession[]>>;
+  activeSessionId: string;
+  setActiveSessionId: (id: string) => void;
 }
 
-export const Workspace: React.FC<WorkspaceProps> = ({ sessions, setSessions }) => {
-  const [activeSessionId, setActiveSessionId] = useState<string>('');
+export const Workspace: React.FC<WorkspaceProps> = ({ sessions, setSessions, activeSessionId, setActiveSessionId }) => {
+  const [activeSessionIdState, setActiveSessionIdState] = useState<string>(activeSessionId);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);

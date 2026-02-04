@@ -57,4 +57,5 @@ export interface FoodLogEntry {
   protein: string;
   carbs: string;
   fat: string;
+  sessionId?: string;
 }

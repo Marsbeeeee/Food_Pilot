@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { FoodLogEntry } from '../main';
+import { FoodLogEntry } from '../types/types';
 
 interface ExplorerProps {
   logEntries: FoodLogEntry[];
+  onNavigateToSession: (sessionId: string) => void;
 }
 
-export const Explorer: React.FC<ExplorerProps> = ({ logEntries }) => {
-  const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(logEntries.length > 0 ? logEntries[0] : null);
+export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSession }) => {
+    const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(logEntries.length > 0 ? logEntries[0] : null);
 
   useEffect(() => {
     if (logEntries.length > 0) {
@@ -144,8 +145,16 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries }) => {
             </div>
           </div>
           <div className="p-8 bg-white border-t border-[#4A453E]/05 flex flex-col gap-3">
-            <button className="w-full h-14 rounded-full bg-[#FF8A65] text-white font-bold text-sm shadow-lg shadow-[#FF8A65]/20 hover:bg-[#FF8A65]/90 transition-all flex items-center justify-center gap-2">
-              <span className="material-symbols-outlined text-lg">forum</span> 前往对应对话
+            <button 
+              onClick={() => selectedEntry.sessionId && onNavigateToSession(selectedEntry.sessionId)}
+              disabled={!selectedEntry.sessionId}
+              className={`w-full h-14 rounded-full text-white font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2 ${
+                selectedEntry.sessionId 
+                ? 'bg-[#FF8A65] shadow-[#FF8A65]/20 hover:bg-[#FF8A65]/90' 
+                : 'bg-[#4A453E]/20 cursor-not-allowed shadow-none'
+              }`}
+            >              
+            <span className="material-symbols-outlined text-lg">forum</span> 前往对应对话
             </button>
           </div>
         </aside>
