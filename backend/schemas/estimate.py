@@ -20,9 +20,19 @@ class EstimateRequest(BaseModel):
 
 
 class EstimateItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str
     portion: str
     energy: str
+
+    @field_validator("name", "portion", "energy")
+    @classmethod
+    def validate_text_field(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Item fields cannot be empty")
+        return normalized
 
 
 class EstimateResult(BaseModel):
