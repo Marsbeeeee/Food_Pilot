@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserProfile } from '../main';
+import { UserProfile } from '../types/types';
 
 interface ProfileProps {
   profile: UserProfile;

@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChatSession, Message, IngredientResult } from '../types/types';
-import { GoogleGenAI, Type } from "@google/genai";
+import { ChatSession, EstimateApiResponse, Message } from '../types/types';
 
 interface WorkspaceProps {
   sessions: ChatSession[];
@@ -9,6 +8,8 @@ interface WorkspaceProps {
   activeSessionId: string;
   setActiveSessionId: (id: string) => void;
 }
+
+const ESTIMATE_ENDPOINT = 'http://localhost:8000/estimate';
 
 export const Workspace: React.FC<WorkspaceProps> = ({ sessions, setSessions, activeSessionId, setActiveSessionId }) => {
   const [activeSessionIdState, setActiveSessionIdState] = useState<string>(activeSessionId);
@@ -63,64 +64,45 @@ export const Workspace: React.FC<WorkspaceProps> = ({ sessions, setSessions, act
   const performAnalysis = async (query: string, sessionId: string) => {
     setIsTyping(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: query,
-        config: {
-          systemInstruction: "你叫 Food Pilot，是一个友好且专业的营养指导助手。你的目标是提供清晰、鼓励性的热量估算。请务必细分食材，并提供针对健康或替代选择的后续建议。所有回复必须使用中文。",
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING },
-              description: { type: Type.STRING },
-              confidence: { type: Type.STRING, description: "例如：高准确度" },
-              items: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    name: { type: Type.STRING },
-                    portion: { type: Type.STRING },
-                    energy: { type: Type.STRING }
-                  },
-                  required: ["name", "portion", "energy"]
-                }
-              },
-              totalCalories: { type: Type.STRING },
-              suggestion: { type: Type.STRING, description: "友好的后续建议或问题" }
-            },
-            required: ["title", "description", "confidence", "items", "totalCalories", "suggestion"]
-          }
-        }
+      const response = await fetch(ESTIMATE_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ query })
       });
+      const payload: EstimateApiResponse = await response.json();
 
-      const data = JSON.parse(response.text || "{}");
-      
+      if (!response.ok || !payload.success || !payload.data) {
+        throw new Error(payload.error?.message || 'Estimate service is temporarily unavailable.');
+      }
+
       const assistantMessage: Message = {
         role: 'assistant',
         isResult: true,
-        title: data.title,
-        confidence: data.confidence,
-        description: data.description,
-        items: data.items,
-        total: data.totalCalories,
-        content: data.suggestion,
+        title: payload.data.title,
+        confidence: payload.data.confidence,
+        description: payload.data.description,
+        items: payload.data.items,
+        total: payload.data.totalCalories,
+        content: payload.data.suggestion,
         time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
       };
 
-      setSessions(prev => prev.map(s => 
+      setSessions(prev => prev.map(s =>
         s.id === sessionId ? { ...s, messages: [...s.messages, assistantMessage] } : s
       ));
     } catch (error) {
       console.error("Analysis Error:", error);
+      const fallbackMessage = error instanceof Error
+        ? error.message
+        : 'Unable to process this meal description right now. Please try again.';
       const errorMessage: Message = {
         role: 'assistant',
-        content: "抱歉，我现在无法处理该请求。能请你再次描述一下这顿餐食吗？",
+        content: fallbackMessage,
         time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
       };
-      setSessions(prev => prev.map(s => 
+      setSessions(prev => prev.map(s =>
         s.id === sessionId ? { ...s, messages: [...s.messages, errorMessage] } : s
       ));
     } finally {

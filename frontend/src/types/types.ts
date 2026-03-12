@@ -11,6 +11,33 @@ export interface IngredientResult {
   energy: string;
 }
 
+export interface EstimateResult {
+  title: string;
+  description: string;
+  confidence: string;
+  items: IngredientResult[];
+  totalCalories: string;
+  suggestion: string;
+}
+
+export interface ApiErrorField {
+  field: string;
+  message: string;
+}
+
+export interface ApiError {
+  code: string;
+  message: string;
+  fields?: ApiErrorField[];
+  retryable: boolean;
+}
+
+export interface EstimateApiResponse {
+  success: boolean;
+  data: EstimateResult | null;
+  error: ApiError | null;
+}
+
 export interface UserProfile {
   age: string;
   height: string;
