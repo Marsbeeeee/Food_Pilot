@@ -84,7 +84,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ sessions, setSessions, act
         confidence: payload.data.confidence,
         description: payload.data.description,
         items: payload.data.items,
-        total: payload.data.totalCalories,
+        total: payload.data.total_calories,
         content: payload.data.suggestion,
         time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
       };

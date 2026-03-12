@@ -16,7 +16,7 @@ export interface EstimateResult {
   description: string;
   confidence: string;
   items: IngredientResult[];
-  totalCalories: string;
+  total_calories: string;
   suggestion: string;
 }
 
