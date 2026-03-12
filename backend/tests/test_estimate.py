@@ -54,8 +54,10 @@ class EstimateTests(unittest.TestCase):
         self.assertFalse(payload["success"])
         self.assertIsNone(payload["data"])
         self.assertEqual(payload["error"]["code"], "VALIDATION_ERROR")
+        self.assertEqual(payload["error"]["message"], "请求参数校验失败。")
         self.assertFalse(payload["error"]["retryable"])
         self.assertEqual(payload["error"]["fields"][0]["field"], "query")
+        self.assertEqual(payload["error"]["fields"][0]["message"], "输入内容不能为空")
 
     def test_ai_error_returns_fallback_structure(self) -> None:
         request_model = EstimateRequest(query="蛋炒饭")

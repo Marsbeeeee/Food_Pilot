@@ -11,11 +11,11 @@ class EstimateRequest(BaseModel):
     def validate_query(cls, value: str) -> str:
         normalized = value.strip()
         if not normalized:
-            raise ValueError("Query cannot be empty")
+            raise ValueError("\u8f93\u5165\u5185\u5bb9\u4e0d\u80fd\u4e3a\u7a7a")
         if len(normalized) < 2:
-            raise ValueError("Query must be at least 2 characters")
+            raise ValueError("\u8bf7\u81f3\u5c11\u8f93\u5165 2 \u4e2a\u5b57\u7b26")
         if len(normalized) > 500:
-            raise ValueError("Query must be 500 characters or fewer")
+            raise ValueError("\u8f93\u5165\u5185\u5bb9\u4e0d\u80fd\u8d85\u8fc7 500 \u4e2a\u5b57\u7b26")
         return normalized
 
 
@@ -31,7 +31,7 @@ class EstimateItem(BaseModel):
     def validate_text_field(cls, value: str) -> str:
         normalized = value.strip()
         if not normalized:
-            raise ValueError("Item fields cannot be empty")
+            raise ValueError("\u5b57\u6bb5\u4e0d\u80fd\u4e3a\u7a7a")
         return normalized
 
 

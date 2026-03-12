@@ -51,7 +51,7 @@ def create_estimate_validation_error_response(errors: list[dict]) -> JSONRespons
         data=None,
         error=EstimateError(
             code="VALIDATION_ERROR",
-            message="Request validation failed.",
+            message="\u8bf7\u6c42\u53c2\u6570\u6821\u9a8c\u5931\u8d25\u3002",
             fields=fields,
             retryable=False,
         ),
@@ -67,13 +67,13 @@ def _format_field_name(location: tuple[object, ...]) -> str:
 def _format_validation_message(error: dict) -> str:
     error_type = error.get("type")
     if error_type == "missing":
-        return "Missing required field"
+        return "\u7f3a\u5c11\u5fc5\u586b\u5b57\u6bb5"
     if error_type == "extra_forbidden":
-        return "Unexpected field"
+        return "\u5305\u542b\u672a\u5b9a\u4e49\u5b57\u6bb5"
     if error_type == "string_type":
-        return "Field must be a string"
+        return "\u5b57\u6bb5\u5fc5\u987b\u4e3a\u5b57\u7b26\u4e32"
 
-    message = str(error.get("msg", "Invalid input"))
+    message = str(error.get("msg", "\u8f93\u5165\u4e0d\u5408\u6cd5"))
     prefix = "Value error, "
     if message.startswith(prefix):
         return message[len(prefix):]
