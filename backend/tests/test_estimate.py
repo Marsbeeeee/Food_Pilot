@@ -32,8 +32,9 @@ class EstimateTests(unittest.TestCase):
             "backend.services.estimate_service.estimate_meal",
             return_value=estimate_result,
         ):
-            response = create_estimate_response(request_model)
+            status_code, response = create_estimate_response(request_model)
 
+        self.assertEqual(status_code, 200)
         self.assertTrue(response.success)
         self.assertIsNone(response.error)
         self.assertIsNotNone(response.data)
@@ -66,8 +67,9 @@ class EstimateTests(unittest.TestCase):
                 retryable=True,
             ),
         ):
-            response = create_estimate_response(request_model)
+            status_code, response = create_estimate_response(request_model)
 
+        self.assertEqual(status_code, 503)
         self.assertFalse(response.success)
         self.assertIsNone(response.data)
         self.assertIsNotNone(response.error)

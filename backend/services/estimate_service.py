@@ -9,11 +9,13 @@ from backend.schemas.estimate import (
 from backend.services.estimate import EstimateServiceError, estimate_meal
 
 
-def create_estimate_response(request_model: EstimateRequest) -> EstimateResponse:
+def create_estimate_response(
+    request_model: EstimateRequest,
+) -> tuple[int, EstimateResponse]:
     try:
         result = estimate_meal(request_model.query)
     except EstimateServiceError as exc:
-        return EstimateResponse(
+        return exc.status_code, EstimateResponse(
             success=False,
             data=None,
             error=EstimateError(
@@ -23,7 +25,7 @@ def create_estimate_response(request_model: EstimateRequest) -> EstimateResponse
             ),
         )
     except Exception:
-        return EstimateResponse(
+        return 500, EstimateResponse(
             success=False,
             data=None,
             error=EstimateError(
@@ -33,7 +35,7 @@ def create_estimate_response(request_model: EstimateRequest) -> EstimateResponse
             ),
         )
 
-    return EstimateResponse(success=True, data=result, error=None)
+    return 200, EstimateResponse(success=True, data=result, error=None)
 
 
 def create_estimate_validation_error_response(errors: list[dict]) -> JSONResponse:
