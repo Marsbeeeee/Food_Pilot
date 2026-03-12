@@ -1,19 +1,9 @@
 import json
-import os
-from pathlib import Path
 from typing import Any
 from urllib import error, parse, request
 
+from backend.config.estimate import get_estimate_ai_config
 from backend.schemas.estimate import EstimateItem, EstimateResult
-
-
-SYSTEM_INSTRUCTION = """
-You are Food Pilot, a friendly and professional nutrition assistant.
-Reply in Simplified Chinese.
-Estimate calories conservatively, break down the meal into ingredients,
-and provide a short practical suggestion.
-Return only JSON that matches the requested schema.
-""".strip()
 
 RESPONSE_SCHEMA = {
     "type": "OBJECT",
@@ -89,19 +79,18 @@ def estimate_meal(query: str) -> EstimateResult:
 
 
 def _call_gemini_api(query: str) -> dict[str, Any]:
-    api_key = _get_api_key()
-    if not api_key:
+    config = get_estimate_ai_config()
+    if not config.api_key:
         raise ProviderUnavailableError("AI provider is not configured. Set GEMINI_API_KEY.", retryable=False)
 
-    model_name = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
     endpoint = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{model_name}:generateContent?key={parse.quote(api_key)}"
+        f"{config.model}:generateContent?key={parse.quote(config.api_key)}"
     )
 
     payload = {
         "system_instruction": {
-            "parts": [{"text": SYSTEM_INSTRUCTION}],
+            "parts": [{"text": config.system_prompt}],
         },
         "contents": [
             {
@@ -123,7 +112,7 @@ def _call_gemini_api(query: str) -> dict[str, Any]:
     )
 
     try:
-        with request.urlopen(req, timeout=20) as response:
+        with request.urlopen(req, timeout=config.timeout_seconds) as response:
             response_data = json.load(response)
     except error.HTTPError as exc:
         exc.read()
@@ -211,41 +200,3 @@ def _coerce_text(value: Any) -> str:
     if value is None:
         return ""
     return str(value).strip()
-
-
-def _get_api_key() -> str:
-    env_key = os.getenv("GEMINI_API_KEY") or os.getenv("API_KEY")
-    if env_key:
-        return env_key
-
-    project_root = Path(__file__).resolve().parents[2]
-    candidate_files = [
-        project_root / ".env",
-        project_root / ".env.local",
-        project_root / "frontend" / ".env.local",
-    ]
-
-    for env_file in candidate_files:
-        loaded = _read_env_file(env_file, "GEMINI_API_KEY") or _read_env_file(env_file, "API_KEY")
-        if loaded:
-            return loaded
-
-    return ""
-
-
-def _read_env_file(path: Path, key: str) -> str:
-    if not path.exists():
-        return ""
-
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-
-        current_key, current_value = line.split("=", 1)
-        if current_key.strip() != key:
-            continue
-
-        return current_value.strip().strip("'\"")
-
-    return ""
