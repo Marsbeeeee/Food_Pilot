@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from backend.routers.health import router as health_router
 from fastapi.middleware.cors import CORSMiddleware
+from backend.database.init_db import init_db
 from backend.routers.profile import router as profile_router
 
 app = FastAPI()
+init_db()
 
 app.add_middleware(
     CORSMiddleware,
