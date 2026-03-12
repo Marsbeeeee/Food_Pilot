@@ -8,7 +8,7 @@ from backend.schemas.estimate import (
     EstimateRequest,
     EstimateResponse,
 )
-from backend.services.estimate import EstimateServiceError, estimate_meal
+from backend.services.estimate_service import EstimateServiceError, estimate_meal
 
 
 router = APIRouter(prefix="/estimate", tags=["estimate"])
