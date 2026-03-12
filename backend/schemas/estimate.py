@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class EstimateRequest(BaseModel):
@@ -26,11 +26,17 @@ class EstimateItem(BaseModel):
 
 
 class EstimateResult(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     title: str
     description: str
     confidence: str
     items: list[EstimateItem]
-    totalCalories: str
+    total_calories: str = Field(
+        alias="totalCalories",
+        serialization_alias="total_calories",
+        validation_alias=AliasChoices("total_calories", "totalCalories", "total"),
+    )
     suggestion: str
 
 
