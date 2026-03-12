@@ -4,37 +4,10 @@ from urllib import error, parse, request
 
 from backend.config.estimate import get_estimate_ai_config
 from backend.schemas.estimate import EstimateItem, EstimateResult
-
-RESPONSE_SCHEMA = {
-    "type": "OBJECT",
-    "properties": {
-        "title": {"type": "STRING"},
-        "description": {"type": "STRING"},
-        "confidence": {"type": "STRING"},
-        "items": {
-            "type": "ARRAY",
-            "items": {
-                "type": "OBJECT",
-                "properties": {
-                    "name": {"type": "STRING"},
-                    "portion": {"type": "STRING"},
-                    "energy": {"type": "STRING"},
-                },
-                "required": ["name", "portion", "energy"],
-            },
-        },
-        "totalCalories": {"type": "STRING"},
-        "suggestion": {"type": "STRING"},
-    },
-    "required": [
-        "title",
-        "description",
-        "confidence",
-        "items",
-        "totalCalories",
-        "suggestion",
-    ],
-}
+from backend.services.estimate_contract import (
+    ESTIMATE_RESPONSE_INSTRUCTION,
+    ESTIMATE_RESPONSE_SCHEMA,
+)
 
 
 class EstimateServiceError(Exception):
@@ -90,7 +63,14 @@ def _call_gemini_api(query: str) -> dict[str, Any]:
 
     payload = {
         "system_instruction": {
-            "parts": [{"text": config.system_prompt}],
+            "parts": [
+                {
+                    "text": (
+                        f"{config.system_prompt}\n\n"
+                        f"{ESTIMATE_RESPONSE_INSTRUCTION}"
+                    )
+                }
+            ],
         },
         "contents": [
             {
@@ -100,7 +80,7 @@ def _call_gemini_api(query: str) -> dict[str, Any]:
         ],
         "generationConfig": {
             "responseMimeType": "application/json",
-            "responseSchema": RESPONSE_SCHEMA,
+            "responseSchema": ESTIMATE_RESPONSE_SCHEMA,
         },
     }
     body = json.dumps(payload).encode("utf-8")
