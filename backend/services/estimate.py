@@ -3,11 +3,12 @@ from typing import Any
 from urllib import error, parse, request
 
 from backend.config.estimate import get_estimate_ai_config
-from backend.schemas.estimate import EstimateItem, EstimateResult
+from backend.schemas.estimate import EstimateResult
 from backend.services.estimate_contract import (
     ESTIMATE_RESPONSE_INSTRUCTION,
     ESTIMATE_RESPONSE_SCHEMA,
 )
+from backend.services.estimate_parser import parse_estimate_payload
 
 
 class EstimateServiceError(Exception):
@@ -48,7 +49,10 @@ class InvalidAIResponseError(EstimateServiceError):
 
 def estimate_meal(query: str) -> EstimateResult:
     raw_response = _call_gemini_api(query)
-    return _normalize_estimate(raw_response)
+    try:
+        return parse_estimate_payload(raw_response)
+    except ValueError as exc:
+        raise InvalidAIResponseError(str(exc)) from exc
 
 
 def _call_gemini_api(query: str) -> dict[str, Any]:
@@ -118,65 +122,3 @@ def _call_gemini_api(query: str) -> dict[str, Any]:
     if not isinstance(parsed, dict):
         raise InvalidAIResponseError("AI provider returned JSON that is not an object")
     return parsed
-
-
-def _normalize_estimate(payload: dict[str, Any]) -> EstimateResult:
-    items = _normalize_items(payload.get("items"))
-    total_calories = _coerce_text(
-        payload.get("totalCalories")
-        or payload.get("total_calories")
-        or payload.get("total")
-    )
-
-    if not items:
-        raise InvalidAIResponseError("AI response is missing item details")
-    if not total_calories:
-        raise InvalidAIResponseError("AI response is missing totalCalories")
-
-    title = _coerce_text(payload.get("title")) or "Meal Estimate"
-    description = (
-        _coerce_text(payload.get("description"))
-        or "Here is the estimated calorie breakdown based on your description."
-    )
-    confidence = _coerce_text(payload.get("confidence")) or "Medium"
-    suggestion = (
-        _coerce_text(payload.get("suggestion"))
-        or "Add portions, cooking methods, or ingredients for a more accurate estimate."
-    )
-
-    return EstimateResult(
-        title=title,
-        description=description,
-        confidence=confidence,
-        items=items,
-        totalCalories=total_calories,
-        suggestion=suggestion,
-    )
-
-
-def _normalize_items(raw_items: Any) -> list[EstimateItem]:
-    if not isinstance(raw_items, list):
-        return []
-
-    normalized_items: list[EstimateItem] = []
-    for raw_item in raw_items:
-        if not isinstance(raw_item, dict):
-            continue
-
-        name = _coerce_text(raw_item.get("name"))
-        portion = _coerce_text(raw_item.get("portion"))
-        energy = _coerce_text(raw_item.get("energy"))
-        if not name or not portion or not energy:
-            continue
-
-        normalized_items.append(
-            EstimateItem(name=name, portion=portion, energy=energy)
-        )
-
-    return normalized_items
-
-
-def _coerce_text(value: Any) -> str:
-    if value is None:
-        return ""
-    return str(value).strip()
