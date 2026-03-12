@@ -18,7 +18,7 @@ def create_estimate_response(request_model: EstimateRequest) -> EstimateResponse
             data=None,
             error=EstimateError(
                 code=exc.code,
-                message=exc.message,
+                message=exc.user_message,
                 retryable=exc.retryable,
             ),
         )
@@ -28,7 +28,7 @@ def create_estimate_response(request_model: EstimateRequest) -> EstimateResponse
             data=None,
             error=EstimateError(
                 code="INTERNAL_ERROR",
-                message="The estimate service is temporarily unavailable. Please try again later.",
+                message="估算服务暂时不可用，请稍后重试。",
                 retryable=True,
             ),
         )

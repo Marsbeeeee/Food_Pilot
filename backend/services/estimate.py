@@ -18,31 +18,57 @@ class EstimateServiceError(Exception):
         code: str,
         status_code: int,
         message: str,
+        user_message: str,
         retryable: bool,
     ) -> None:
         super().__init__(message)
         self.code = code
         self.status_code = status_code
         self.message = message
+        self.user_message = user_message
         self.retryable = retryable
 
 
-class ProviderUnavailableError(EstimateServiceError):
+class MissingAPIKeyError(EstimateServiceError):
+    def __init__(self) -> None:
+        super().__init__(
+            code="AI_CONFIG_MISSING",
+            status_code=503,
+            message="GEMINI_API_KEY is missing",
+            user_message="AI 估算服务暂未配置，请稍后再试。",
+            retryable=False,
+        )
+
+
+class UpstreamAIError(EstimateServiceError):
     def __init__(self, message: str, *, retryable: bool) -> None:
         super().__init__(
-            code="AI_PROVIDER_UNAVAILABLE",
+            code="AI_UPSTREAM_ERROR",
             status_code=503,
             message=message,
+            user_message="AI 服务暂时不可用，请稍后重试。",
             retryable=retryable,
         )
 
 
 class InvalidAIResponseError(EstimateServiceError):
-    def __init__(self, message: str = "AI returned an invalid response format") -> None:
+    def __init__(self, message: str) -> None:
         super().__init__(
             code="AI_RESPONSE_INVALID",
             status_code=502,
             message=message,
+            user_message="AI 返回结果异常，请稍后重试。",
+            retryable=True,
+        )
+
+
+class IncompleteAIResponseError(EstimateServiceError):
+    def __init__(self, message: str) -> None:
+        super().__init__(
+            code="AI_RESPONSE_INCOMPLETE",
+            status_code=502,
+            message=message,
+            user_message="AI 返回结果不完整，请稍后重试。",
             retryable=True,
         )
 
@@ -52,13 +78,18 @@ def estimate_meal(query: str) -> EstimateResult:
     try:
         return parse_estimate_payload(raw_response)
     except ValueError as exc:
+        if str(exc) in {
+            "AI response is missing item details",
+            "AI response is missing total_calories",
+        }:
+            raise IncompleteAIResponseError(str(exc)) from exc
         raise InvalidAIResponseError(str(exc)) from exc
 
 
 def _call_gemini_api(query: str) -> dict[str, Any]:
     config = get_estimate_ai_config()
     if not config.api_key:
-        raise ProviderUnavailableError("AI provider is not configured. Set GEMINI_API_KEY.", retryable=False)
+        raise MissingAPIKeyError()
 
     endpoint = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
@@ -101,13 +132,13 @@ def _call_gemini_api(query: str) -> dict[str, Any]:
     except error.HTTPError as exc:
         exc.read()
         if exc.code in {401, 403}:
-            raise ProviderUnavailableError("AI provider authentication failed. Check GEMINI_API_KEY.", retryable=False) from exc
-        raise ProviderUnavailableError(
+            raise UpstreamAIError("AI provider authentication failed.", retryable=False) from exc
+        raise UpstreamAIError(
             f"AI provider request failed ({exc.code}).",
             retryable=exc.code >= 500,
         ) from exc
     except error.URLError as exc:
-        raise ProviderUnavailableError("AI provider is temporarily unavailable. Please try again later.", retryable=True) from exc
+        raise UpstreamAIError("AI provider is temporarily unavailable.", retryable=True) from exc
 
     try:
         text = response_data["candidates"][0]["content"]["parts"][0]["text"]
