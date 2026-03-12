@@ -97,6 +97,26 @@
 
 ---
 
+## `/estimate` API
+
+后端负责统一调用 AI 进行餐食热量估算，前端不要直接调用 Gemini。
+
+### 环境变量
+
+必填：
+- `GEMINI_API_KEY`
+
+可选：
+- `GEMINI_MODEL`，默认 `gemini-3-flash-preview`
+- `GEMINI_TIMEOUT_SECONDS`，默认 `20`
+
+### 启动后端
+
+```bash
+uvicorn backend.main:app --reload
+
+---
+
 ## 🧠 设计理念
 
 * **解释优先**：让用户知道“为什么是这个数”
@@ -112,3 +132,4 @@ FoodPilot 提供的所有热量与营养信息均为**估算结果**，基于常
 
 本项目**不用于医疗诊断或营养处方**。
 如有健康或医学相关需求，请咨询专业人士。
+
