@@ -7,6 +7,7 @@ from backend.database.init_db import init_db
 from backend.routers.estimate import router as estimate_router
 from backend.routers.profile import router as profile_router
 from backend.routers.auth import router as auth_router
+from backend.routers.chat import router as chat_router
 from backend.services.estimate_service import create_estimate_validation_error_response
 
 app = FastAPI()
@@ -24,6 +25,7 @@ app.include_router(health_router)
 app.include_router(estimate_router)
 app.include_router(profile_router)
 app.include_router(auth_router)
+app.include_router(chat_router)
 
 
 @app.exception_handler(RequestValidationError)
