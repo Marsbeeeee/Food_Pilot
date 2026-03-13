@@ -8,7 +8,7 @@ from backend.services.profile_service import (
 
 router = APIRouter(prefix = "/profile", tags = ["profile"])
 
-@router.post("", response_model = ProfileOut)
+@router.post("", response_model = ProfileOut, status_code = 201)
 def create_profile(profile: ProfileIn):
     return create_profile_record(profile)
 
@@ -27,7 +27,3 @@ def update_profile(profile_id: int, profile: ProfileIn):
     if updated_profile is None:
         raise HTTPException(status_code = 404, detail = "Profile not found")
     return updated_profile
-
-@router.post("/echo")
-def echo_profile(profile: ProfileIn):
-    return profile
