@@ -3,7 +3,8 @@ from unittest.mock import patch
 
 from fastapi import HTTPException
 
-from backend.routers.auth import _get_current_user_from_header, login, register
+from backend.dependencies.auth import get_current_user
+from backend.routers.auth import login, register
 from backend.schemas.auth import LoginRequest, RegisterRequest
 from backend.schemas.user import UserOut
 from backend.services.auth_service import DuplicateEmailError, InvalidCredentialsError
@@ -45,13 +46,13 @@ class AuthRouterTests(unittest.TestCase):
 
         self.assertEqual(exc.exception.status_code, 401)
 
-    def test_get_current_user_from_header_requires_bearer_token(self) -> None:
+    def test_get_current_user_dependency_requires_bearer_token(self) -> None:
         with self.assertRaises(HTTPException) as exc:
-            _get_current_user_from_header("Basic abc")
+            get_current_user("Basic abc")
 
         self.assertEqual(exc.exception.status_code, 401)
 
-    def test_get_current_user_from_header_returns_user(self) -> None:
+    def test_get_current_user_dependency_returns_user(self) -> None:
         user = UserOut.model_validate(
             {
                 "id": 1,
@@ -62,8 +63,8 @@ class AuthRouterTests(unittest.TestCase):
             }
         )
 
-        with patch("backend.routers.auth.get_current_user_record", return_value=user):
-            current_user = _get_current_user_from_header("Bearer token-123")
+        with patch("backend.dependencies.auth.get_current_user_record", return_value=user):
+            current_user = get_current_user("Bearer token-123")
 
         self.assertEqual(current_user.id, 1)
 

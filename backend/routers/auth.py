@@ -1,33 +1,16 @@
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from backend.dependencies.auth import get_current_user
 from backend.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
 from backend.schemas.user import UserOut
-from backend.services.auth_security import TokenValidationError
 from backend.services.auth_service import (
     DuplicateEmailError,
     InvalidCredentialsError,
-    get_current_user as get_current_user_record,
     login_user,
     register_user,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-def _get_current_user_from_header(
-    authorization: str | None = Header(default=None),
-) -> UserOut:
-    if authorization is None:
-        raise HTTPException(status_code=401, detail="Authorization header is required")
-
-    scheme, _, token = authorization.partition(" ")
-    if scheme.lower() != "bearer" or not token:
-        raise HTTPException(status_code=401, detail="Invalid authorization header")
-
-    try:
-        return get_current_user_record(token)
-    except (InvalidCredentialsError, TokenValidationError) as exc:
-        raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
 
 
 @router.post("/register", response_model=AuthResponse, status_code=201)
@@ -47,5 +30,5 @@ def login(request: LoginRequest):
 
 
 @router.get("/me", response_model=UserOut)
-def get_me(user: UserOut = Depends(_get_current_user_from_header)):
+def get_me(user: UserOut = Depends(get_current_user)):
     return user
