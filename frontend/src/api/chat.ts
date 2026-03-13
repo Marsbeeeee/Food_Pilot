@@ -135,7 +135,7 @@ export function applyChatExchange(
 }
 
 export function buildFoodLogFromSessions(sessions: ChatSession[]): FoodLogEntry[] {
-  const entries: FoodLogEntry[] = [];
+  const entries: Array<{ entry: FoodLogEntry; sortKey: number }> = [];
 
   for (const session of sessions) {
     for (const message of session.messages) {
@@ -147,27 +147,28 @@ export function buildFoodLogFromSessions(sessions: ChatSession[]): FoodLogEntry[
       const timestamp = Number.isNaN(createdAt.getTime()) ? session.timestamp : createdAt;
 
       entries.push({
-        id: message.id ?? `${session.id}-${message.createdAt ?? message.time}`,
-        name: message.title,
-        description: message.description,
-        calories: message.total.replace(/\s*kcal/i, '').trim(),
-        date: timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        time: timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        image: `https://picsum.photos/seed/foodpilot-${session.id}-${message.id ?? 'result'}/640/480`,
-        breakdown: message.items.map((item) => ({ ...item })),
-        protein: '--',
-        carbs: '--',
-        fat: '--',
-        sessionId: session.id,
+        entry: {
+          id: message.id ?? `${session.id}-${message.createdAt ?? message.time}`,
+          name: message.title,
+          description: message.description,
+          calories: message.total.replace(/\s*kcal/i, '').trim(),
+          date: timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          time: timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          image: `https://picsum.photos/seed/foodpilot-${session.id}-${message.id ?? 'result'}/640/480`,
+          breakdown: message.items.map((item) => ({ ...item })),
+          protein: '--',
+          carbs: '--',
+          fat: '--',
+          sessionId: session.id,
+        },
+        sortKey: timestamp.getTime(),
       });
     }
   }
 
-  return entries.sort((left, right) => {
-    const leftValue = new Date(`${left.date} ${left.time}`).getTime();
-    const rightValue = new Date(`${right.date} ${right.time}`).getTime();
-    return rightValue - leftValue;
-  });
+  return entries
+    .sort((left, right) => right.sortKey - left.sortKey)
+    .map((item) => item.entry);
 }
 
 function mapSessionSummary(session: ChatSessionSummaryResponse): ChatSession {

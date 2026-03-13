@@ -149,11 +149,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       const renamedSession = await renameChatSession(activeSessionId, renamingTitle.trim());
       setSessions((prev) => prev.map((session) => (
         session.id === activeSessionId
-          ? {
-              ...session,
-              title: renamedSession.title,
-              timestamp: renamedSession.timestamp,
-            }
+          ? { ...session, title: renamedSession.title, timestamp: renamedSession.timestamp }
           : session
       )));
       setIsRenameModalOpen(false);
@@ -207,40 +203,42 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             className="bg-[#FF8A65] text-white rounded-[20px] flex w-full items-center justify-center gap-2 h-12 px-4 text-sm font-bold shadow-lg shadow-[#FF8A65]/10 hover:shadow-xl hover:translate-y-[-1px] transition-all active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
           >
             <span className="material-symbols-outlined text-[20px]">add_circle</span>
-            <span>寮€鍚柊瀵硅瘽</span>
+            <span>Start New Chat</span>
           </button>
 
           <div className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-2 pb-10">
             <div>
-              <h3 className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30 mb-4">鍘嗗彶璁板綍</h3>
+              <h3 className="mb-4 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">History</h3>
               <div className="flex flex-col gap-1">
                 {sessions.map((session) => {
                   const lastResult = [...session.messages].reverse().find((message) => message.isResult);
+                  const sessionStatus = isLoadingSessionId === session.id
+                    ? 'Loading...'
+                    : session.messages.length > 0
+                      ? 'Saved'
+                      : 'Empty';
+
                   return (
                     <div
                       key={session.id}
                       onClick={() => void handleSelectSession(session.id)}
-                      className={`group flex items-start gap-4 p-4 rounded-[16px] cursor-pointer transition-all border ${
+                      className={`group flex items-start gap-4 rounded-[16px] border p-4 transition-all ${
                         activeSessionId === session.id
                           ? 'bg-[#F7F3E9] border-[#4A453E]/10'
                           : 'bg-transparent border-transparent hover:bg-[#F7F3E9]/60'
                       }`}
                     >
-                      <div className={`mt-1.5 rounded-full size-2 shrink-0 ${activeSessionId === session.id ? 'bg-[#FF8A65]' : 'bg-[#4A453E]/10'}`}></div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-[13px] truncate mb-1 ${activeSessionId === session.id ? 'font-bold text-[#4A453E]' : 'font-medium text-[#4A453E]/60 group-hover:text-[#4A453E]/80'}`}>
+                      <div className={`mt-1.5 size-2 shrink-0 rounded-full ${activeSessionId === session.id ? 'bg-[#FF8A65]' : 'bg-[#4A453E]/10'}`}></div>
+                      <div className="min-w-0 flex-1">
+                        <p className={`mb-1 truncate text-[13px] ${activeSessionId === session.id ? 'font-bold text-[#4A453E]' : 'font-medium text-[#4A453E]/60 group-hover:text-[#4A453E]/80'}`}>
                           {session.title}
                         </p>
-                        <div className="flex justify-between items-center">
-                          <span className="text-[10px] text-[#4A453E]/30 font-bold uppercase tracking-wider">
-                            {isLoadingSessionId === session.id
-                              ? '鍔犺浇涓?...'
-                              : session.messages.length > 0
-                                ? '宸茶褰?'
-                                : '绌?'}
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A453E]/30">
+                            {sessionStatus}
                           </span>
                           {lastResult?.total && (
-                            <span className="text-[10px] bg-white/60 text-[#4A453E]/50 px-1.5 py-0.5 rounded border border-[#4A453E]/05 font-bold">
+                            <span className="rounded border border-[#4A453E]/5 bg-white/60 px-1.5 py-0.5 text-[10px] font-bold text-[#4A453E]/50">
                               {lastResult.total}
                             </span>
                           )}
@@ -250,7 +248,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                   );
                 })}
                 {sessions.length === 0 && (
-                  <p className="px-3 text-[11px] text-[#4A453E]/30 italic">鏆傛棤鍘嗗彶璁板綍銆?/p>
+                  <p className="px-3 text-[11px] italic text-[#4A453E]/30">No chat history yet.</p>
                 )}
               </div>
             </div>
@@ -260,37 +258,37 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
       <section className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#FFFDF5]">
         {activeSession && (
-          <div className="flex items-center justify-between px-10 py-4 border-b border-[#4A453E]/5 bg-white/40 backdrop-blur-sm z-10">
+          <div className="z-10 flex items-center justify-between border-b border-[#4A453E]/5 bg-white/40 px-10 py-4 backdrop-blur-sm">
             <div className="flex items-center gap-3">
-              <span className="text-[#4A453E]/20 material-symbols-outlined text-[20px]">auto_awesome</span>
-              <span className="text-[#4A453E] text-[13px] font-bold font-serif-brand italic tracking-wide">
+              <span className="material-symbols-outlined text-[20px] text-[#4A453E]/20">auto_awesome</span>
+              <span className="font-serif-brand text-[13px] font-bold italic tracking-wide text-[#4A453E]">
                 {activeSession.title}
               </span>
             </div>
             <div className="relative flex items-center gap-2" ref={menuRef}>
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className={`p-1 transition-colors rounded-full ${isMenuOpen ? 'text-[#FF8A65] bg-[#FF8A65]/10' : 'text-[#4A453E]/30 hover:text-[#FF8A65] hover:bg-[#FF8A65]/5'}`}
+                className={`rounded-full p-1 transition-colors ${isMenuOpen ? 'text-[#FF8A65] bg-[#FF8A65]/10' : 'text-[#4A453E]/30 hover:text-[#FF8A65] hover:bg-[#FF8A65]/5'}`}
               >
                 <span className="material-symbols-outlined text-[20px]">more_vert</span>
               </button>
 
               {isMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-[20px] shadow-xl border border-[#4A453E]/10 py-2 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-[20px] border border-[#4A453E]/10 bg-white py-2 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
                   <button
                     onClick={openRenameModal}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-[#4A453E]/70 hover:bg-[#F7F3E9] hover:text-[#4A453E] transition-colors"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-sm font-bold text-[#4A453E]/70 transition-colors hover:bg-[#F7F3E9] hover:text-[#4A453E]"
                   >
                     <span className="material-symbols-outlined text-[18px]">edit</span>
-                    閲嶅懡鍚?
+                    Rename
                   </button>
-                  <div className="h-[1px] bg-[#4A453E]/5 mx-2 my-1"></div>
+                  <div className="mx-2 my-1 h-[1px] bg-[#4A453E]/5"></div>
                   <button
                     onClick={() => void handleDeleteSession(activeSessionId)}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-400 hover:bg-red-50 transition-colors"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-sm font-bold text-red-400 transition-colors hover:bg-red-50"
                   >
                     <span className="material-symbols-outlined text-[18px]">delete</span>
-                    鍒犻櫎
+                    Delete
                   </button>
                 </div>
               )}
@@ -303,22 +301,22 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-10 overflow-y-auto px-6 py-10 scroll-smooth md:px-16"
         >
           {(!activeSession || activeSession.messages.length === 0) ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center py-20">
-              <div className="size-20 bg-white rounded-[40px] shadow-sm flex items-center justify-center mb-8 border border-[#4A453E]/05">
+            <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
+              <div className="mb-8 flex size-20 items-center justify-center rounded-[40px] border border-[#4A453E]/5 bg-white shadow-sm">
                 <span className="material-symbols-outlined text-4xl text-[#FF8A65]">restaurant</span>
               </div>
-              <h3 className="text-3xl font-serif-brand font-bold text-[#4A453E] mb-3 italic">浣犵洏瀛愰噷瑁呬簡浠€涔堬紵</h3>
-              <p className="max-w-md text-[#4A453E]/50 text-base leading-relaxed">
-                鎻忚堪浣犵殑楗锛屾垜灏嗕负浣犲垎鏋愯惀鍏绘垚鍒嗗苟浼扮畻鐑噺銆?
+              <h3 className="mb-3 font-serif-brand text-3xl font-bold italic text-[#4A453E]">What is on your plate?</h3>
+              <p className="max-w-md text-base leading-relaxed text-[#4A453E]/50">
+                Describe your meal and Food Pilot will estimate the ingredients and calories for you.
               </p>
-              <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
-                <button onClick={() => void handleSendMessage('缁忓吀鐨勭墰娌规灉鍚愬徃鍖呭惈鍝簺钀ュ吇锛?')} className="p-4 bg-white rounded-[20px] border border-[#4A453E]/05 text-left hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20 transition-all group">
-                  <p className="text-[13px] font-bold text-[#4A453E] mb-1">鏍囧噯鏌ヨ</p>
-                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">"缁忓吀鐨勭墰娌规灉鍚愬徃鍖呭惈鍝簺钀ュ吇锛?"</p>
+              <div className="mt-10 grid w-full max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">
+                <button onClick={() => void handleSendMessage('What nutrition is in a classic avocado toast?')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-4 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
+                  <p className="mb-1 text-[13px] font-bold text-[#4A453E]">Quick Question</p>
+                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">"What nutrition is in a classic avocado toast?"</p>
                 </button>
-                <button onClick={() => void handleSendMessage('涓€浠芥尝濂囬キ澶х害鏈夊灏戠儹閲忥紵')} className="p-4 bg-white rounded-[20px] border border-[#4A453E]/05 text-left hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20 transition-all group">
-                  <p className="text-[13px] font-bold text-[#4A453E] mb-1">椁愰浼扮畻</p>
-                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">"涓€浠芥尝濂囬キ澶х害鏈夊灏戠儹閲忥紵"</p>
+                <button onClick={() => void handleSendMessage('How many calories are in a bowl of poke?')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-4 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
+                  <p className="mb-1 text-[13px] font-bold text-[#4A453E]">Meal Estimate</p>
+                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">"How many calories are in a bowl of poke?"</p>
                 </button>
               </div>
             </div>
@@ -326,86 +324,86 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             activeSession.messages.map((message, index) => (
               <div key={message.id ?? index} className={`flex items-start gap-5 ${message.role === 'user' ? 'justify-end' : ''}`}>
                 {message.role === 'assistant' && (
-                  <div className="bg-white border border-[#4A453E]/10 flex items-center justify-center rounded-2xl size-10 shrink-0 shadow-sm mt-1">
-                    <span className="material-symbols-outlined text-[#FF8A65] text-[22px]">auto_awesome</span>
+                  <div className="mt-1 flex size-10 shrink-0 items-center justify-center rounded-2xl border border-[#4A453E]/10 bg-white shadow-sm">
+                    <span className="material-symbols-outlined text-[22px] text-[#FF8A65]">auto_awesome</span>
                   </div>
                 )}
 
-                <div className={`flex flex-col gap-3 ${message.role === 'user' ? 'items-end max-w-[80%]' : 'items-start max-w-[95%]'}`}>
+                <div className={`flex max-w-[95%] flex-col gap-3 ${message.role === 'user' ? 'items-end max-w-[80%]' : 'items-start'}`}>
                   {message.isResult ? (
-                    <div className="bg-white rounded-[32px] shadow-sm border border-[#4A453E]/05 w-full overflow-hidden">
-                      <div className="p-8 border-b border-[#4A453E]/5">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-2xl text-[#4A453E] font-serif-brand font-bold italic">{message.title}</h3>
-                          <span className="bg-[#81C784]/10 text-[#81C784] text-[10px] font-bold px-3 py-1.5 rounded-full uppercase border border-[#81C784]/10 tracking-widest">
+                    <div className="w-full overflow-hidden rounded-[32px] border border-[#4A453E]/5 bg-white shadow-sm">
+                      <div className="border-b border-[#4A453E]/5 p-8">
+                        <div className="mb-4 flex items-center justify-between">
+                          <h3 className="font-serif-brand text-2xl font-bold italic text-[#4A453E]">{message.title}</h3>
+                          <span className="rounded-full border border-[#81C784]/10 bg-[#81C784]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#81C784]">
                             {message.confidence}
                           </span>
                         </div>
-                        <p className="text-[16px] text-[#4A453E]/70 leading-relaxed font-medium">{message.description}</p>
+                        <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">{message.description}</p>
                       </div>
                       <div className="p-0">
                         <table className="w-full text-left">
-                          <thead className="bg-[#F7F3E9]/30 text-[#4A453E]/40 text-[10px] font-bold uppercase tracking-widest">
+                          <thead className="bg-[#F7F3E9]/30 text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/40">
                             <tr>
-                              <th className="px-8 py-4">椋熸潗</th>
-                              <th className="px-8 py-4">浠介噺</th>
-                              <th className="px-8 py-4 text-right">浼扮畻鐑噺</th>
+                              <th className="px-8 py-4">Ingredient</th>
+                              <th className="px-8 py-4">Portion</th>
+                              <th className="px-8 py-4 text-right">Estimated Energy</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-[#4A453E]/5 text-[14px]">
                             {message.items?.map((item, itemIndex) => (
-                              <tr key={itemIndex} className="hover:bg-[#F7F3E9]/10 transition-colors">
+                              <tr key={itemIndex} className="transition-colors hover:bg-[#F7F3E9]/10">
                                 <td className="px-8 py-4 font-bold text-[#4A453E]">{item.name}</td>
-                                <td className="px-8 py-4 text-[#4A453E]/50 font-medium">{item.portion}</td>
+                                <td className="px-8 py-4 font-medium text-[#4A453E]/50">{item.portion}</td>
                                 <td className="px-8 py-4 text-right font-bold text-[#4A453E]">{item.energy}</td>
                               </tr>
                             ))}
                           </tbody>
-                          <tfoot className="bg-[#FFFDF5] font-bold border-t border-[#4A453E]/10">
+                          <tfoot className="border-t border-[#4A453E]/10 bg-[#FFFDF5] font-bold">
                             <tr>
-                              <td className="px-8 py-6 text-[#4A453E] text-lg" colSpan={2}>棰勪及鎬婚噺</td>
-                              <td className="px-8 py-6 text-right text-[#FF8A65] text-3xl font-serif-brand italic">{message.total}</td>
+                              <td className="px-8 py-6 text-lg text-[#4A453E]" colSpan={2}>Estimated Total</td>
+                              <td className="px-8 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{message.total}</td>
                             </tr>
                           </tfoot>
                         </table>
                       </div>
                     </div>
                   ) : (
-                    <div className={`text-[15px] leading-relaxed rounded-[24px] px-6 py-4 shadow-sm border ${
+                    <div className={`rounded-[24px] px-6 py-4 text-[15px] leading-relaxed shadow-sm border ${
                       message.role === 'user'
                         ? 'bg-[#F7F3E9] text-[#4A453E] border-[#4A453E]/5 rounded-tr-[4px]'
-                        : 'bg-white text-[#4A453E] border-[#4A453E]/08 rounded-tl-[4px]'
+                        : 'bg-white text-[#4A453E] border-[#4A453E]/8 rounded-tl-[4px]'
                     }`}>
                       {message.content}
                     </div>
                   )}
-                  <span className="text-[#4A453E]/20 text-[9px] font-bold uppercase tracking-widest px-1">{message.time || '鍒氬垰'}</span>
+                  <span className="px-1 text-[9px] font-bold uppercase tracking-widest text-[#4A453E]/20">{message.time || 'Just now'}</span>
                 </div>
               </div>
             ))
           )}
           {isTyping && (
             <div className="flex items-start gap-5">
-              <div className="bg-white border border-[#4A453E]/10 flex items-center justify-center rounded-2xl size-10 shrink-0 shadow-sm mt-1">
-                <span className="material-symbols-outlined text-[#FF8A65] text-[22px] animate-pulse">auto_awesome</span>
+              <div className="mt-1 flex size-10 shrink-0 items-center justify-center rounded-2xl border border-[#4A453E]/10 bg-white shadow-sm">
+                <span className="material-symbols-outlined animate-pulse text-[22px] text-[#FF8A65]">auto_awesome</span>
               </div>
-              <div className="bg-white rounded-[24px] rounded-tl-[4px] px-8 py-5 shadow-sm border border-[#4A453E]/05">
+              <div className="rounded-[24px] rounded-tl-[4px] border border-[#4A453E]/5 bg-white px-8 py-5 shadow-sm">
                 <div className="flex gap-1.5">
-                  <span className="size-2 bg-[#FF8A65] rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                  <span className="size-2 bg-[#FF8A65] rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                  <span className="size-2 bg-[#FF8A65] rounded-full animate-bounce"></span>
+                  <span className="size-2 animate-bounce rounded-full bg-[#FF8A65] [animation-delay:-0.3s]"></span>
+                  <span className="size-2 animate-bounce rounded-full bg-[#FF8A65] [animation-delay:-0.15s]"></span>
+                  <span className="size-2 animate-bounce rounded-full bg-[#FF8A65]"></span>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        <div className="shrink-0 bg-gradient-to-t from-[#FFFDF5] via-[#FFFDF5] to-transparent px-10 pb-10 pt-4 z-20">
-          <div className="max-w-4xl mx-auto">
-            <div className="relative flex items-end bg-white rounded-[28px] border border-[#4A453E]/10 focus-within:border-[#FF8A65]/40 transition-all shadow-xl shadow-[#4A453E]/05 overflow-hidden">
+        <div className="z-20 shrink-0 bg-gradient-to-t from-[#FFFDF5] via-[#FFFDF5] to-transparent px-10 pb-10 pt-4">
+          <div className="mx-auto max-w-4xl">
+            <div className="relative flex items-end overflow-hidden rounded-[28px] border border-[#4A453E]/10 bg-white shadow-xl shadow-[#4A453E]/5 transition-all focus-within:border-[#FF8A65]/40">
               <textarea
-                className="flex-1 bg-transparent border-none focus:ring-0 text-[16px] py-6 pl-8 text-[#4A453E] placeholder-[#4A453E]/30 resize-none max-h-40 custom-scrollbar leading-relaxed"
-                placeholder="鍜?Food Pilot 鑱婅亰... (渚嬪锛氭垜鐨勫鍙搁噷鏈変粈涔堬紵)"
+                className="custom-scrollbar max-h-40 flex-1 resize-none bg-transparent py-6 pl-8 text-[16px] leading-relaxed text-[#4A453E] placeholder-[#4A453E]/30 focus:ring-0"
+                placeholder="Chat with Food Pilot... (e.g. What is in my sushi roll?)"
                 rows={1}
                 value={inputValue}
                 onChange={(event) => setInputValue(event.target.value)}
@@ -415,38 +413,38 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 <button
                   onClick={() => void handleSendMessage()}
                   disabled={!inputValue.trim() || isTyping}
-                  className={`size-12 rounded-[20px] flex items-center justify-center transition-all active:scale-95 ${
+                  className={`flex size-12 items-center justify-center rounded-[20px] transition-all active:scale-95 ${
                     !inputValue.trim() || isTyping
-                      ? 'bg-[#4A453E]/05 text-[#4A453E]/20 cursor-not-allowed'
-                      : 'bg-[#FF8A65] text-white hover:bg-[#FF8A65]/90 shadow-lg shadow-[#FF8A65]/20'
+                      ? 'cursor-not-allowed bg-[#4A453E]/5 text-[#4A453E]/20'
+                      : 'bg-[#FF8A65] text-white shadow-lg shadow-[#FF8A65]/20 hover:bg-[#FF8A65]/90'
                   }`}
                 >
                   <span className="material-symbols-outlined text-[24px]">arrow_upward</span>
                 </button>
               </div>
             </div>
-            <p className="text-center text-[10px] text-[#4A453E]/30 mt-4 font-bold uppercase tracking-[0.2em]">
-              浣犵殑鍧囪　楗鍔╂墜銆?
+            <p className="mt-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
+              Your everyday meal assistant.
             </p>
           </div>
         </div>
       </section>
 
       {isRenameModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm px-6">
-          <div className="bg-white rounded-[32px] p-8 w-full max-w-md shadow-2xl border border-[#4A453E]/10 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-2xl font-serif-brand font-bold text-[#4A453E] mb-6 italic">閲嶅懡鍚嶅璇?/h3>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 px-6 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[32px] border border-[#4A453E]/10 bg-white p-8 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h3 className="mb-6 font-serif-brand text-2xl font-bold italic text-[#4A453E]">Rename Chat</h3>
             <input
               type="text"
               value={renamingTitle}
               onChange={(event) => setRenamingTitle(event.target.value)}
               autoFocus
-              className="w-full bg-[#F7F3E9]/40 border border-[#4A453E]/10 rounded-[18px] px-6 py-4 font-bold text-[#4A453E] focus:ring-2 focus:ring-[#FF8A65]/20 focus:bg-white outline-none transition-all mb-8"
+              className="mb-8 w-full rounded-[18px] border border-[#4A453E]/10 bg-[#F7F3E9]/40 px-6 py-4 font-bold text-[#4A453E] outline-none transition-all focus:bg-white focus:ring-2 focus:ring-[#FF8A65]/20"
               onKeyDown={(event) => event.key === 'Enter' && void handleRenameSession()}
             />
             <div className="flex gap-3">
-              <button onClick={() => setIsRenameModalOpen(false)} className="flex-1 py-3 bg-white text-[#4A453E]/40 font-bold text-sm rounded-full border border-[#4A453E]/10 hover:bg-[#F7F3E9] transition-all">鍙栨秷</button>
-              <button onClick={() => void handleRenameSession()} className="flex-1 py-3 bg-[#FF8A65] text-white font-bold text-sm rounded-full shadow-lg shadow-[#FF8A65]/20 hover:translate-y-[-1px] transition-all">淇濆瓨</button>
+              <button onClick={() => setIsRenameModalOpen(false)} className="flex-1 rounded-full border border-[#4A453E]/10 bg-white py-3 text-sm font-bold text-[#4A453E]/40 transition-all hover:bg-[#F7F3E9]">Cancel</button>
+              <button onClick={() => void handleRenameSession()} className="flex-1 rounded-full bg-[#FF8A65] py-3 text-sm font-bold text-white shadow-lg shadow-[#FF8A65]/20 transition-all hover:translate-y-[-1px]">Save</button>
             </div>
           </div>
         </div>
