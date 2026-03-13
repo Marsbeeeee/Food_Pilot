@@ -1,17 +1,27 @@
+import React, { useEffect, useRef, useState } from 'react';
 
-import React, { useState, useEffect, useRef } from 'react';
+import { AppView, AuthScreenMode, AuthUser } from '../types/types';
 import { Logo } from './Logo';
-import { AppView } from '../types/types';
 
 interface HeaderProps {
   currentView: AppView;
   onViewChange: (view: AppView) => void;
   isLoggedIn: boolean;
-  onLogin: () => void;
+  currentUser: AuthUser | null;
+  authMode: AuthScreenMode;
+  onAuthModeChange: (mode: AuthScreenMode) => void;
   onLogout: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, isLoggedIn, onLogin, onLogout }) => {
+export const Header: React.FC<HeaderProps> = ({
+  currentView,
+  onViewChange,
+  isLoggedIn,
+  currentUser,
+  authMode,
+  onAuthModeChange,
+  onLogout,
+}) => {
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -21,98 +31,138 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, isLog
         setIsAvatarMenuOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   return (
-    <header className="flex items-center justify-between border-b border-[#4A453E]/5 px-6 py-3 bg-white/80 backdrop-blur-sm sticky top-0 z-[60] h-16">
+    <header className="sticky top-0 z-[60] flex h-16 items-center justify-between border-b border-[#4A453E]/5 bg-white/80 px-6 py-3 backdrop-blur-sm">
       <Logo />
-      
+
       <div className="flex items-center gap-8">
-        <nav className="flex items-center gap-6 hidden md:flex">
-          <button 
+        <nav className="hidden items-center gap-6 md:flex">
+          <button
             onClick={() => onViewChange(AppView.WORKSPACE)}
-            className={`text-sm font-semibold relative py-1 transition-colors ${
-              currentView === AppView.WORKSPACE ? 'text-[#FF8A65] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#FF8A65]' : 'text-[#4A453E]/60 hover:text-[#FF8A65]'
+            className={`relative py-1 text-sm font-semibold transition-colors ${
+              currentView === AppView.WORKSPACE
+                ? 'text-[#FF8A65] after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:bg-[#FF8A65]'
+                : 'text-[#4A453E]/60 hover:text-[#FF8A65]'
             }`}
           >
-            咨询 FoodPilot
+            Ask FoodPilot
           </button>
-          <button 
+          <button
             onClick={() => onViewChange(AppView.EXPLORER)}
-            className={`text-sm font-semibold relative py-1 transition-colors ${
-              currentView === AppView.EXPLORER ? 'text-[#FF8A65] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#FF8A65]' : 'text-[#4A453E]/60 hover:text-[#FF8A65]'
+            className={`relative py-1 text-sm font-semibold transition-colors ${
+              currentView === AppView.EXPLORER
+                ? 'text-[#FF8A65] after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:bg-[#FF8A65]'
+                : 'text-[#4A453E]/60 hover:text-[#FF8A65]'
             }`}
           >
-            我的饮食日志
+            My Food Log
           </button>
-          <button 
+          <button
             onClick={() => onViewChange(AppView.PROFILE)}
-            className={`text-sm font-semibold relative py-1 transition-colors ${
-              currentView === AppView.PROFILE ? 'text-[#FF8A65] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#FF8A65]' : 'text-[#4A453E]/60 hover:text-[#FF8A65]'
+            className={`relative py-1 text-sm font-semibold transition-colors ${
+              currentView === AppView.PROFILE
+                ? 'text-[#FF8A65] after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:bg-[#FF8A65]'
+                : 'text-[#4A453E]/60 hover:text-[#FF8A65]'
             }`}
           >
-            个人档案
+            Profile
           </button>
         </nav>
 
-        <div className="flex items-center gap-4 relative" ref={menuRef}>
+        <div className="relative flex items-center gap-4" ref={menuRef}>
           {isLoggedIn ? (
             <>
-              <div className="flex items-center bg-[#F7F3E9] rounded-full px-3 py-1 gap-2 border border-[#4A453E]/5">
-                <span className="flex h-2 w-2 rounded-full bg-[#81C784] animate-pulse"></span>
-                <span className="text-[10px] font-bold uppercase text-[#4A453E]/70 tracking-widest">在线</span>
+              <div className="flex items-center gap-2 rounded-full border border-[#4A453E]/5 bg-[#F7F3E9] px-3 py-1">
+                <span className="flex h-2 w-2 rounded-full bg-[#81C784] animate-pulse" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/70">
+                  Signed in
+                </span>
               </div>
-              
-              <button 
-                onClick={() => setIsAvatarMenuOpen(!isAvatarMenuOpen)}
-                className={`bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 border transition-all ${
-                  isAvatarMenuOpen ? 'ring-2 ring-[#FF8A65] ring-offset-2 border-transparent' : 'border-[#4A453E]/10 shadow-sm hover:border-[#FF8A65]/50'
+
+              <button
+                onClick={() => setIsAvatarMenuOpen((prev) => !prev)}
+                className={`flex size-9 items-center justify-center rounded-full border text-sm font-black uppercase transition-all ${
+                  isAvatarMenuOpen
+                    ? 'border-transparent bg-[#FF8A65] text-white ring-2 ring-[#FF8A65] ring-offset-2'
+                    : 'border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E] shadow-sm hover:border-[#FF8A65]/50'
                 }`}
-                style={{ backgroundImage: 'url("https://picsum.photos/seed/user123/100/100")' }}
-              ></button>
+              >
+                {getUserInitial(currentUser)}
+              </button>
 
               {isAvatarMenuOpen && (
-                <div className="absolute right-0 top-full mt-3 w-52 bg-white rounded-[24px] shadow-2xl border border-[#4A453E]/10 py-2 z-[70] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="px-4 py-3 border-b border-[#4A453E]/05 mb-1">
-                    <p className="text-[11px] font-bold text-[#4A453E]/30 uppercase tracking-widest mb-0.5">登录身份</p>
-                    <p className="text-sm font-bold text-[#4A453E] truncate">alex_pilot@example.com</p>
+                <div className="absolute right-0 top-full z-[70] mt-3 w-60 overflow-hidden rounded-[24px] border border-[#4A453E]/10 bg-white py-2 shadow-2xl">
+                  <div className="mb-1 border-b border-[#4A453E]/5 px-4 py-3">
+                    <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-[#4A453E]/30">
+                      Current account
+                    </p>
+                    <p className="truncate text-sm font-bold text-[#4A453E]">
+                      {currentUser?.displayName ?? 'Unknown user'}
+                    </p>
+                    <p className="truncate text-xs font-medium text-[#4A453E]/45">
+                      {currentUser?.email ?? 'No email'}
+                    </p>
                   </div>
-                  <button 
+                  <button
                     onClick={() => {
                       onViewChange(AppView.PROFILE);
                       setIsAvatarMenuOpen(false);
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-[#4A453E]/70 hover:bg-[#F7F3E9] hover:text-[#4A453E] transition-colors"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-sm font-bold text-[#4A453E]/70 transition-colors hover:bg-[#F7F3E9] hover:text-[#4A453E]"
                   >
                     <span className="material-symbols-outlined text-[18px]">account_circle</span>
-                    编辑头像
+                    Open profile
                   </button>
-                  <div className="h-[1px] bg-[#4A453E]/5 mx-2 my-1"></div>
-                  <button 
+                  <div className="mx-2 my-1 h-px bg-[#4A453E]/5" />
+                  <button
                     onClick={() => {
                       setIsAvatarMenuOpen(false);
                       onLogout();
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-400 hover:bg-red-50 transition-colors"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-sm font-bold text-red-400 transition-colors hover:bg-red-50"
                   >
                     <span className="material-symbols-outlined text-[18px]">logout</span>
-                    退出登录
+                    Sign out
                   </button>
                 </div>
               )}
             </>
           ) : (
-            <button 
-              onClick={onLogin}
-              className="px-6 py-2 bg-[#FF8A65] text-white rounded-full text-sm font-bold shadow-lg shadow-[#FF8A65]/20 hover:bg-[#FF8A65]/90 transition-all"
-            >
-              登录
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onAuthModeChange('login')}
+                className={`rounded-full px-4 py-2 text-sm font-bold transition-all ${
+                  authMode === 'login'
+                    ? 'bg-[#4A453E] text-white'
+                    : 'border border-[#4A453E]/10 bg-white text-[#4A453E]/60 hover:text-[#4A453E]'
+                }`}
+              >
+                Sign in
+              </button>
+              <button
+                onClick={() => onAuthModeChange('register')}
+                className={`rounded-full px-4 py-2 text-sm font-bold transition-all ${
+                  authMode === 'register'
+                    ? 'bg-[#FF8A65] text-white shadow-lg shadow-[#FF8A65]/15'
+                    : 'bg-[#FF8A65]/10 text-[#FF8A65] hover:bg-[#FF8A65]/15'
+                }`}
+              >
+                Create account
+              </button>
+            </div>
           )}
         </div>
       </div>
     </header>
   );
 };
+
+function getUserInitial(user: AuthUser | null): string {
+  const source = user?.displayName || user?.email || 'U';
+  return source.charAt(0).toUpperCase();
+}

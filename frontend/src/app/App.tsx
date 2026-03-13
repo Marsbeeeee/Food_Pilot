@@ -1,114 +1,161 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+
+import { clearSession, restoreSession } from '../api/auth';
+import { clearStoredProfile } from '../api/profile';
 import { Header } from '../components/Header';
-import { Workspace } from '../pages/Workspace';
+import { AuthPage } from '../pages/Auth';
 import { Explorer } from '../pages/Explorer';
 import { Profile } from '../pages/Profile';
-import { AppView, ChatSession, FoodLogEntry, UserProfileForm } from '../types/types';
+import { Workspace } from '../pages/Workspace';
+import {
+  AppView,
+  AuthScreenMode,
+  AuthSession,
+  AuthStatus,
+  ChatSession,
+  FoodLogEntry,
+  UserProfileForm,
+} from '../types/types';
 
 const MOCK_USER_SESSIONS: ChatSession[] = [
   {
     id: '8291',
-    title: '地中海风格午餐',
+    title: 'Mediterranean lunch bowl',
     icon: 'restaurant',
     timestamp: new Date(),
     messages: [
       {
         role: 'user',
-        content: '请预估一份鸡肉沙拉（含牛油果和一个小苹果）的热量。',
-        time: '下午 12:45'
+        content: 'Estimate the calories in a chicken salad with half an avocado and one small apple.',
+        time: '12:45 PM',
       },
       {
         role: 'assistant',
         isResult: true,
-        title: '分析完成',
-        confidence: '高置信度',
-        description: '根据标准份量，这顿餐食是瘦肉蛋白、健康脂肪和纤维的均衡组合。',
+        title: 'Analysis complete',
+        confidence: 'High confidence',
+        description:
+          'Using standard portions, this meal is a balanced mix of lean protein, healthy fat, and fiber.',
         items: [
-          { name: '烤鸡胸肉', portion: '150g', energy: '248 kcal' },
-          { name: '新鲜混合生菜', portion: '2 杯', energy: '20 kcal' },
-          { name: '哈斯牛油果', portion: '0.5 个', energy: '160 kcal' },
-          { name: '小苹果', portion: '1 个（小）', energy: '75 kcal' }
+          { name: 'Grilled chicken breast', portion: '150g', energy: '248 kcal' },
+          { name: 'Mixed greens', portion: '2 cups', energy: '20 kcal' },
+          { name: 'Avocado', portion: '0.5 medium', energy: '160 kcal' },
+          { name: 'Apple', portion: '1 small', energy: '75 kcal' },
         ],
         total: '503 kcal',
-        time: '下午 12:46'
-      }
-    ]
-  }
+        time: '12:46 PM',
+      },
+    ],
+  },
 ];
 
 const MOCK_USER_LOG: FoodLogEntry[] = [
   {
     id: '1',
-    name: '香草鸡胸能量碗',
-    description: '烤鸡胸肉配藜麦、羽衣甘蓝和柠檬芝麻酱。',
+    name: 'Herb chicken grain bowl',
+    description: 'Grilled chicken with quinoa, kale, and a lemon sesame dressing.',
     calories: '480',
-    date: '今天',
-    time: '下午 1:15',
-    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400',
+    date: 'Today',
+    time: '1:15 PM',
+    image:
+      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400',
     protein: '32g',
     carbs: '45g',
     fat: '18g',
     sessionId: '8291',
     breakdown: [
-      { name: '烤鸡胸', portion: '150g', energy: '248 kcal' },
-      { name: '藜麦', portion: '1 杯', energy: '222 kcal' },
-      { name: '羽衣甘蓝 & 芝麻酱', portion: '1.5 杯', energy: '10 kcal' }
-    ]
-  }
+      { name: 'Grilled chicken', portion: '150g', energy: '248 kcal' },
+      { name: 'Quinoa', portion: '1 cup', energy: '222 kcal' },
+      { name: 'Kale and dressing', portion: '1.5 cups', energy: '10 kcal' },
+    ],
+  },
 ];
 
 const DEFAULT_PROFILE: UserProfileForm = {
   age: '',
   height: '',
   weight: '',
-  sex: '不愿透露',
-  activityLevel: '久坐',
-  exerciseType: '极少',
-  goal: '日常健康',
-  pace: '适中',
+  sex: 'Prefer not to say',
+  activityLevel: 'Sedentary',
+  exerciseType: 'Minimal',
+  goal: 'General health',
+  pace: 'Moderate',
   kcalTarget: '2000',
-  dietStyle: '均衡饮食',
-  allergies: []
-};
-
-const USER_PROFILE: UserProfileForm = {
-  id: 1,
-  age: '28',
-  height: '178',
-  weight: '72',
-  sex: '男',
-  activityLevel: '轻度活动',
-  exerciseType: '混合运动',
-  goal: '增肌',
-  pace: '适中',
-  kcalTarget: '2400',
-  dietStyle: '高蛋白饮食',
-  allergies: ['坚果']
+  dietStyle: 'Balanced',
+  allergies: [],
 };
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.WORKSPACE);
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
-  const [sessions, setSessions] = useState<ChatSession[]>(MOCK_USER_SESSIONS);
-  const [foodLog, setFoodLog] = useState<FoodLogEntry[]>(MOCK_USER_LOG);
-  const [profile, setProfile] = useState<UserProfileForm>(DEFAULT_PROFILE);
-  const [activeSessionId, setActiveSessionId] = useState<string>(MOCK_USER_SESSIONS[0]?.id || '');
+  const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
+  const [authMode, setAuthMode] = useState<AuthScreenMode>('login');
+  const [session, setSession] = useState<AuthSession | null>(null);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [foodLog, setFoodLog] = useState<FoodLogEntry[]>([]);
+  const [profile, setProfile] = useState<UserProfileForm>(createDefaultProfile());
+  const [activeSessionId, setActiveSessionId] = useState<string>('');
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
+  useEffect(() => {
+    let cancelled = false;
+
+    const initializeAuth = async () => {
+      setAuthStatus('loading');
+
+      try {
+        const restoredSession = await restoreSession();
+        if (cancelled) {
+          return;
+        }
+
+        if (restoredSession) {
+          applyAuthenticatedState(restoredSession);
+        } else {
+          resetUnauthenticatedState('login');
+        }
+      } catch (error) {
+        console.error('Failed to restore session:', error);
+        if (!cancelled) {
+          resetUnauthenticatedState('login');
+        }
+      }
+    };
+
+    initializeAuth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const resetUnauthenticatedState = (nextMode: AuthScreenMode) => {
+    setAuthStatus('unauthenticated');
+    setAuthMode(nextMode);
+    setSession(null);
     setSessions([]);
     setFoodLog([]);
-    setProfile(DEFAULT_PROFILE);
+    setProfile(createDefaultProfile());
     setCurrentView(AppView.WORKSPACE);
     setActiveSessionId('');
   };
 
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-    setSessions(MOCK_USER_SESSIONS);
-    setFoodLog(MOCK_USER_LOG);
-    setProfile(DEFAULT_PROFILE);
+  const applyAuthenticatedState = (nextSession: AuthSession) => {
+    setSession(nextSession);
+    setAuthStatus('authenticated');
+    setSessions(createInitialSessions());
+    setFoodLog(createInitialFoodLog());
+    setProfile(createDefaultProfile());
+    setCurrentView(AppView.WORKSPACE);
     setActiveSessionId(MOCK_USER_SESSIONS[0]?.id || '');
+  };
+
+  const handleLogout = () => {
+    clearSession();
+    clearStoredProfile();
+    resetUnauthenticatedState('login');
+  };
+
+  const handleAuthenticated = (nextSession: AuthSession) => {
+    applyAuthenticatedState(nextSession);
   };
 
   const handleNavigateToSession = (sessionId: string) => {
@@ -117,12 +164,40 @@ const App: React.FC = () => {
   };
 
   const renderView = () => {
+    if (authStatus === 'loading') {
+      return (
+        <div className="flex flex-1 items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(255,138,101,0.14),_transparent_35%),#FFFDF5]">
+          <div className="rounded-[32px] border border-[#4A453E]/8 bg-white/75 px-8 py-10 text-center shadow-[0_20px_60px_rgba(74,69,62,0.08)]">
+            <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-[#FF8A65]/10">
+              <span className="material-symbols-outlined animate-spin text-2xl text-[#FF8A65]">
+                progress_activity
+              </span>
+            </div>
+            <h2 className="font-serif-brand text-2xl font-bold text-[#4A453E]">Restoring session</h2>
+            <p className="mt-2 text-sm text-[#4A453E]/50">
+              Checking whether there is a valid FoodPilot login on this device.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (authStatus !== 'authenticated' || !session) {
+      return (
+        <AuthPage
+          mode={authMode}
+          onModeChange={setAuthMode}
+          onAuthenticated={handleAuthenticated}
+        />
+      );
+    }
+
     switch (currentView) {
       case AppView.WORKSPACE:
         return (
-          <Workspace 
-            sessions={sessions} 
-            setSessions={setSessions} 
+          <Workspace
+            sessions={sessions}
+            setSessions={setSessions}
             activeSessionId={activeSessionId}
             setActiveSessionId={setActiveSessionId}
             profileId={profile.id}
@@ -130,8 +205,8 @@ const App: React.FC = () => {
         );
       case AppView.EXPLORER:
         return (
-          <Explorer 
-            logEntries={foodLog} 
+          <Explorer
+            logEntries={foodLog}
             onNavigateToSession={handleNavigateToSession}
           />
         );
@@ -139,9 +214,9 @@ const App: React.FC = () => {
         return <Profile profile={profile} setProfile={setProfile} />;
       default:
         return (
-          <Workspace 
-            sessions={sessions} 
-            setSessions={setSessions} 
+          <Workspace
+            sessions={sessions}
+            setSessions={setSessions}
             activeSessionId={activeSessionId}
             setActiveSessionId={setActiveSessionId}
             profileId={profile.id}
@@ -151,19 +226,41 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col overflow-hidden bg-[#FFFDF5]">
+    <div className="flex min-h-screen flex-col overflow-hidden bg-[#FFFDF5]">
       <Header
         currentView={currentView}
         onViewChange={setCurrentView}
-        isLoggedIn={isLoggedIn}
-        onLogin={handleLogin}
+        isLoggedIn={authStatus === 'authenticated'}
+        currentUser={session?.user ?? null}
+        authMode={authMode}
+        onAuthModeChange={setAuthMode}
         onLogout={handleLogout}
       />
-      <main className="flex-1 flex overflow-hidden h-[calc(100vh-64px)]">
-        {renderView()}
-      </main>
+      <main className="flex h-[calc(100vh-64px)] flex-1 overflow-hidden">{renderView()}</main>
     </div>
   );
 };
+
+function createInitialSessions(): ChatSession[] {
+  return MOCK_USER_SESSIONS.map((session) => ({
+    ...session,
+    timestamp: new Date(session.timestamp),
+    messages: session.messages.map((message) => ({ ...message })),
+  }));
+}
+
+function createInitialFoodLog(): FoodLogEntry[] {
+  return MOCK_USER_LOG.map((entry) => ({
+    ...entry,
+    breakdown: entry.breakdown.map((item) => ({ ...item })),
+  }));
+}
+
+function createDefaultProfile(): UserProfileForm {
+  return {
+    ...DEFAULT_PROFILE,
+    allergies: [...DEFAULT_PROFILE.allergies],
+  };
+}
 
 export default App;

@@ -5,6 +5,24 @@ export enum AppView {
   PROFILE = 'PROFILE'
 }
 
+export type AuthScreenMode = 'login' | 'register';
+
+export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
+
+export interface AuthUser {
+  id: number;
+  email: string;
+  displayName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuthSession {
+  accessToken: string;
+  tokenType: string;
+  user: AuthUser;
+}
+
 export interface IngredientResult {
   name: string;
   portion: string;

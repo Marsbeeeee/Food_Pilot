@@ -30,6 +30,10 @@ export async function loadStoredProfile(): Promise<UserProfile | null> {
   }
 }
 
+export function clearStoredProfile(): void {
+  clearStoredProfileId();
+}
+
 export async function saveProfile(form: UserProfileForm): Promise<UserProfile> {
   const profileId = form.id ?? getStoredProfileId();
   const method = profileId ? 'PUT' : 'POST';
