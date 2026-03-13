@@ -144,6 +144,85 @@ class FoodLogServiceTests(unittest.TestCase):
         self.assertEqual(entries[0]["meal_description"], "Chicken salad")
         self.assertEqual(entries[0]["created_at"], "2026-03-13 12:00:00")
 
+    def test_init_db_adds_food_logs_table_to_existing_database_without_rebuild(self) -> None:
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("DROP TABLE food_logs")
+            cursor.execute(
+                """
+                INSERT INTO chat_sessions (user_id, title)
+                VALUES (?, ?)
+                """,
+                (self.user_id, "Legacy upgrade"),
+            )
+            session_id = cursor.lastrowid
+            cursor.execute(
+                """
+                INSERT INTO messages (
+                    session_id,
+                    user_id,
+                    role,
+                    message_type,
+                    content,
+                    result_title,
+                    result_confidence,
+                    result_description,
+                    result_items_json,
+                    result_total,
+                    created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    session_id,
+                    self.user_id,
+                    "assistant",
+                    "estimate_result",
+                    "Legacy assistant suggestion",
+                    "Legacy meal",
+                    "medium",
+                    "Legacy meal description.",
+                    '[{"name":"Rice","portion":"1 bowl","energy":"230 kcal"}]',
+                    "230 kcal",
+                    "2026-03-14 08:30:00",
+                ),
+            )
+            message_id = cursor.lastrowid
+            conn.commit()
+        finally:
+            conn.close()
+
+        init_db()
+
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table' AND name = 'food_logs'
+                """
+            )
+            table_row = cursor.fetchone()
+            cursor.execute(
+                """
+                SELECT source_message_id, result_title, total_calories
+                FROM food_logs
+                WHERE source_message_id = ?
+                """,
+                (message_id,),
+            )
+            food_log_row = cursor.fetchone()
+        finally:
+            conn.close()
+
+        self.assertIsNotNone(table_row)
+        self.assertIsNotNone(food_log_row)
+        self.assertEqual(food_log_row["source_message_id"], message_id)
+        self.assertEqual(food_log_row["result_title"], "Legacy meal")
+        self.assertEqual(food_log_row["total_calories"], "230 kcal")
+
     def test_food_logs_table_has_expected_indexes_and_foreign_keys(self) -> None:
         conn = get_db_connection()
         try:
