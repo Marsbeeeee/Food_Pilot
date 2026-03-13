@@ -53,6 +53,14 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
   const [lastSavedProfile, setLastSavedProfile] = useState<UserProfileForm>(cloneProfile(profile));
 
   useEffect(() => {
+    if (profile.id) {
+      const hydratedProfile = cloneProfile(profile);
+      setLastSavedProfile(hydratedProfile);
+      setStatus('idle');
+      setInlineError(null);
+      return;
+    }
+
     let cancelled = false;
 
     const syncProfile = async () => {
@@ -90,7 +98,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
     return () => {
       cancelled = true;
     };
-  }, [setProfile]);
+  }, [profile.id, setProfile]);
 
   useEffect(() => {
     if (status !== 'success' && status !== 'error') {

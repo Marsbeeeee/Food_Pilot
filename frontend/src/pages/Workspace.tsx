@@ -2,11 +2,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 import { getStoredToken } from '../api/auth';
-import { ChatSession, EstimateApiResponse, Message } from '../types/types';
+import { ChatSession, EstimateApiResponse, FoodLogEntry, Message } from '../types/types';
 
 interface WorkspaceProps {
   sessions: ChatSession[];
   setSessions: React.Dispatch<React.SetStateAction<ChatSession[]>>;
+  setFoodLog: React.Dispatch<React.SetStateAction<FoodLogEntry[]>>;
   activeSessionId: string;
   setActiveSessionId: (id: string) => void;
   profileId?: number;
@@ -14,7 +15,14 @@ interface WorkspaceProps {
 
 const ESTIMATE_ENDPOINT = 'http://localhost:8000/estimate';
 
-export const Workspace: React.FC<WorkspaceProps> = ({ sessions, setSessions, activeSessionId, setActiveSessionId, profileId }) => {
+export const Workspace: React.FC<WorkspaceProps> = ({
+  sessions,
+  setSessions,
+  setFoodLog,
+  activeSessionId,
+  setActiveSessionId,
+  profileId,
+}) => {
   const [activeSessionIdState, setActiveSessionIdState] = useState<string>(activeSessionId);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -104,6 +112,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({ sessions, setSessions, act
       setSessions(prev => prev.map(s =>
         s.id === sessionId ? { ...s, messages: [...s.messages, assistantMessage] } : s
       ));
+      setFoodLog((prev) => [
+        buildFoodLogEntry(payload, sessionId),
+        ...prev,
+      ]);
     } catch (error) {
       console.error("Analysis Error:", error);
       const fallbackMessage = error instanceof Error
@@ -182,6 +194,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ sessions, setSessions, act
       }
       setSessions(remainingSessions);
     }
+    setFoodLog((prev) => prev.filter((entry) => entry.sessionId !== id));
     setIsMenuOpen(false);
   };
 
@@ -449,3 +462,26 @@ export const Workspace: React.FC<WorkspaceProps> = ({ sessions, setSessions, act
     </div>
   );
 };
+
+function buildFoodLogEntry(
+  payload: EstimateApiResponse,
+  sessionId: string,
+): FoodLogEntry {
+  const data = payload.data!;
+  const now = new Date();
+
+  return {
+    id: `${sessionId}-${now.getTime()}`,
+    name: data.title,
+    description: data.description,
+    calories: data.total_calories.replace(/\s*kcal/i, '').trim(),
+    date: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    image: `https://picsum.photos/seed/foodpilot-${sessionId}/640/480`,
+    breakdown: data.items.map((item) => ({ ...item })),
+    protein: '--',
+    carbs: '--',
+    fat: '--',
+    sessionId,
+  };
+}

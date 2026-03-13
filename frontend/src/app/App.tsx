@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 
 import { clearSession, restoreSession } from '../api/auth';
-import { clearStoredProfile } from '../api/profile';
+import { clearStoredProfile, loadStoredProfile, ProfileApiError, toProfileForm } from '../api/profile';
+import { loadUserFoodLog, loadUserSessions, saveUserFoodLog, saveUserSessions } from '../api/userData';
 import { Header } from '../components/Header';
 import { AuthPage } from '../pages/Auth';
 import { Explorer } from '../pages/Explorer';
@@ -16,60 +17,6 @@ import {
   FoodLogEntry,
   UserProfileForm,
 } from '../types/types';
-
-const MOCK_USER_SESSIONS: ChatSession[] = [
-  {
-    id: '8291',
-    title: 'Mediterranean lunch bowl',
-    icon: 'restaurant',
-    timestamp: new Date(),
-    messages: [
-      {
-        role: 'user',
-        content: 'Estimate the calories in a chicken salad with half an avocado and one small apple.',
-        time: '12:45 PM',
-      },
-      {
-        role: 'assistant',
-        isResult: true,
-        title: 'Analysis complete',
-        confidence: 'High confidence',
-        description:
-          'Using standard portions, this meal is a balanced mix of lean protein, healthy fat, and fiber.',
-        items: [
-          { name: 'Grilled chicken breast', portion: '150g', energy: '248 kcal' },
-          { name: 'Mixed greens', portion: '2 cups', energy: '20 kcal' },
-          { name: 'Avocado', portion: '0.5 medium', energy: '160 kcal' },
-          { name: 'Apple', portion: '1 small', energy: '75 kcal' },
-        ],
-        total: '503 kcal',
-        time: '12:46 PM',
-      },
-    ],
-  },
-];
-
-const MOCK_USER_LOG: FoodLogEntry[] = [
-  {
-    id: '1',
-    name: 'Herb chicken grain bowl',
-    description: 'Grilled chicken with quinoa, kale, and a lemon sesame dressing.',
-    calories: '480',
-    date: 'Today',
-    time: '1:15 PM',
-    image:
-      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400',
-    protein: '32g',
-    carbs: '45g',
-    fat: '18g',
-    sessionId: '8291',
-    breakdown: [
-      { name: 'Grilled chicken', portion: '150g', energy: '248 kcal' },
-      { name: 'Quinoa', portion: '1 cup', energy: '222 kcal' },
-      { name: 'Kale and dressing', portion: '1.5 cups', energy: '10 kcal' },
-    ],
-  },
-];
 
 const DEFAULT_PROFILE: UserProfileForm = {
   age: '',
@@ -93,6 +40,7 @@ const App: React.FC = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [foodLog, setFoodLog] = useState<FoodLogEntry[]>([]);
   const [profile, setProfile] = useState<UserProfileForm>(createDefaultProfile());
+  const [isBootstrappingData, setIsBootstrappingData] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
 
   useEffect(() => {
@@ -127,7 +75,73 @@ const App: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (authStatus !== 'authenticated' || !session) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const hydrateUserData = async () => {
+      setIsBootstrappingData(true);
+      const userId = session.user.id;
+      const storedSessions = loadUserSessions(userId);
+      const storedFoodLog = loadUserFoodLog(userId);
+
+      if (!cancelled) {
+        setSessions(storedSessions);
+        setFoodLog(storedFoodLog);
+        setActiveSessionId((currentId) =>
+          storedSessions.some((item) => item.id === currentId)
+            ? currentId
+            : storedSessions[0]?.id || '',
+        );
+      }
+
+      try {
+        const storedProfile = await loadStoredProfile();
+        if (cancelled) {
+          return;
+        }
+        setProfile(storedProfile ? toProfileForm(storedProfile) : createDefaultProfile());
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        if (!(error instanceof ProfileApiError && error.status === 404)) {
+          console.error('Failed to load profile:', error);
+        }
+        setProfile(createDefaultProfile());
+      } finally {
+        if (!cancelled) {
+          setIsBootstrappingData(false);
+        }
+      }
+    };
+
+    hydrateUserData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authStatus, session]);
+
+  useEffect(() => {
+    if (authStatus !== 'authenticated' || !session || isBootstrappingData) {
+      return;
+    }
+    saveUserSessions(session.user.id, sessions);
+  }, [authStatus, isBootstrappingData, session, sessions]);
+
+  useEffect(() => {
+    if (authStatus !== 'authenticated' || !session || isBootstrappingData) {
+      return;
+    }
+    saveUserFoodLog(session.user.id, foodLog);
+  }, [authStatus, foodLog, isBootstrappingData, session]);
+
   const resetUnauthenticatedState = (nextMode: AuthScreenMode) => {
+    setIsBootstrappingData(false);
     setAuthStatus('unauthenticated');
     setAuthMode(nextMode);
     setSession(null);
@@ -139,13 +153,14 @@ const App: React.FC = () => {
   };
 
   const applyAuthenticatedState = (nextSession: AuthSession) => {
+    setIsBootstrappingData(true);
     setSession(nextSession);
     setAuthStatus('authenticated');
-    setSessions(createInitialSessions());
-    setFoodLog(createInitialFoodLog());
+    setSessions([]);
+    setFoodLog([]);
     setProfile(createDefaultProfile());
     setCurrentView(AppView.WORKSPACE);
-    setActiveSessionId(MOCK_USER_SESSIONS[0]?.id || '');
+    setActiveSessionId('');
   };
 
   const handleLogout = () => {
@@ -164,7 +179,7 @@ const App: React.FC = () => {
   };
 
   const renderView = () => {
-    if (authStatus === 'loading') {
+    if (authStatus === 'loading' || (authStatus === 'authenticated' && isBootstrappingData)) {
       return (
         <div className="flex flex-1 items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(255,138,101,0.14),_transparent_35%),#FFFDF5]">
           <div className="rounded-[32px] border border-[#4A453E]/8 bg-white/75 px-8 py-10 text-center shadow-[0_20px_60px_rgba(74,69,62,0.08)]">
@@ -175,7 +190,9 @@ const App: React.FC = () => {
             </div>
             <h2 className="font-serif-brand text-2xl font-bold text-[#4A453E]">Restoring session</h2>
             <p className="mt-2 text-sm text-[#4A453E]/50">
-              Checking whether there is a valid FoodPilot login on this device.
+              {authStatus === 'loading'
+                ? 'Checking whether there is a valid FoodPilot login on this device.'
+                : 'Loading your profile, sessions, and food log.'}
             </p>
           </div>
         </div>
@@ -198,6 +215,7 @@ const App: React.FC = () => {
           <Workspace
             sessions={sessions}
             setSessions={setSessions}
+            setFoodLog={setFoodLog}
             activeSessionId={activeSessionId}
             setActiveSessionId={setActiveSessionId}
             profileId={profile.id}
@@ -217,6 +235,7 @@ const App: React.FC = () => {
           <Workspace
             sessions={sessions}
             setSessions={setSessions}
+            setFoodLog={setFoodLog}
             activeSessionId={activeSessionId}
             setActiveSessionId={setActiveSessionId}
             profileId={profile.id}
@@ -240,21 +259,6 @@ const App: React.FC = () => {
     </div>
   );
 };
-
-function createInitialSessions(): ChatSession[] {
-  return MOCK_USER_SESSIONS.map((session) => ({
-    ...session,
-    timestamp: new Date(session.timestamp),
-    messages: session.messages.map((message) => ({ ...message })),
-  }));
-}
-
-function createInitialFoodLog(): FoodLogEntry[] {
-  return MOCK_USER_LOG.map((entry) => ({
-    ...entry,
-    breakdown: entry.breakdown.map((item) => ({ ...item })),
-  }));
-}
 
 function createDefaultProfile(): UserProfileForm {
   return {
