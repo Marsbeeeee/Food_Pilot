@@ -91,7 +91,7 @@ const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
   const [sessions, setSessions] = useState<ChatSession[]>(MOCK_USER_SESSIONS);
   const [foodLog, setFoodLog] = useState<FoodLogEntry[]>(MOCK_USER_LOG);
-  const [profile, setProfile] = useState<UserProfileForm>(USER_PROFILE);
+  const [profile, setProfile] = useState<UserProfileForm>(DEFAULT_PROFILE);
   const [activeSessionId, setActiveSessionId] = useState<string>(MOCK_USER_SESSIONS[0]?.id || '');
 
   const handleLogout = () => {
@@ -107,7 +107,7 @@ const App: React.FC = () => {
     setIsLoggedIn(true);
     setSessions(MOCK_USER_SESSIONS);
     setFoodLog(MOCK_USER_LOG);
-    setProfile(USER_PROFILE);
+    setProfile(DEFAULT_PROFILE);
     setActiveSessionId(MOCK_USER_SESSIONS[0]?.id || '');
   };
 
