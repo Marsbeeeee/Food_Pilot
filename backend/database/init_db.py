@@ -7,6 +7,8 @@ def init_db():
 
     _ensure_users_table(cursor)
     _ensure_profiles_table(cursor)
+    _ensure_chat_sessions_table(cursor)
+    _ensure_messages_table(cursor)
 
     conn.commit()
     conn.close()
@@ -90,6 +92,117 @@ def _ensure_profiles_table(cursor) -> None:
         CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_user_id_unique
         ON profiles(user_id)
         WHERE user_id IS NOT NULL;
+        """
+    )
+
+
+def _ensure_chat_sessions_table(cursor) -> None:
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS chat_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_message_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            deleted_at TEXT,
+            CHECK (length(trim(title)) BETWEEN 1 AND 120)
+        );
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_last_message_at
+        ON chat_sessions(user_id, last_message_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS chat_sessions_set_updated_at
+        AFTER UPDATE ON chat_sessions
+        FOR EACH ROW
+        WHEN NEW.updated_at = OLD.updated_at
+        BEGIN
+            UPDATE chat_sessions
+            SET updated_at = CURRENT_TIMESTAMP
+            WHERE id = NEW.id;
+        END;
+        """
+    )
+
+
+def _ensure_messages_table(cursor) -> None:
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            role TEXT NOT NULL,
+            message_type TEXT NOT NULL,
+            content TEXT,
+            result_title TEXT,
+            result_confidence TEXT,
+            result_description TEXT,
+            result_items_json TEXT,
+            result_total TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CHECK (role IN ('user', 'assistant')),
+            CHECK (message_type IN ('text', 'estimate_result')),
+            CHECK (content IS NULL OR length(trim(content)) > 0),
+            CHECK (
+                (
+                    message_type = 'text'
+                    AND result_title IS NULL
+                    AND result_confidence IS NULL
+                    AND result_description IS NULL
+                    AND result_items_json IS NULL
+                    AND result_total IS NULL
+                    AND content IS NOT NULL
+                )
+                OR (
+                    message_type = 'estimate_result'
+                    AND role = 'assistant'
+                    AND result_title IS NOT NULL
+                    AND result_confidence IS NOT NULL
+                    AND result_description IS NOT NULL
+                    AND result_items_json IS NOT NULL
+                    AND result_total IS NOT NULL
+                    AND length(trim(result_title)) > 0
+                    AND length(trim(result_confidence)) > 0
+                    AND length(trim(result_description)) > 0
+                    AND length(trim(result_items_json)) > 0
+                    AND length(trim(result_total)) > 0
+                )
+            )
+        );
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_messages_session_id_id
+        ON messages(session_id, id ASC);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_messages_user_created_at
+        ON messages(user_id, created_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS messages_touch_chat_session_after_insert
+        AFTER INSERT ON messages
+        FOR EACH ROW
+        BEGIN
+            UPDATE chat_sessions
+            SET
+                updated_at = CURRENT_TIMESTAMP,
+                last_message_at = NEW.created_at
+            WHERE id = NEW.session_id;
+        END;
         """
     )
 
