@@ -114,6 +114,7 @@
 
 ```bash
 uvicorn backend.main:app --reload
+```
 
 ---
 
