@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import {
-  applyChatExchange,
   ChatApiError,
   createChatMessage,
   createChatSession,
@@ -11,7 +10,7 @@ import {
   renameChatSession,
   sendChatMessage,
 } from '../api/chat';
-import { ChatSession } from '../types/types';
+import { ChatSession, Message } from '../types/types';
 
 interface WorkspaceProps {
   sessions: ChatSession[];
@@ -105,27 +104,64 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       return;
     }
 
+    const previousActiveSessionId = activeSessionId;
+    const optimisticMessageId = `temp-user-${Date.now()}`;
+    const optimisticMessage = buildOptimisticUserMessage(optimisticMessageId, finalQuery);
+    const needsTemporarySession = !activeSessionId || sessions.length === 0;
+    const optimisticSessionId = needsTemporarySession ? `temp-session-${Date.now()}` : null;
+    const originalSession = !needsTemporarySession
+      ? sessions.find((session) => session.id === activeSessionId) ?? null
+      : null;
+
+    if (originalSession && !originalSession.hasLoadedMessages) {
+      await loadSessionDetail(originalSession.id);
+    }
+
+    setSessions((prev) => applyOptimisticUserMessage(
+      prev,
+      optimisticMessage,
+      finalQuery,
+      previousActiveSessionId,
+      optimisticSessionId,
+    ));
+    if (optimisticSessionId) {
+      setActiveSessionId(optimisticSessionId);
+    }
+
     setIsTyping(true);
     setInputValue('');
 
     try {
-      if (!activeSessionId || sessions.length === 0) {
+      if (needsTemporarySession) {
         const exchange = await createChatMessage(finalQuery, profileId);
-        setSessions((prev) => applyChatExchange(prev, exchange));
+        setSessions((prev) => applyResolvedExchange(
+          prev,
+          exchange,
+          optimisticMessageId,
+          optimisticSessionId,
+        ));
         setActiveSessionId(exchange.session.id);
         return;
       }
 
-      const active = sessions.find((session) => session.id === activeSessionId);
-      if (active && !active.hasLoadedMessages) {
-        await loadSessionDetail(active.id);
-      }
-
-      const exchange = await sendChatMessage(activeSessionId, finalQuery, profileId);
-      setSessions((prev) => applyChatExchange(prev, exchange));
+      const exchange = await sendChatMessage(previousActiveSessionId, finalQuery, profileId);
+      setSessions((prev) => applyResolvedExchange(
+        prev,
+        exchange,
+        optimisticMessageId,
+        null,
+      ));
       setActiveSessionId(exchange.session.id);
     } catch (error) {
       setInputValue(finalQuery);
+      setSessions((prev) => rollbackOptimisticUserMessage(
+        prev,
+        optimisticMessageId,
+        optimisticSessionId,
+        previousActiveSessionId,
+        originalSession,
+      ));
+      setActiveSessionId(previousActiveSessionId);
       handleChatError(error, 'Unable to send this message right now.');
     } finally {
       setIsTyping(false);
@@ -499,4 +535,114 @@ function handleChatError(error: unknown, fallbackMessage: string): void {
       ? error.message
       : fallbackMessage;
   window.alert(message || fallbackMessage);
+}
+
+function buildOptimisticUserMessage(id: string, content: string): Message {
+  return {
+    id,
+    role: 'user',
+    content,
+    time: formatOptimisticTime(),
+  };
+}
+
+function applyOptimisticUserMessage(
+  sessions: ChatSession[],
+  optimisticMessage: Message,
+  content: string,
+  activeSessionId: string,
+  optimisticSessionId: string | null,
+): ChatSession[] {
+  if (optimisticSessionId) {
+    return mergeSessionIntoList(sessions, {
+      id: optimisticSessionId,
+      title: buildOptimisticSessionTitle(content),
+      messages: [optimisticMessage],
+      timestamp: new Date(),
+      icon: 'chat_bubble',
+      hasLoadedMessages: true,
+    });
+  }
+
+  return sessions.map((session) => {
+    if (session.id !== activeSessionId) {
+      return session;
+    }
+
+    const shouldRenameEmptySession = session.messages.length === 0;
+    return {
+      ...session,
+      title: shouldRenameEmptySession ? buildOptimisticSessionTitle(content) : session.title,
+      timestamp: new Date(),
+      hasLoadedMessages: true,
+      messages: [...session.messages, optimisticMessage],
+    };
+  });
+}
+
+function applyResolvedExchange(
+  sessions: ChatSession[],
+  exchange: {
+    session: ChatSession;
+    userMessage: Message;
+    assistantMessage: Message;
+  },
+  optimisticMessageId: string,
+  optimisticSessionId: string | null,
+): ChatSession[] {
+  const baseSessions = sessions.filter((session) => (
+    session.id !== exchange.session.id
+    && session.id !== optimisticSessionId
+  ));
+
+  const existingSession = sessions.find((session) => session.id === exchange.session.id);
+  const existingMessages = existingSession?.messages ?? [];
+  const nextMessages = optimisticSessionId
+    ? [exchange.userMessage, exchange.assistantMessage]
+    : [
+      ...existingMessages.filter((message) => message.id !== optimisticMessageId),
+      exchange.userMessage,
+      exchange.assistantMessage,
+    ];
+
+  return mergeSessionIntoList(baseSessions, {
+    ...exchange.session,
+    messages: nextMessages,
+    hasLoadedMessages: true,
+  });
+}
+
+function rollbackOptimisticUserMessage(
+  sessions: ChatSession[],
+  optimisticMessageId: string,
+  optimisticSessionId: string | null,
+  activeSessionId: string,
+  originalSession: ChatSession | null,
+): ChatSession[] {
+  if (optimisticSessionId) {
+    return sessions.filter((session) => session.id !== optimisticSessionId);
+  }
+
+  return sessions.map((session) => {
+    if (session.id !== activeSessionId) {
+      return session;
+    }
+
+    return {
+      ...(originalSession ?? session),
+      messages: session.messages.filter((message) => message.id !== optimisticMessageId),
+    };
+  });
+}
+
+function buildOptimisticSessionTitle(content: string): string {
+  const normalized = content.trim().replace(/\s+/g, ' ');
+  return normalized.length > 120 ? `${normalized.slice(0, 117)}...` : normalized;
+}
+
+function formatOptimisticTime(): string {
+  return new Date().toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
