@@ -59,6 +59,29 @@ export async function restoreSession(): Promise<AuthSession | null> {
   }
 }
 
+export async function deleteCurrentAccount(): Promise<void> {
+  const token = getStoredToken();
+  if (!token) {
+    throw new AuthApiError('Please sign in again.', 401);
+  }
+
+  const response = await fetch(`${AUTH_BASE_URL}/me`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (response.status === 401) {
+    clearSession();
+  }
+
+  if (!response.ok) {
+    const data = await parseJson(response);
+    throw new AuthApiError(getErrorMessage(data, response.status), response.status);
+  }
+}
+
 export function persistSession(session: AuthSession): void {
   if (typeof window === 'undefined') {
     return;

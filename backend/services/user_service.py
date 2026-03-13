@@ -3,6 +3,7 @@ import sqlite3
 from backend.database.connection import get_db_connection
 from backend.repositories.user_repository import (
     create_user as create_user_record,
+    delete_user as delete_user_record,
     get_user_auth_by_email as get_user_auth_by_email_record,
     get_user_by_id as get_user_by_id_record,
 )
@@ -29,5 +30,13 @@ def get_user_auth_by_email(email: str) -> sqlite3.Row | None:
     conn = get_db_connection()
     try:
         return get_user_auth_by_email_record(conn, email)
+    finally:
+        conn.close()
+
+
+def delete_user(user_id: int) -> bool:
+    conn = get_db_connection()
+    try:
+        return delete_user_record(conn, user_id)
     finally:
         conn.close()

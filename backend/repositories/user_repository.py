@@ -70,3 +70,19 @@ def get_user_auth_by_email(
         (email,),
     )
     return cursor.fetchone()
+
+
+def delete_user(
+    conn: sqlite3.Connection,
+    user_id: int,
+) -> bool:
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        DELETE FROM users
+        WHERE id = ?
+        """,
+        (user_id,),
+    )
+    conn.commit()
+    return cursor.rowcount > 0

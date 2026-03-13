@@ -4,7 +4,7 @@ from unittest.mock import patch
 from fastapi import HTTPException
 
 from backend.dependencies.auth import get_current_user
-from backend.routers.auth import login, register
+from backend.routers.auth import delete_me, login, register
 from backend.schemas.auth import LoginRequest, RegisterRequest
 from backend.schemas.user import UserOut
 from backend.services.auth_service import DuplicateEmailError, InvalidCredentialsError
@@ -67,6 +67,23 @@ class AuthRouterTests(unittest.TestCase):
             current_user = get_current_user("Bearer token-123")
 
         self.assertEqual(current_user.id, 1)
+
+    def test_delete_me_calls_delete_current_user(self) -> None:
+        user = UserOut.model_validate(
+            {
+                "id": 1,
+                "email": "alice@example.com",
+                "display_name": "Alice",
+                "created_at": "2026-03-13 18:00:00",
+                "updated_at": "2026-03-13 18:00:00",
+            }
+        )
+
+        with patch("backend.routers.auth.delete_current_user") as delete_current_user_mock:
+            response = delete_me(user)
+
+        delete_current_user_mock.assert_called_once_with(1)
+        self.assertEqual(response.status_code, 204)
 
 
 if __name__ == "__main__":

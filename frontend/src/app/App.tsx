@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from 'react';
 
-import { clearSession, restoreSession } from '../api/auth';
+import { AuthApiError, clearSession, deleteCurrentAccount, restoreSession } from '../api/auth';
 import { clearStoredProfile, loadStoredProfile, ProfileApiError, toProfileForm } from '../api/profile';
-import { loadUserFoodLog, loadUserSessions, saveUserFoodLog, saveUserSessions } from '../api/userData';
+import {
+  clearUserFoodLog,
+  clearUserSessions,
+  loadUserFoodLog,
+  loadUserSessions,
+  saveUserFoodLog,
+  saveUserSessions,
+} from '../api/userData';
 import { Header } from '../components/Header';
 import { AuthPage } from '../pages/Auth';
 import { Explorer } from '../pages/Explorer';
@@ -41,6 +48,7 @@ const App: React.FC = () => {
   const [foodLog, setFoodLog] = useState<FoodLogEntry[]>([]);
   const [profile, setProfile] = useState<UserProfileForm>(createDefaultProfile());
   const [isBootstrappingData, setIsBootstrappingData] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
 
   useEffect(() => {
@@ -169,6 +177,40 @@ const App: React.FC = () => {
     resetUnauthenticatedState('login');
   };
 
+  const handleDeleteAccount = async () => {
+    if (!session || isDeletingAccount) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      'Delete this account permanently? Your profile and this device\'s saved chat history will be removed.',
+    );
+    if (!shouldDelete) {
+      return;
+    }
+
+    setIsDeletingAccount(true);
+
+    try {
+      await deleteCurrentAccount();
+      clearUserSessions(session.user.id);
+      clearUserFoodLog(session.user.id);
+      clearSession();
+      clearStoredProfile();
+      resetUnauthenticatedState('register');
+      window.alert('Your account has been deleted.');
+    } catch (error) {
+      const message = error instanceof AuthApiError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : 'Failed to delete this account. Please try again.';
+      window.alert(message);
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
   const handleAuthenticated = (nextSession: AuthSession) => {
     applyAuthenticatedState(nextSession);
   };
@@ -254,6 +296,8 @@ const App: React.FC = () => {
         authMode={authMode}
         onAuthModeChange={setAuthMode}
         onLogout={handleLogout}
+        onDeleteAccount={handleDeleteAccount}
+        isDeletingAccount={isDeletingAccount}
       />
       <main className="flex min-h-0 flex-1 overflow-hidden">{renderView()}</main>
     </div>

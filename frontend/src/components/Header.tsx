@@ -11,6 +11,8 @@ interface HeaderProps {
   authMode: AuthScreenMode;
   onAuthModeChange: (mode: AuthScreenMode) => void;
   onLogout: () => void;
+  onDeleteAccount: () => void;
+  isDeletingAccount: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -21,6 +23,8 @@ export const Header: React.FC<HeaderProps> = ({
   authMode,
   onAuthModeChange,
   onLogout,
+  onDeleteAccount,
+  isDeletingAccount,
 }) => {
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -128,6 +132,22 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     <span className="material-symbols-outlined text-[18px]">logout</span>
                     Sign out
+                  </button>
+                  <div className="mx-2 my-1 h-px bg-[#4A453E]/5" />
+                  <button
+                    onClick={() => {
+                      setIsAvatarMenuOpen(false);
+                      onDeleteAccount();
+                    }}
+                    disabled={isDeletingAccount}
+                    className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-bold transition-colors ${
+                      isDeletingAccount
+                        ? 'cursor-not-allowed text-red-300'
+                        : 'text-red-500 hover:bg-red-50'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">delete_forever</span>
+                    {isDeletingAccount ? 'Deleting account...' : 'Delete account'}
                   </button>
                 </div>
               )}

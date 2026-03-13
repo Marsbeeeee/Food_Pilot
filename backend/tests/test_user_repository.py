@@ -8,6 +8,7 @@ from backend.database.connection import get_db_connection
 from backend.database.init_db import init_db
 from backend.repositories.user_repository import (
     create_user,
+    delete_user,
     get_user_auth_by_email,
     get_user_by_id,
 )
@@ -88,6 +89,28 @@ class UserRepositoryTests(unittest.TestCase):
                 create_user(conn, user)
         finally:
             conn.close()
+
+    def test_delete_user_removes_row(self) -> None:
+        conn = get_db_connection()
+        try:
+            created = create_user(
+                conn,
+                UserCreate.model_validate(
+                    {
+                        "email": "alice@example.com",
+                        "passwordHash": "hashed-password",
+                        "displayName": "Alice",
+                    }
+                ),
+            )
+
+            deleted = delete_user(conn, created.id)
+            fetched = get_user_by_id(conn, created.id)
+        finally:
+            conn.close()
+
+        self.assertTrue(deleted)
+        self.assertIsNone(fetched)
 
 
 if __name__ == "__main__":

@@ -81,6 +81,14 @@ export function saveUserFoodLog(userId: number, foodLog: FoodLogEntry[]): void {
   );
 }
 
+export function clearUserSessions(userId: number): void {
+  clearStoredValue(SESSIONS_STORAGE_PREFIX, userId);
+}
+
+export function clearUserFoodLog(userId: number): void {
+  clearStoredValue(FOOD_LOG_STORAGE_PREFIX, userId);
+}
+
 function getStoredValue(prefix: string, userId: number): string | null {
   if (typeof window === 'undefined') {
     return null;
@@ -95,6 +103,14 @@ function setStoredValue(prefix: string, userId: number, value: string): void {
   }
 
   window.localStorage.setItem(buildStorageKey(prefix, userId), value);
+}
+
+function clearStoredValue(prefix: string, userId: number): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.removeItem(buildStorageKey(prefix, userId));
 }
 
 function buildStorageKey(prefix: string, userId: number): string {

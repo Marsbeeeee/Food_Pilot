@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from backend.dependencies.auth import get_current_user
 from backend.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
@@ -6,6 +6,7 @@ from backend.schemas.user import UserOut
 from backend.services.auth_service import (
     DuplicateEmailError,
     InvalidCredentialsError,
+    delete_current_user,
     login_user,
     register_user,
 )
@@ -32,3 +33,9 @@ def login(request: LoginRequest):
 @router.get("/me", response_model=UserOut)
 def get_me(user: UserOut = Depends(get_current_user)):
     return user
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_me(user: UserOut = Depends(get_current_user)):
+    delete_current_user(user.id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
