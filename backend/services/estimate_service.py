@@ -13,7 +13,7 @@ def create_estimate_response(
     request_model: EstimateRequest,
 ) -> tuple[int, EstimateResponse]:
     try:
-        result = estimate_meal(request_model.query)
+        result = estimate_meal(request_model.query, request_model.profile_id)
     except EstimateServiceError as exc:
         return exc.status_code, EstimateResponse(
             success=False,

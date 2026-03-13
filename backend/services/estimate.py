@@ -4,11 +4,13 @@ from urllib import error, parse, request
 
 from backend.config.estimate import get_estimate_ai_config
 from backend.schemas.estimate import EstimateResult
+from backend.schemas.profile import ProfileOut
 from backend.services.estimate_contract import (
     ESTIMATE_RESPONSE_INSTRUCTION,
     ESTIMATE_RESPONSE_SCHEMA,
 )
 from backend.services.estimate_parser import parse_estimate_payload
+from backend.services.profile_service import get_profile
 
 
 class EstimateServiceError(Exception):
@@ -73,8 +75,9 @@ class IncompleteAIResponseError(EstimateServiceError):
         )
 
 
-def estimate_meal(query: str) -> EstimateResult:
-    raw_response = _call_gemini_api(query)
+def estimate_meal(query: str, profile_id: int | None = None) -> EstimateResult:
+    profile_context = _load_profile_context(profile_id)
+    raw_response = _call_gemini_api(query, profile_context)
     try:
         return parse_estimate_payload(raw_response)
     except ValueError as exc:
@@ -86,7 +89,10 @@ def estimate_meal(query: str) -> EstimateResult:
         raise InvalidAIResponseError(str(exc)) from exc
 
 
-def _call_gemini_api(query: str) -> dict[str, Any]:
+def _call_gemini_api(
+    query: str,
+    profile_context: str | None = None,
+) -> dict[str, Any]:
     config = get_estimate_ai_config()
     if not config.api_key:
         raise MissingAPIKeyError()
@@ -100,9 +106,9 @@ def _call_gemini_api(query: str) -> dict[str, Any]:
         "system_instruction": {
             "parts": [
                 {
-                    "text": (
-                        f"{config.system_prompt}\n\n"
-                        f"{ESTIMATE_RESPONSE_INSTRUCTION}"
+                    "text": _build_estimate_system_instruction(
+                        config.system_prompt,
+                        profile_context,
                     )
                 }
             ],
@@ -153,3 +159,54 @@ def _call_gemini_api(query: str) -> dict[str, Any]:
     if not isinstance(parsed, dict):
         raise InvalidAIResponseError("AI provider returned JSON that is not an object")
     return parsed
+
+
+def _load_profile_context(profile_id: int | None) -> str | None:
+    if profile_id is None:
+        return None
+
+    profile = get_profile(profile_id)
+    if profile is None:
+        return None
+
+    return _build_profile_context(profile)
+
+
+def _build_estimate_system_instruction(
+    system_prompt: str,
+    profile_context: str | None = None,
+) -> str:
+    parts = [system_prompt.strip()]
+
+    if profile_context:
+        parts.extend(
+            [
+                "Use the following user profile context when personalizing assumptions and the final suggestion.",
+                profile_context,
+                (
+                    "When profile context is available, keep the calorie estimate grounded in the described meal, "
+                    "but make the suggestion align with the user's goal, calorie target, diet style, and allergies."
+                ),
+                "Do not recommend foods that conflict with listed allergies or avoidances.",
+            ]
+        )
+
+    parts.append(ESTIMATE_RESPONSE_INSTRUCTION)
+    return "\n\n".join(parts)
+
+
+def _build_profile_context(profile: ProfileOut) -> str:
+    allergies = ", ".join(profile.allergies) if profile.allergies else "None reported"
+
+    return "\n".join(
+        [
+            "User profile:",
+            f"- Goal: {profile.goal}",
+            f"- Daily calorie target: {profile.kcal_target} kcal",
+            f"- Diet style: {profile.diet_style}",
+            f"- Allergies / avoidances: {allergies}",
+            f"- Activity level: {profile.activity_level}",
+            f"- Exercise type: {profile.exercise_type}",
+            f"- Pace: {profile.pace}",
+        ]
+    )
