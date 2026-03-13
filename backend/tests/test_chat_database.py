@@ -103,11 +103,36 @@ class ChatDatabaseTests(unittest.TestCase):
 
         self.assertTrue(
             {
+                "idx_chat_sessions_user_id",
+                "idx_chat_sessions_last_message_at",
                 "idx_chat_sessions_user_last_message_at",
+                "idx_messages_session_id",
+                "idx_messages_user_id",
                 "idx_messages_session_id_id",
                 "idx_messages_user_created_at",
             }.issubset(index_names)
         )
+
+    def test_init_db_can_run_multiple_times_on_same_database(self) -> None:
+        init_db()
+        init_db()
+
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table'
+                AND name IN ('chat_sessions', 'messages')
+                """
+            )
+            table_names = {row["name"] for row in cursor.fetchall()}
+        finally:
+            conn.close()
+
+        self.assertEqual(table_names, {"chat_sessions", "messages"})
 
     def test_message_constraints_accept_supported_shapes(self) -> None:
         conn = get_db_connection()

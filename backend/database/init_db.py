@@ -113,6 +113,18 @@ def _ensure_chat_sessions_table(cursor) -> None:
     )
     cursor.execute(
         """
+        CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id
+        ON chat_sessions(user_id);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_chat_sessions_last_message_at
+        ON chat_sessions(last_message_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_last_message_at
         ON chat_sessions(user_id, last_message_at DESC, id DESC);
         """
@@ -177,6 +189,18 @@ def _ensure_messages_table(cursor) -> None:
                 )
             )
         );
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_messages_session_id
+        ON messages(session_id);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_messages_user_id
+        ON messages(user_id);
         """
     )
     cursor.execute(
