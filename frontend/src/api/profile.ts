@@ -58,8 +58,8 @@ export function toProfileForm(profile: UserProfile): UserProfileForm {
   return {
     id: profile.id,
     age: String(profile.age),
-    height: String(profile.height),
-    weight: String(profile.weight),
+    height: normalizeNumericText(String(profile.height)),
+    weight: normalizeNumericText(String(profile.weight)),
     sex: profile.sex,
     activityLevel: profile.activityLevel,
     exerciseType: profile.exerciseType,
@@ -67,7 +67,24 @@ export function toProfileForm(profile: UserProfile): UserProfileForm {
     pace: profile.pace,
     kcalTarget: String(profile.kcalTarget),
     dietStyle: profile.dietStyle,
-    allergies: profile.allergies,
+    allergies: [...profile.allergies],
+  };
+}
+
+export function normalizeProfileForm(form: UserProfileForm): UserProfileForm {
+  return {
+    id: form.id,
+    age: normalizeNumericText(form.age),
+    height: normalizeNumericText(form.height),
+    weight: normalizeNumericText(form.weight),
+    sex: form.sex.trim(),
+    activityLevel: form.activityLevel.trim(),
+    exerciseType: form.exerciseType.trim(),
+    goal: form.goal.trim(),
+    pace: form.pace.trim(),
+    kcalTarget: normalizeNumericText(form.kcalTarget),
+    dietStyle: form.dietStyle.trim(),
+    allergies: uniqueStrings(form.allergies),
   };
 }
 
@@ -145,42 +162,78 @@ function getErrorMessage(payload: unknown, status: number): string {
   }
 
   if (status === 404) {
-    return '未找到画像记录。';
+    return 'Profile not found.';
   }
 
   if (status === 422) {
-    return '画像字段不合法，请检查输入内容。';
+    return 'Invalid profile fields. Please check your input.';
   }
 
-  return '画像服务暂时不可用，请稍后重试。';
+  return 'Profile service is temporarily unavailable. Please try again later.';
 }
 
 function toProfileInput(form: UserProfileForm): UserProfileInput {
+  const normalized = normalizeProfileForm(form);
+
   return {
-    age: parseRequiredNumber(form.age, '年龄', true),
-    height: parseRequiredNumber(form.height, '身高'),
-    weight: parseRequiredNumber(form.weight, '体重'),
-    sex: form.sex.trim(),
-    activityLevel: form.activityLevel.trim(),
-    exerciseType: form.exerciseType.trim(),
-    goal: form.goal.trim(),
-    pace: form.pace.trim(),
-    kcalTarget: parseRequiredNumber(form.kcalTarget, '热量目标', true),
-    dietStyle: form.dietStyle.trim(),
-    allergies: form.allergies.map((item) => item.trim()).filter(Boolean),
+    age: parseRequiredNumber(normalized.age, 'Age', true),
+    height: parseRequiredNumber(normalized.height, 'Height'),
+    weight: parseRequiredNumber(normalized.weight, 'Weight'),
+    sex: requireText(normalized.sex, 'Sex'),
+    activityLevel: requireText(normalized.activityLevel, 'Activity level'),
+    exerciseType: requireText(normalized.exerciseType, 'Exercise type'),
+    goal: requireText(normalized.goal, 'Goal'),
+    pace: requireText(normalized.pace, 'Pace'),
+    kcalTarget: parseRequiredNumber(normalized.kcalTarget, 'Calorie target', true),
+    dietStyle: requireText(normalized.dietStyle, 'Diet style'),
+    allergies: normalized.allergies,
   };
 }
 
 function parseRequiredNumber(value: string, label: string, integer = false): number {
   const normalized = value.trim();
   if (!normalized) {
-    throw new ProfileApiError(`请填写${label}。`);
+    throw new ProfileApiError(`${label} is required.`);
   }
 
   const parsed = integer ? Number.parseInt(normalized, 10) : Number.parseFloat(normalized);
   if (!Number.isFinite(parsed)) {
-    throw new ProfileApiError(`${label}格式不正确。`);
+    throw new ProfileApiError(`${label} must be a valid number.`);
   }
 
   return parsed;
+}
+
+function requireText(value: string, label: string): string {
+  const normalized = value.trim();
+  if (!normalized) {
+    throw new ProfileApiError(`${label} is required.`);
+  }
+  return normalized;
+}
+
+function uniqueStrings(values: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of values) {
+    const normalized = value.trim();
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    result.push(normalized);
+  }
+
+  return result;
+}
+
+function normalizeNumericText(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? String(parsed) : trimmed;
 }
