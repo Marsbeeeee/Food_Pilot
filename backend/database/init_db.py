@@ -11,7 +11,7 @@ def init_db():
     _ensure_profiles_table(cursor)
     _ensure_chat_sessions_table(cursor)
     _ensure_messages_table(cursor)
-    _ensure_food_log_entries_table(cursor)
+    _ensure_food_logs_table(cursor)
 
     conn.commit()
     conn.close()
@@ -22,6 +22,18 @@ def _get_table_columns(cursor, table_name: str) -> set[str]:
         row[1]
         for row in cursor.execute(f"PRAGMA table_info({table_name})").fetchall()
     }
+
+
+def _table_exists(cursor, table_name: str) -> bool:
+    row = cursor.execute(
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = ?
+        """,
+        (table_name,),
+    ).fetchone()
+    return row is not None
 
 
 def _ensure_users_table(cursor) -> None:
@@ -304,70 +316,96 @@ def _ensure_messages_table(cursor) -> None:
     )
 
 
-def _ensure_food_log_entries_table(cursor) -> None:
+def _ensure_food_logs_table(cursor) -> None:
     cursor.execute(
         """
-        CREATE TABLE IF NOT EXISTS food_log_entries (
+        CREATE TABLE IF NOT EXISTS food_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            source_type TEXT NOT NULL,
             session_id INTEGER REFERENCES chat_sessions(id) ON DELETE SET NULL,
-            message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
-            title TEXT NOT NULL,
-            confidence TEXT,
-            description TEXT NOT NULL,
-            items_json TEXT NOT NULL,
-            total TEXT NOT NULL,
-            suggestion TEXT,
+            source_message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
+            meal_description TEXT NOT NULL,
+            logged_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            result_title TEXT NOT NULL,
+            result_confidence TEXT,
+            result_description TEXT NOT NULL,
+            total_calories TEXT NOT NULL,
+            ingredients_json TEXT NOT NULL,
+            source_type TEXT NOT NULL,
+            assistant_suggestion TEXT,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             CHECK (source_type IN ('estimate_api', 'chat_message')),
-            CHECK (message_id IS NULL OR session_id IS NOT NULL),
-            CHECK (length(trim(title)) > 0),
-            CHECK (confidence IS NULL OR length(trim(confidence)) > 0),
-            CHECK (length(trim(description)) > 0),
-            CHECK (length(trim(items_json)) > 0),
-            CHECK (length(trim(total)) > 0),
-            CHECK (suggestion IS NULL OR length(trim(suggestion)) > 0)
+            CHECK (source_message_id IS NULL OR session_id IS NOT NULL),
+            CHECK (length(trim(meal_description)) > 0),
+            CHECK (length(trim(result_title)) > 0),
+            CHECK (result_confidence IS NULL OR length(trim(result_confidence)) > 0),
+            CHECK (length(trim(result_description)) > 0),
+            CHECK (length(trim(total_calories)) > 0),
+            CHECK (length(trim(ingredients_json)) > 0),
+            CHECK (length(trim(source_type)) > 0),
+            CHECK (assistant_suggestion IS NULL OR length(trim(assistant_suggestion)) > 0)
         );
         """
     )
-    food_log_columns = _get_table_columns(cursor, "food_log_entries")
-    if "confidence" not in food_log_columns:
+    food_log_columns = _get_table_columns(cursor, "food_logs")
+    if "result_confidence" not in food_log_columns:
         cursor.execute(
             """
-            ALTER TABLE food_log_entries
-            ADD COLUMN confidence TEXT
+            ALTER TABLE food_logs
+            ADD COLUMN result_confidence TEXT
             """
         )
-    if "suggestion" not in food_log_columns:
+    if "assistant_suggestion" not in food_log_columns:
         cursor.execute(
             """
-            ALTER TABLE food_log_entries
-            ADD COLUMN suggestion TEXT
+            ALTER TABLE food_logs
+            ADD COLUMN assistant_suggestion TEXT
+            """
+        )
+    if "updated_at" not in food_log_columns:
+        cursor.execute(
+            """
+            ALTER TABLE food_logs
+            ADD COLUMN updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             """
         )
 
     cursor.execute(
         """
-        CREATE INDEX IF NOT EXISTS idx_food_log_entries_user_created_at
-        ON food_log_entries(user_id, created_at DESC, id DESC);
+        CREATE INDEX IF NOT EXISTS idx_food_logs_user_logged_at
+        ON food_logs(user_id, logged_at DESC, id DESC);
         """
     )
     cursor.execute(
         """
-        CREATE INDEX IF NOT EXISTS idx_food_log_entries_session_id
-        ON food_log_entries(session_id);
+        CREATE INDEX IF NOT EXISTS idx_food_logs_session_id
+        ON food_logs(session_id);
         """
     )
     cursor.execute(
         """
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_food_log_entries_message_id_unique
-        ON food_log_entries(message_id)
-        WHERE message_id IS NOT NULL;
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_food_logs_source_message_id_unique
+        ON food_logs(source_message_id)
+        WHERE source_message_id IS NOT NULL;
+        """
+    )
+    cursor.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS food_logs_set_updated_at
+        AFTER UPDATE ON food_logs
+        FOR EACH ROW
+        WHEN NEW.updated_at = OLD.updated_at
+        BEGIN
+            UPDATE food_logs
+            SET updated_at = CURRENT_TIMESTAMP
+            WHERE id = NEW.id;
+        END;
         """
     )
 
-    _backfill_food_log_entries_from_messages(cursor)
+    _migrate_legacy_food_log_entries(cursor)
+    _backfill_food_logs_from_messages(cursor)
 
 
 def _create_messages_table(cursor, table_name: str = "messages") -> None:
@@ -575,40 +613,129 @@ def _resolve_created_at_value(row_data: dict[str, object], message_columns: set[
     return datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _backfill_food_log_entries_from_messages(cursor) -> None:
+def _migrate_legacy_food_log_entries(cursor) -> None:
+    if not _table_exists(cursor, "food_log_entries"):
+        return
+
     cursor.execute(
         """
-        INSERT INTO food_log_entries (
+        INSERT INTO food_logs (
             user_id,
-            source_type,
             session_id,
-            message_id,
-            title,
-            confidence,
-            description,
-            items_json,
-            total,
-            suggestion,
-            created_at
+            source_message_id,
+            meal_description,
+            logged_at,
+            result_title,
+            result_confidence,
+            result_description,
+            total_calories,
+            ingredients_json,
+            source_type,
+            assistant_suggestion,
+            created_at,
+            updated_at
+        )
+        SELECT
+            legacy.user_id,
+            legacy.session_id,
+            legacy.message_id,
+            COALESCE(
+                (
+                    SELECT user_message.content
+                    FROM messages AS user_message
+                    WHERE user_message.session_id = legacy.session_id
+                    AND user_message.role = 'user'
+                    AND legacy.message_id IS NOT NULL
+                    AND user_message.id < legacy.message_id
+                    ORDER BY user_message.id DESC
+                    LIMIT 1
+                ),
+                legacy.suggestion,
+                legacy.title
+            ),
+            COALESCE(legacy.created_at, CURRENT_TIMESTAMP),
+            legacy.title,
+            legacy.confidence,
+            legacy.description,
+            legacy.total,
+            legacy.items_json,
+            legacy.source_type,
+            legacy.suggestion,
+            COALESCE(legacy.created_at, CURRENT_TIMESTAMP),
+            COALESCE(legacy.created_at, CURRENT_TIMESTAMP)
+        FROM food_log_entries AS legacy
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM food_logs AS current_logs
+            WHERE current_logs.source_message_id = legacy.message_id
+            AND legacy.message_id IS NOT NULL
+        )
+        AND (
+            legacy.message_id IS NOT NULL
+            OR NOT EXISTS (
+                SELECT 1
+                FROM food_logs AS current_logs
+                WHERE current_logs.user_id = legacy.user_id
+                AND current_logs.source_message_id IS NULL
+                AND current_logs.logged_at = COALESCE(legacy.created_at, CURRENT_TIMESTAMP)
+                AND current_logs.result_title = legacy.title
+            )
+        )
+        """
+    )
+
+
+def _backfill_food_logs_from_messages(cursor) -> None:
+    cursor.execute(
+        """
+        INSERT INTO food_logs (
+            user_id,
+            session_id,
+            source_message_id,
+            meal_description,
+            logged_at,
+            result_title,
+            result_confidence,
+            result_description,
+            total_calories,
+            ingredients_json,
+            source_type,
+            assistant_suggestion,
+            created_at,
+            updated_at
         )
         SELECT
             m.user_id,
-            'chat_message',
             m.session_id,
             m.id,
+            COALESCE(
+                (
+                    SELECT user_message.content
+                    FROM messages AS user_message
+                    WHERE user_message.session_id = m.session_id
+                    AND user_message.role = 'user'
+                    AND user_message.id < m.id
+                    ORDER BY user_message.id DESC
+                    LIMIT 1
+                ),
+                m.result_title
+            ),
+            m.created_at,
             m.result_title,
             m.result_confidence,
             m.result_description,
-            m.result_items_json,
             m.result_total,
+            m.result_items_json,
+            'chat_message',
             m.content,
+            m.created_at,
             m.created_at
         FROM messages AS m
         WHERE m.message_type = 'estimate_result'
         AND NOT EXISTS (
             SELECT 1
-            FROM food_log_entries AS f
-            WHERE f.message_id = m.id
+            FROM food_logs AS current_logs
+            WHERE current_logs.source_message_id = m.id
         )
         """
     )

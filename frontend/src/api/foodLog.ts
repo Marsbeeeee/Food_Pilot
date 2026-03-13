@@ -7,7 +7,9 @@ interface FoodLogEntryResponse {
   id: number;
   sourceType: 'estimate_api' | 'chat_message';
   sessionId: number | null;
-  messageId: number | null;
+  sourceMessageId: number | null;
+  mealDescription: string;
+  loggedAt: string;
   title: string;
   confidence: string | null;
   description: string;
@@ -15,6 +17,7 @@ interface FoodLogEntryResponse {
   total: string;
   suggestion: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 export class FoodLogApiError extends Error {

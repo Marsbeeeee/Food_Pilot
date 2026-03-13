@@ -19,6 +19,7 @@ def create_estimate_response(
         if user_id is not None:
             record_food_log_entry_from_estimate(
                 user_id,
+                request_model.query,
                 result,
                 source_type="estimate_api",
             )

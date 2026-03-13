@@ -36,6 +36,7 @@ class EstimateServiceProfileTests(unittest.TestCase):
         estimate_meal_mock.assert_called_once_with("chicken salad", 12, 34)
         record_food_log_mock.assert_called_once_with(
             34,
+            "chicken salad",
             estimate_result,
             source_type="estimate_api",
         )

@@ -6,44 +6,52 @@ def create_food_log_entry(
     user_id: int,
     source_type: str,
     *,
-    title: str,
-    description: str,
-    items_json: str,
-    total: str,
-    confidence: str | None = None,
-    suggestion: str | None = None,
+    meal_description: str,
+    result_title: str,
+    result_description: str,
+    total_calories: str,
+    ingredients_json: str,
     session_id: int | None = None,
-    message_id: int | None = None,
+    source_message_id: int | None = None,
+    result_confidence: str | None = None,
+    assistant_suggestion: str | None = None,
+    logged_at: str | None = None,
     created_at: str | None = None,
 ) -> dict[str, object]:
     cursor = conn.cursor()
     cursor.execute(
         """
-        INSERT INTO food_log_entries (
+        INSERT INTO food_logs (
             user_id,
-            source_type,
             session_id,
-            message_id,
-            title,
-            confidence,
-            description,
-            items_json,
-            total,
-            suggestion,
-            created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))
+            source_message_id,
+            meal_description,
+            logged_at,
+            result_title,
+            result_confidence,
+            result_description,
+            total_calories,
+            ingredients_json,
+            source_type,
+            assistant_suggestion,
+            created_at,
+            updated_at
+        ) VALUES (?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), COALESCE(?, CURRENT_TIMESTAMP))
         """,
         (
             user_id,
-            source_type,
             session_id,
-            message_id,
-            title,
-            confidence,
-            description,
-            items_json,
-            total,
-            suggestion,
+            source_message_id,
+            meal_description,
+            logged_at,
+            result_title,
+            result_confidence,
+            result_description,
+            total_calories,
+            ingredients_json,
+            source_type,
+            assistant_suggestion,
+            created_at,
             created_at,
         ),
     )
@@ -61,19 +69,22 @@ def list_food_log_entries_by_user(
         SELECT
             id,
             user_id,
-            source_type,
             session_id,
-            message_id,
-            title,
-            confidence,
-            description,
-            items_json,
-            total,
-            suggestion,
-            created_at
-        FROM food_log_entries
+            source_message_id,
+            meal_description,
+            logged_at,
+            result_title,
+            result_confidence,
+            result_description,
+            total_calories,
+            ingredients_json,
+            source_type,
+            assistant_suggestion,
+            created_at,
+            updated_at
+        FROM food_logs
         WHERE user_id = ?
-        ORDER BY created_at DESC, id DESC
+        ORDER BY logged_at DESC, id DESC
         """,
         (user_id,),
     )
@@ -91,17 +102,20 @@ def get_food_log_entry_by_id(
         SELECT
             id,
             user_id,
-            source_type,
             session_id,
-            message_id,
-            title,
-            confidence,
-            description,
-            items_json,
-            total,
-            suggestion,
-            created_at
-        FROM food_log_entries
+            source_message_id,
+            meal_description,
+            logged_at,
+            result_title,
+            result_confidence,
+            result_description,
+            total_calories,
+            ingredients_json,
+            source_type,
+            assistant_suggestion,
+            created_at,
+            updated_at
+        FROM food_logs
         WHERE id = ? AND user_id = ?
         """,
         (entry_id, user_id),

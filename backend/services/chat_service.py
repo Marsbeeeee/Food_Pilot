@@ -140,6 +140,7 @@ def append_assistant_message(
     session_id: int,
     *,
     message_type: str = "text",
+    meal_description: str | None = None,
     content: str | None = None,
     result_title: str | None = None,
     result_confidence: str | None = None,
@@ -172,6 +173,7 @@ def append_assistant_message(
             conn,
             message,
             user_id,
+            meal_description=meal_description,
         )
         return message
     finally:
@@ -290,7 +292,12 @@ def _generate_assistant_reply_with_conn(
             ),
             result_total=estimate.total_calories,
         )
-        _record_food_log_from_message(conn, assistant_message, user_id)
+        _record_food_log_from_message(
+            conn,
+            assistant_message,
+            user_id,
+            meal_description=content,
+        )
     except Exception as exc:
         assistant_message = create_message_record(
             conn,
@@ -307,6 +314,8 @@ def _record_food_log_from_message(
     conn,
     message: dict[str, object],
     user_id: int,
+    *,
+    meal_description: str | None = None,
 ) -> None:
     if message.get("message_type") != "estimate_result":
         return
@@ -326,20 +335,56 @@ def _record_food_log_from_message(
     ):
         return
 
+    resolved_meal_description = meal_description or _resolve_meal_description_for_message(
+        conn,
+        int(message["session_id"]),
+        int(message["id"]),
+        result_title,
+    )
+
     record_food_log_entry(
         user_id,
         "chat_message",
-        title=result_title,
-        confidence=message.get("result_confidence") if isinstance(message.get("result_confidence"), str) else None,
-        description=result_description,
-        items_json=result_items_json,
-        total=result_total,
-        suggestion=message.get("content") if isinstance(message.get("content"), str) else None,
+        meal_description=resolved_meal_description,
+        result_title=result_title,
+        result_confidence=message.get("result_confidence") if isinstance(message.get("result_confidence"), str) else None,
+        result_description=result_description,
+        total_calories=result_total,
+        ingredients_json=result_items_json,
         session_id=int(message["session_id"]),
-        message_id=int(message["id"]),
+        source_message_id=int(message["id"]),
+        assistant_suggestion=message.get("content") if isinstance(message.get("content"), str) else None,
+        logged_at=message.get("created_at") if isinstance(message.get("created_at"), str) else None,
         created_at=message.get("created_at") if isinstance(message.get("created_at"), str) else None,
         conn=conn,
     )
+
+
+def _resolve_meal_description_for_message(
+    conn,
+    session_id: int,
+    message_id: int,
+    fallback: str,
+) -> str:
+    cursor = conn.cursor()
+    row = cursor.execute(
+        """
+        SELECT content
+        FROM messages
+        WHERE session_id = ?
+        AND role = 'user'
+        AND id < ?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (session_id, message_id),
+    ).fetchone()
+    if row is not None:
+        content = row["content"]
+        if isinstance(content, str) and content.strip():
+            return content
+
+    return fallback
 
 
 def _build_fallback_message(error: Exception) -> str:

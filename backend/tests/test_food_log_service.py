@@ -62,8 +62,9 @@ class FoodLogServiceTests(unittest.TestCase):
         self.assertEqual(len(entries), 1)
         self.assertEqual(entries[0]["source_type"], "chat_message")
         self.assertEqual(entries[0]["session_id"], int(session["id"]))
-        self.assertEqual(entries[0]["message_id"], int(exchange["assistant_message"]["id"]))
-        self.assertEqual(entries[0]["total"], "240 kcal")
+        self.assertEqual(entries[0]["source_message_id"], int(exchange["assistant_message"]["id"]))
+        self.assertEqual(entries[0]["meal_description"], "chicken salad")
+        self.assertEqual(entries[0]["total_calories"], "240 kcal")
 
     def test_estimate_api_creates_food_log_entry(self) -> None:
         request_model = EstimateRequest(query="chicken salad")
@@ -80,8 +81,9 @@ class FoodLogServiceTests(unittest.TestCase):
         self.assertEqual(len(entries), 1)
         self.assertEqual(entries[0]["source_type"], "estimate_api")
         self.assertIsNone(entries[0]["session_id"])
-        self.assertIsNone(entries[0]["message_id"])
-        self.assertEqual(entries[0]["title"], "Chicken salad")
+        self.assertIsNone(entries[0]["source_message_id"])
+        self.assertEqual(entries[0]["meal_description"], "chicken salad")
+        self.assertEqual(entries[0]["result_title"], "Chicken salad")
 
     def test_init_db_backfills_existing_estimate_result_messages(self) -> None:
         conn = get_db_connection()
@@ -136,8 +138,9 @@ class FoodLogServiceTests(unittest.TestCase):
 
         entries = _list_food_log_entries()
         self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0]["message_id"], message_id)
+        self.assertEqual(entries[0]["source_message_id"], message_id)
         self.assertEqual(entries[0]["source_type"], "chat_message")
+        self.assertEqual(entries[0]["meal_description"], "Chicken salad")
         self.assertEqual(entries[0]["created_at"], "2026-03-13 12:00:00")
 
 
@@ -168,11 +171,12 @@ def _list_food_log_entries() -> list[dict[str, object]]:
                 id,
                 source_type,
                 session_id,
-                message_id,
-                title,
-                total,
+                source_message_id,
+                meal_description,
+                result_title,
+                total_calories,
                 created_at
-            FROM food_log_entries
+            FROM food_logs
             ORDER BY id ASC
             """
         )

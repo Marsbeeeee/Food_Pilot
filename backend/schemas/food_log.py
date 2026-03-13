@@ -18,10 +18,18 @@ class FoodLogEntryOut(BaseModel):
         validation_alias=AliasChoices("session_id", "sessionId"),
         serialization_alias="sessionId",
     )
-    message_id: int | None = Field(
+    source_message_id: int | None = Field(
         default=None,
-        validation_alias=AliasChoices("message_id", "messageId"),
-        serialization_alias="messageId",
+        validation_alias=AliasChoices("source_message_id", "sourceMessageId", "message_id", "messageId"),
+        serialization_alias="sourceMessageId",
+    )
+    meal_description: str = Field(
+        validation_alias=AliasChoices("meal_description", "mealDescription"),
+        serialization_alias="mealDescription",
+    )
+    logged_at: str = Field(
+        validation_alias=AliasChoices("logged_at", "loggedAt"),
+        serialization_alias="loggedAt",
     )
     title: str
     confidence: str | None = None
@@ -35,6 +43,10 @@ class FoodLogEntryOut(BaseModel):
     created_at: str = Field(
         validation_alias=AliasChoices("created_at", "createdAt"),
         serialization_alias="createdAt",
+    )
+    updated_at: str = Field(
+        validation_alias=AliasChoices("updated_at", "updatedAt"),
+        serialization_alias="updatedAt",
     )
 
 
