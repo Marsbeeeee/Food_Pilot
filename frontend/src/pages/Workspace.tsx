@@ -67,6 +67,21 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!isRenameModalOpen) {
+      return undefined;
+    }
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsRenameModalOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => document.removeEventListener('keydown', handleEscapeKey);
+  }, [isRenameModalOpen]);
+
   const handleNewAnalysis = async () => {
     if (isCreatingSession) {
       return;
@@ -398,11 +413,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           )}
         </div>
 
-        <div className="z-20 shrink-0 bg-gradient-to-t from-[#FFFDF5] via-[#FFFDF5] to-transparent px-10 pb-10 pt-4">
+        <div className="z-20 shrink-0 bg-gradient-to-t from-[#FFFDF5] via-[#FFFDF5] to-transparent px-6 pb-8 pt-4 md:px-10 md:pb-10">
           <div className="mx-auto max-w-4xl">
-            <div className="relative flex items-end overflow-hidden rounded-[28px] border border-[#4A453E]/10 bg-white shadow-xl shadow-[#4A453E]/5 transition-all focus-within:border-[#FF8A65]/40">
+            <div className="relative flex items-end gap-3 overflow-hidden rounded-[22px] border border-[#4A453E]/12 bg-white px-3 py-3 shadow-[0_16px_40px_rgba(74,69,62,0.08)] transition-all focus-within:border-[#FF8A65]/35 focus-within:shadow-[0_20px_48px_rgba(255,138,101,0.12)]">
               <textarea
-                className="custom-scrollbar max-h-40 flex-1 resize-none bg-transparent py-6 pl-8 text-[16px] leading-relaxed text-[#4A453E] placeholder-[#4A453E]/30 focus:ring-0"
+                className="custom-scrollbar min-h-[56px] max-h-40 flex-1 resize-none bg-transparent px-4 py-3 text-[15px] leading-7 text-[#4A453E] placeholder-[#4A453E]/35 focus:ring-0"
                 placeholder="Chat with Food Pilot... (e.g. What is in my sushi roll?)"
                 rows={1}
                 value={inputValue}
@@ -413,13 +428,13 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 <button
                   onClick={() => void handleSendMessage()}
                   disabled={!inputValue.trim() || isTyping}
-                  className={`flex size-12 items-center justify-center rounded-[20px] transition-all active:scale-95 ${
+                  className={`flex size-11 items-center justify-center rounded-full transition-all active:scale-95 ${
                     !inputValue.trim() || isTyping
                       ? 'cursor-not-allowed bg-[#4A453E]/5 text-[#4A453E]/20'
                       : 'bg-[#FF8A65] text-white shadow-lg shadow-[#FF8A65]/20 hover:bg-[#FF8A65]/90'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[24px]">arrow_upward</span>
+                  <span className="material-symbols-outlined text-[22px]">arrow_upward</span>
                 </button>
               </div>
             </div>
@@ -431,20 +446,41 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       </section>
 
       {isRenameModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 px-6 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[32px] border border-[#4A453E]/10 bg-white p-8 shadow-2xl animate-in fade-in zoom-in duration-200">
-            <h3 className="mb-6 font-serif-brand text-2xl font-bold italic text-[#4A453E]">Rename Chat</h3>
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 px-6"
+          onClick={() => setIsRenameModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-[24px] border border-[#4A453E]/10 bg-[#FFFDF5] p-6 shadow-[0_28px_70px_rgba(74,69,62,0.18)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-5">
+              <h3 className="text-lg font-bold text-[#4A453E]">Rename Chat</h3>
+              <p className="mt-1 text-sm text-[#4A453E]/50">
+                Update the conversation title shown in your history.
+              </p>
+            </div>
             <input
               type="text"
               value={renamingTitle}
               onChange={(event) => setRenamingTitle(event.target.value)}
               autoFocus
-              className="mb-8 w-full rounded-[18px] border border-[#4A453E]/10 bg-[#F7F3E9]/40 px-6 py-4 font-bold text-[#4A453E] outline-none transition-all focus:bg-white focus:ring-2 focus:ring-[#FF8A65]/20"
+              className="mb-6 w-full rounded-[16px] border border-[#4A453E]/10 bg-white px-4 py-3 text-sm font-medium text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
               onKeyDown={(event) => event.key === 'Enter' && void handleRenameSession()}
             />
-            <div className="flex gap-3">
-              <button onClick={() => setIsRenameModalOpen(false)} className="flex-1 rounded-full border border-[#4A453E]/10 bg-white py-3 text-sm font-bold text-[#4A453E]/40 transition-all hover:bg-[#F7F3E9]">Cancel</button>
-              <button onClick={() => void handleRenameSession()} className="flex-1 rounded-full bg-[#FF8A65] py-3 text-sm font-bold text-white shadow-lg shadow-[#FF8A65]/20 transition-all hover:translate-y-[-1px]">Save</button>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsRenameModalOpen(false)}
+                className="rounded-[14px] border border-[#4A453E]/10 bg-white px-4 py-2.5 text-sm font-semibold text-[#4A453E]/55 transition-colors hover:bg-[#F7F3E9]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void handleRenameSession()}
+                className="rounded-[14px] bg-[#FF8A65] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#FF8A65]/20 transition-colors hover:bg-[#FF8A65]/90"
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>

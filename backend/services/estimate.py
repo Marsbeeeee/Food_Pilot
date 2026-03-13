@@ -128,7 +128,6 @@ def _call_gemini_api(
             "responseSchema": ESTIMATE_RESPONSE_SCHEMA,
         },
     }
-    print(payload["system_instruction"]["parts"][0]["text"])
     body = json.dumps(payload).encode("utf-8")
     req = request.Request(
         endpoint,

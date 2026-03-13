@@ -134,6 +134,138 @@ class ChatDatabaseTests(unittest.TestCase):
 
         self.assertEqual(table_names, {"chat_sessions", "messages"})
 
+    def test_init_db_migrates_legacy_chat_sessions_table(self) -> None:
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("DROP TABLE messages")
+            cursor.execute("DROP TABLE chat_sessions")
+            cursor.execute(
+                """
+                CREATE TABLE chat_sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    title TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CHECK (length(trim(title)) BETWEEN 1 AND 120)
+                );
+                """
+            )
+            cursor.execute(
+                """
+                INSERT INTO chat_sessions (
+                    user_id,
+                    title,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?)
+                """,
+                (
+                    self.user_id,
+                    "Legacy session",
+                    "2026-03-12 08:00:00",
+                    "2026-03-12 09:00:00",
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        init_db()
+
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(chat_sessions)")
+            chat_session_columns = {row["name"] for row in cursor.fetchall()}
+            cursor.execute(
+                """
+                SELECT last_message_at, deleted_at
+                FROM chat_sessions
+                WHERE title = ?
+                """,
+                ("Legacy session",),
+            )
+            session_row = cursor.fetchone()
+        finally:
+            conn.close()
+
+        self.assertIn("last_message_at", chat_session_columns)
+        self.assertIn("deleted_at", chat_session_columns)
+        self.assertEqual(session_row["last_message_at"], "2026-03-12 09:00:00")
+        self.assertIsNone(session_row["deleted_at"])
+
+    def test_init_db_migrates_legacy_messages_table(self) -> None:
+        conn = get_db_connection()
+        try:
+            session_id = _insert_session(conn, self.user_id, "Message migration")
+            cursor = conn.cursor()
+            cursor.execute("DROP TABLE messages")
+            cursor.execute(
+                """
+                CREATE TABLE messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id INTEGER NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+                    role TEXT NOT NULL,
+                    content TEXT,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                """
+            )
+            cursor.execute(
+                """
+                INSERT INTO messages (
+                    session_id,
+                    role,
+                    content,
+                    created_at
+                ) VALUES (?, ?, ?, ?)
+                """,
+                (
+                    session_id,
+                    "user",
+                    "Legacy message",
+                    "2026-03-13 10:15:00",
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        init_db()
+
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(messages)")
+            message_columns = {row["name"] for row in cursor.fetchall()}
+            cursor.execute(
+                """
+                SELECT user_id, message_type
+                FROM messages
+                WHERE content = ?
+                """,
+                ("Legacy message",),
+            )
+            message_row = cursor.fetchone()
+        finally:
+            conn.close()
+
+        self.assertTrue(
+            {
+                "user_id",
+                "message_type",
+                "result_title",
+                "result_confidence",
+                "result_description",
+                "result_items_json",
+                "result_total",
+            }.issubset(message_columns)
+        )
+        self.assertEqual(message_row["user_id"], self.user_id)
+        self.assertEqual(message_row["message_type"], "text")
+
     def test_message_constraints_accept_supported_shapes(self) -> None:
         conn = get_db_connection()
         try:

@@ -14,6 +14,13 @@ def init_db():
     conn.close()
 
 
+def _get_table_columns(cursor, table_name: str) -> set[str]:
+    return {
+        row[1]
+        for row in cursor.execute(f"PRAGMA table_info({table_name})").fetchall()
+    }
+
+
 def _ensure_users_table(cursor) -> None:
     cursor.execute(
         """
@@ -69,10 +76,7 @@ def _ensure_profiles_table(cursor) -> None:
         """
     )
 
-    profile_columns = {
-        row[1]
-        for row in cursor.execute("PRAGMA table_info(profiles)").fetchall()
-    }
+    profile_columns = _get_table_columns(cursor, "profiles")
     if "user_id" not in profile_columns:
         cursor.execute(
             """
@@ -111,6 +115,30 @@ def _ensure_chat_sessions_table(cursor) -> None:
         );
         """
     )
+    chat_session_columns = _get_table_columns(cursor, "chat_sessions")
+    if "last_message_at" not in chat_session_columns:
+        cursor.execute(
+            """
+            ALTER TABLE chat_sessions
+            ADD COLUMN last_message_at TEXT
+            """
+        )
+        cursor.execute(
+            """
+            UPDATE chat_sessions
+            SET last_message_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP)
+            WHERE last_message_at IS NULL
+            """
+        )
+
+    if "deleted_at" not in chat_session_columns:
+        cursor.execute(
+            """
+            ALTER TABLE chat_sessions
+            ADD COLUMN deleted_at TEXT
+            """
+        )
+
     cursor.execute(
         """
         CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id
@@ -127,6 +155,19 @@ def _ensure_chat_sessions_table(cursor) -> None:
         """
         CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_last_message_at
         ON chat_sessions(user_id, last_message_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS chat_sessions_set_last_message_at_after_insert
+        AFTER INSERT ON chat_sessions
+        FOR EACH ROW
+        WHEN NEW.last_message_at IS NULL
+        BEGIN
+            UPDATE chat_sessions
+            SET last_message_at = COALESCE(NEW.created_at, CURRENT_TIMESTAMP)
+            WHERE id = NEW.id;
+        END;
         """
     )
     cursor.execute(
@@ -191,6 +232,76 @@ def _ensure_messages_table(cursor) -> None:
         );
         """
     )
+    message_columns = _get_table_columns(cursor, "messages")
+    if "user_id" not in message_columns:
+        cursor.execute(
+            """
+            ALTER TABLE messages
+            ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
+            """
+        )
+    if "message_type" not in message_columns:
+        cursor.execute(
+            """
+            ALTER TABLE messages
+            ADD COLUMN message_type TEXT
+            """
+        )
+    if "result_title" not in message_columns:
+        cursor.execute(
+            """
+            ALTER TABLE messages
+            ADD COLUMN result_title TEXT
+            """
+        )
+    if "result_confidence" not in message_columns:
+        cursor.execute(
+            """
+            ALTER TABLE messages
+            ADD COLUMN result_confidence TEXT
+            """
+        )
+    if "result_description" not in message_columns:
+        cursor.execute(
+            """
+            ALTER TABLE messages
+            ADD COLUMN result_description TEXT
+            """
+        )
+    if "result_items_json" not in message_columns:
+        cursor.execute(
+            """
+            ALTER TABLE messages
+            ADD COLUMN result_items_json TEXT
+            """
+        )
+    if "result_total" not in message_columns:
+        cursor.execute(
+            """
+            ALTER TABLE messages
+            ADD COLUMN result_total TEXT
+            """
+        )
+
+    cursor.execute(
+        """
+        UPDATE messages
+        SET user_id = (
+            SELECT user_id
+            FROM chat_sessions
+            WHERE chat_sessions.id = messages.session_id
+        )
+        WHERE user_id IS NULL
+        """
+    )
+    cursor.execute(
+        """
+        UPDATE messages
+        SET message_type = 'text'
+        WHERE message_type IS NULL
+        """
+    )
+
     cursor.execute(
         """
         CREATE INDEX IF NOT EXISTS idx_messages_session_id
