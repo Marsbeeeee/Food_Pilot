@@ -3,6 +3,14 @@ from datetime import datetime
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
+def normalize_email(value: str) -> str:
+    normalized = value.strip().lower()
+    local_part, separator, domain = normalized.partition("@")
+    if not separator or not local_part or not domain or "." not in domain:
+        raise ValueError("email must be a valid email address")
+    return normalized
+
+
 class UserBase(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
@@ -15,11 +23,7 @@ class UserBase(BaseModel):
     @field_validator("email")
     @classmethod
     def validate_email(cls, value: str) -> str:
-        normalized = value.strip().lower()
-        local_part, separator, domain = normalized.partition("@")
-        if not separator or not local_part or not domain or "." not in domain:
-            raise ValueError("email must be a valid email address")
-        return normalized
+        return normalize_email(value)
 
     @field_validator("display_name")
     @classmethod

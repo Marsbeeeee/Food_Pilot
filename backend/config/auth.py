@@ -1,0 +1,6 @@
+import os
+
+
+AUTH_SECRET = os.getenv("AUTH_SECRET", "foodpilot-dev-secret")
+AUTH_TOKEN_EXPIRE_SECONDS = int(os.getenv("AUTH_TOKEN_EXPIRE_SECONDS", "604800"))
+PASSWORD_HASH_ITERATIONS = int(os.getenv("PASSWORD_HASH_ITERATIONS", "120000"))
