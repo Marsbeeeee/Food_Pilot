@@ -11,6 +11,7 @@ def init_db():
     _ensure_profiles_table(cursor)
     _ensure_chat_sessions_table(cursor)
     _ensure_messages_table(cursor)
+    _ensure_food_log_entries_table(cursor)
 
     conn.commit()
     conn.close()
@@ -303,6 +304,72 @@ def _ensure_messages_table(cursor) -> None:
     )
 
 
+def _ensure_food_log_entries_table(cursor) -> None:
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS food_log_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            source_type TEXT NOT NULL,
+            session_id INTEGER REFERENCES chat_sessions(id) ON DELETE SET NULL,
+            message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
+            title TEXT NOT NULL,
+            confidence TEXT,
+            description TEXT NOT NULL,
+            items_json TEXT NOT NULL,
+            total TEXT NOT NULL,
+            suggestion TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CHECK (source_type IN ('estimate_api', 'chat_message')),
+            CHECK (message_id IS NULL OR session_id IS NOT NULL),
+            CHECK (length(trim(title)) > 0),
+            CHECK (confidence IS NULL OR length(trim(confidence)) > 0),
+            CHECK (length(trim(description)) > 0),
+            CHECK (length(trim(items_json)) > 0),
+            CHECK (length(trim(total)) > 0),
+            CHECK (suggestion IS NULL OR length(trim(suggestion)) > 0)
+        );
+        """
+    )
+    food_log_columns = _get_table_columns(cursor, "food_log_entries")
+    if "confidence" not in food_log_columns:
+        cursor.execute(
+            """
+            ALTER TABLE food_log_entries
+            ADD COLUMN confidence TEXT
+            """
+        )
+    if "suggestion" not in food_log_columns:
+        cursor.execute(
+            """
+            ALTER TABLE food_log_entries
+            ADD COLUMN suggestion TEXT
+            """
+        )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_food_log_entries_user_created_at
+        ON food_log_entries(user_id, created_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_food_log_entries_session_id
+        ON food_log_entries(session_id);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_food_log_entries_message_id_unique
+        ON food_log_entries(message_id)
+        WHERE message_id IS NOT NULL;
+        """
+    )
+
+    _backfill_food_log_entries_from_messages(cursor)
+
+
 def _create_messages_table(cursor, table_name: str = "messages") -> None:
     cursor.execute(
         f"""
@@ -506,6 +573,45 @@ def _resolve_created_at_value(row_data: dict[str, object], message_columns: set[
         return legacy_time
 
     return datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _backfill_food_log_entries_from_messages(cursor) -> None:
+    cursor.execute(
+        """
+        INSERT INTO food_log_entries (
+            user_id,
+            source_type,
+            session_id,
+            message_id,
+            title,
+            confidence,
+            description,
+            items_json,
+            total,
+            suggestion,
+            created_at
+        )
+        SELECT
+            m.user_id,
+            'chat_message',
+            m.session_id,
+            m.id,
+            m.result_title,
+            m.result_confidence,
+            m.result_description,
+            m.result_items_json,
+            m.result_total,
+            m.content,
+            m.created_at
+        FROM messages AS m
+        WHERE m.message_type = 'estimate_result'
+        AND NOT EXISTS (
+            SELECT 1
+            FROM food_log_entries AS f
+            WHERE f.message_id = m.id
+        )
+        """
+    )
 
 
 if __name__ == '__main__':

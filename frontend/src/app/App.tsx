@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { AuthApiError, clearSession, deleteCurrentAccount, restoreSession } from '../api/auth';
-import { buildFoodLogFromSessions, getChatSession, listChatSessions } from '../api/chat';
+import { getChatSession, listChatSessions } from '../api/chat';
+import { listFoodLogEntries } from '../api/foodLog';
 import { clearStoredProfile, loadStoredProfile, ProfileApiError, toProfileForm } from '../api/profile';
 import { Header } from '../components/Header';
 import { AuthPage } from '../pages/Auth';
@@ -38,14 +39,11 @@ const App: React.FC = () => {
   const [authMode, setAuthMode] = useState<AuthScreenMode>('login');
   const [session, setSession] = useState<AuthSession | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [foodLog, setFoodLog] = useState<FoodLogEntry[]>([]);
   const [profile, setProfile] = useState<UserProfileForm>(createDefaultProfile());
   const [isBootstrappingData, setIsBootstrappingData] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
-  const foodLog = useMemo<FoodLogEntry[]>(
-    () => buildFoodLogFromSessions(sessions),
-    [sessions],
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -90,9 +88,10 @@ const App: React.FC = () => {
       setIsBootstrappingData(true);
 
       try {
-        const [storedProfile, sessionSummaries] = await Promise.all([
+        const [storedProfile, sessionSummaries, foodLogEntries] = await Promise.all([
           loadStoredProfile(),
           listChatSessions(),
+          listFoodLogEntries(),
         ]);
         if (cancelled) {
           return;
@@ -100,6 +99,7 @@ const App: React.FC = () => {
 
         setProfile(storedProfile ? toProfileForm(storedProfile) : createDefaultProfile());
         setSessions(sessionSummaries);
+        setFoodLog(foodLogEntries);
         setActiveSessionId((currentId) =>
           sessionSummaries.some((item) => item.id === currentId)
             ? currentId
@@ -136,6 +136,7 @@ const App: React.FC = () => {
         }
         console.error('Failed to load chat sessions:', error);
         setSessions([]);
+        setFoodLog([]);
         setProfile(createDefaultProfile());
       } finally {
         if (!cancelled) {
@@ -157,6 +158,7 @@ const App: React.FC = () => {
     setAuthMode(nextMode);
     setSession(null);
     setSessions([]);
+    setFoodLog([]);
     setProfile(createDefaultProfile());
     setCurrentView(AppView.WORKSPACE);
     setActiveSessionId('');
@@ -167,9 +169,19 @@ const App: React.FC = () => {
     setSession(nextSession);
     setAuthStatus('authenticated');
     setSessions([]);
+    setFoodLog([]);
     setProfile(createDefaultProfile());
     setCurrentView(AppView.WORKSPACE);
     setActiveSessionId('');
+  };
+
+  const refreshFoodLog = async () => {
+    try {
+      const entries = await listFoodLogEntries();
+      setFoodLog(entries);
+    } catch (error) {
+      console.error('Failed to load food log:', error);
+    }
   };
 
   const handleLogout = () => {
@@ -259,6 +271,7 @@ const App: React.FC = () => {
             activeSessionId={activeSessionId}
             setActiveSessionId={setActiveSessionId}
             profileId={profile.id}
+            refreshFoodLog={refreshFoodLog}
           />
         );
       case AppView.EXPLORER:
@@ -278,6 +291,7 @@ const App: React.FC = () => {
             activeSessionId={activeSessionId}
             setActiveSessionId={setActiveSessionId}
             profileId={profile.id}
+            refreshFoodLog={refreshFoodLog}
           />
         );
     }

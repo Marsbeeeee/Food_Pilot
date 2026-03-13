@@ -12,6 +12,7 @@ from backend.repositories.message_repository import (
     create_message as create_message_record,
     list_messages_by_session as list_messages_by_session_record,
 )
+from backend.services.food_log_service import record_food_log_entry
 
 
 DEFAULT_SESSION_TITLE = "New chat"
@@ -153,7 +154,7 @@ def append_assistant_message(
         if session is None:
             return None
 
-        return create_message_record(
+        message = create_message_record(
             conn,
             session_id,
             user_id,
@@ -167,6 +168,12 @@ def append_assistant_message(
             result_total=result_total,
             created_at=created_at,
         )
+        _record_food_log_from_message(
+            conn,
+            message,
+            user_id,
+        )
+        return message
     finally:
         conn.close()
 
@@ -283,6 +290,7 @@ def _generate_assistant_reply_with_conn(
             ),
             result_total=estimate.total_calories,
         )
+        _record_food_log_from_message(conn, assistant_message, user_id)
     except Exception as exc:
         assistant_message = create_message_record(
             conn,
@@ -293,6 +301,45 @@ def _generate_assistant_reply_with_conn(
             content=_build_fallback_message(exc),
         )
     return assistant_message
+
+
+def _record_food_log_from_message(
+    conn,
+    message: dict[str, object],
+    user_id: int,
+) -> None:
+    if message.get("message_type") != "estimate_result":
+        return
+
+    result_title = message.get("result_title")
+    result_description = message.get("result_description")
+    result_items_json = message.get("result_items_json")
+    result_total = message.get("result_total")
+    if not all(
+        isinstance(value, str) and value.strip()
+        for value in (
+            result_title,
+            result_description,
+            result_items_json,
+            result_total,
+        )
+    ):
+        return
+
+    record_food_log_entry(
+        user_id,
+        "chat_message",
+        title=result_title,
+        confidence=message.get("result_confidence") if isinstance(message.get("result_confidence"), str) else None,
+        description=result_description,
+        items_json=result_items_json,
+        total=result_total,
+        suggestion=message.get("content") if isinstance(message.get("content"), str) else None,
+        session_id=int(message["session_id"]),
+        message_id=int(message["id"]),
+        created_at=message.get("created_at") if isinstance(message.get("created_at"), str) else None,
+        conn=conn,
+    )
 
 
 def _build_fallback_message(error: Exception) -> str:

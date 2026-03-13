@@ -7,6 +7,7 @@ from backend.schemas.estimate import (
     EstimateResponse,
 )
 from backend.services.estimate import EstimateServiceError, estimate_meal
+from backend.services.food_log_service import record_food_log_entry_from_estimate
 
 
 def create_estimate_response(
@@ -15,6 +16,12 @@ def create_estimate_response(
 ) -> tuple[int, EstimateResponse]:
     try:
         result = estimate_meal(request_model.query, request_model.profile_id, user_id)
+        if user_id is not None:
+            record_food_log_entry_from_estimate(
+                user_id,
+                result,
+                source_type="estimate_api",
+            )
     except EstimateServiceError as exc:
         return exc.status_code, EstimateResponse(
             success=False,
