@@ -60,6 +60,12 @@
 
 ### 1️⃣ Ask FoodPilot（对话分析）
 
+### 启动前端
+
+```bash
+在 frontend 目录跑 npm run dev
+```
+
 **功能说明**
 
 用户输入任意食物或饮食描述，例如：
