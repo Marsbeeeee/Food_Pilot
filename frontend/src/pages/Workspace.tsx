@@ -1,35 +1,41 @@
+import React, { useEffect, useRef, useState } from 'react';
 
-import React, { useState, useEffect, useRef } from 'react';
-
-import { getStoredToken } from '../api/auth';
-import { ChatSession, EstimateApiResponse, FoodLogEntry, Message } from '../types/types';
+import {
+  applyChatExchange,
+  ChatApiError,
+  createChatMessage,
+  createChatSession,
+  deleteChatSession,
+  getChatSession,
+  mergeSessionIntoList,
+  renameChatSession,
+  sendChatMessage,
+} from '../api/chat';
+import { ChatSession } from '../types/types';
 
 interface WorkspaceProps {
   sessions: ChatSession[];
   setSessions: React.Dispatch<React.SetStateAction<ChatSession[]>>;
-  setFoodLog: React.Dispatch<React.SetStateAction<FoodLogEntry[]>>;
   activeSessionId: string;
   setActiveSessionId: (id: string) => void;
   profileId?: number;
 }
 
-const ESTIMATE_ENDPOINT = 'http://localhost:8000/estimate';
-
 export const Workspace: React.FC<WorkspaceProps> = ({
   sessions,
   setSessions,
-  setFoodLog,
   activeSessionId,
   setActiveSessionId,
   profileId,
 }) => {
-  const [activeSessionIdState, setActiveSessionIdState] = useState<string>(activeSessionId);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [renamingTitle, setRenamingTitle] = useState('');
-  
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [isLoadingSessionId, setIsLoadingSessionId] = useState<string | null>(null);
+
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -39,9 +45,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     } else if (sessions.length === 0) {
       setActiveSessionId('');
     }
-  }, [sessions]);
+  }, [activeSessionId, sessions, setActiveSessionId]);
 
-  const activeSession = sessions.find(s => s.id === activeSessionId) || (sessions.length > 0 ? sessions[0] : null);
+  const activeSession = sessions.find((session) => session.id === activeSessionId)
+    || (sessions.length > 0 ? sessions[0] : null);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -55,188 +62,167 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         setIsMenuOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleNewAnalysis = () => {
-    const newId = Math.floor(1000 + Math.random() * 9000).toString();
-    const newSession: ChatSession = {
-      id: newId,
-      title: '新对话',
-      icon: 'chat_bubble',
-      timestamp: new Date(),
-      messages: []
-    };
-    setSessions([newSession, ...sessions]);
-    setActiveSessionId(newId);
+  const handleNewAnalysis = async () => {
+    if (isCreatingSession) {
+      return;
+    }
+
+    setIsCreatingSession(true);
+    try {
+      const newSession = await createChatSession();
+      setSessions((prev) => mergeSessionIntoList(prev, newSession));
+      setActiveSessionId(newSession.id);
+    } catch (error) {
+      handleChatError(error, 'Unable to create a new chat right now.');
+    } finally {
+      setIsCreatingSession(false);
+    }
   };
 
-  const performAnalysis = async (query: string, sessionId: string) => {
+  const handleSendMessage = async (text?: string) => {
+    const finalQuery = text || inputValue.trim();
+    if (!finalQuery || isTyping) {
+      return;
+    }
+
     setIsTyping(true);
+    setInputValue('');
+
     try {
-      const token = getStoredToken();
-      if (!token) {
-        throw new Error('Please sign in again.');
+      if (!activeSessionId || sessions.length === 0) {
+        const exchange = await createChatMessage(finalQuery, profileId);
+        setSessions((prev) => applyChatExchange(prev, exchange));
+        setActiveSessionId(exchange.session.id);
+        return;
       }
 
-      const response = await fetch(ESTIMATE_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          query,
-          ...(profileId ? { profileId } : {}),
-        })
-      });
-      const payload: EstimateApiResponse = await response.json();
-
-      if (!response.ok || !payload.success || !payload.data) {
-        throw new Error(payload.error?.message || 'Estimate service is temporarily unavailable.');
+      const active = sessions.find((session) => session.id === activeSessionId);
+      if (active && !active.hasLoadedMessages) {
+        await loadSessionDetail(active.id);
       }
 
-      const assistantMessage: Message = {
-        role: 'assistant',
-        isResult: true,
-        title: payload.data.title,
-        confidence: payload.data.confidence,
-        description: payload.data.description,
-        items: payload.data.items,
-        total: payload.data.total_calories,
-        content: payload.data.suggestion,
-        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-      };
-
-      setSessions(prev => prev.map(s =>
-        s.id === sessionId ? { ...s, messages: [...s.messages, assistantMessage] } : s
-      ));
-      setFoodLog((prev) => [
-        buildFoodLogEntry(payload, sessionId),
-        ...prev,
-      ]);
+      const exchange = await sendChatMessage(activeSessionId, finalQuery, profileId);
+      setSessions((prev) => applyChatExchange(prev, exchange));
+      setActiveSessionId(exchange.session.id);
     } catch (error) {
-      console.error("Analysis Error:", error);
-      const fallbackMessage = error instanceof Error
-        ? error.message
-        : 'Unable to process this meal description right now. Please try again.';
-      const errorMessage: Message = {
-        role: 'assistant',
-        content: fallbackMessage,
-        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-      };
-      setSessions(prev => prev.map(s =>
-        s.id === sessionId ? { ...s, messages: [...s.messages, errorMessage] } : s
-      ));
+      setInputValue(finalQuery);
+      handleChatError(error, 'Unable to send this message right now.');
     } finally {
       setIsTyping(false);
     }
   };
 
-  const handleSendMessage = (text?: string) => {
-    const finalQuery = text || inputValue.trim();
-    if (!finalQuery || isTyping) return;
-
-    const newMessage: Message = {
-      role: 'user',
-      content: finalQuery,
-      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-    };
-
-    if (sessions.length === 0 || !activeSessionId) {
-       const newId = Math.floor(1000 + Math.random() * 9000).toString();
-       const newSession: ChatSession = {
-         id: newId,
-         title: finalQuery.length > 20 ? finalQuery.substring(0, 20) + '...' : finalQuery,
-         icon: 'chat_bubble',
-         timestamp: new Date(),
-         messages: [newMessage]
-       };
-       setSessions([newSession]);
-       setActiveSessionId(newId);
-       setInputValue('');
-       performAnalysis(finalQuery, newId);
-       return;
-    }
-
-    setSessions(prev => prev.map(s => {
-      if (s.id === activeSessionId) {
-        const isFirstMessage = s.messages.length === 0;
-        return {
-          ...s,
-          title: isFirstMessage ? (finalQuery.length > 20 ? finalQuery.substring(0, 20) + '...' : finalQuery) : s.title,
-          messages: [...s.messages, newMessage]
-        };
-      }
-      return s;
-    }));
-
-    setInputValue('');
-    performAnalysis(finalQuery, activeSessionId);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      void handleSendMessage();
     }
   };
 
-  const handleDeleteSession = (id: string) => {
-    const remainingSessions = sessions.filter(s => s.id !== id);
-    if (remainingSessions.length === 0) {
-      setSessions([]);
-      setActiveSessionId('');
-    } else {
-      if (id === activeSessionId) {
+  const handleDeleteSession = async (sessionId: string) => {
+    try {
+      await deleteChatSession(sessionId);
+      const remainingSessions = sessions.filter((session) => session.id !== sessionId);
+      setSessions(remainingSessions);
+      if (remainingSessions.length === 0) {
+        setActiveSessionId('');
+      } else if (sessionId === activeSessionId) {
         setActiveSessionId(remainingSessions[0].id);
       }
-      setSessions(remainingSessions);
+      setIsMenuOpen(false);
+    } catch (error) {
+      handleChatError(error, 'Unable to delete this chat right now.');
     }
-    setFoodLog((prev) => prev.filter((entry) => entry.sessionId !== id));
-    setIsMenuOpen(false);
   };
 
-  const handleRenameSession = () => {
-    if (!renamingTitle.trim()) return;
-    setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, title: renamingTitle.trim() } : s));
-    setIsRenameModalOpen(false);
-    setIsMenuOpen(false);
+  const handleRenameSession = async () => {
+    if (!activeSessionId || !renamingTitle.trim()) {
+      return;
+    }
+
+    try {
+      const renamedSession = await renameChatSession(activeSessionId, renamingTitle.trim());
+      setSessions((prev) => prev.map((session) => (
+        session.id === activeSessionId
+          ? {
+              ...session,
+              title: renamedSession.title,
+              timestamp: renamedSession.timestamp,
+            }
+          : session
+      )));
+      setIsRenameModalOpen(false);
+      setIsMenuOpen(false);
+    } catch (error) {
+      handleChatError(error, 'Unable to rename this chat right now.');
+    }
   };
 
   const openRenameModal = () => {
-    if (!activeSession) return;
+    if (!activeSession) {
+      return;
+    }
+
     setRenamingTitle(activeSession.title);
     setIsRenameModalOpen(true);
     setIsMenuOpen(false);
+  };
+
+  const handleSelectSession = async (sessionId: string) => {
+    setActiveSessionId(sessionId);
+    const selectedSession = sessions.find((session) => session.id === sessionId);
+    if (!selectedSession || selectedSession.hasLoadedMessages) {
+      return;
+    }
+
+    await loadSessionDetail(sessionId);
+  };
+
+  const loadSessionDetail = async (sessionId: string) => {
+    setIsLoadingSessionId(sessionId);
+    try {
+      const detailedSession = await getChatSession(sessionId);
+      setSessions((prev) => prev.map((session) => (
+        session.id === sessionId ? detailedSession : session
+      )));
+    } catch (error) {
+      handleChatError(error, 'Unable to load this chat right now.');
+    } finally {
+      setIsLoadingSessionId((current) => (current === sessionId ? null : current));
+    }
   };
 
   return (
     <div className="relative flex h-full min-h-0 flex-1 overflow-hidden">
       <aside className="flex min-h-0 w-72 shrink-0 flex-col border-r border-[#4A453E]/5 bg-[#FFFDF5]">
         <div className="flex h-full min-h-0 flex-col gap-6 p-6">
-          <button 
-            onClick={handleNewAnalysis}
-            className="bg-[#FF8A65] text-white rounded-[20px] flex w-full items-center justify-center gap-2 h-12 px-4 text-sm font-bold shadow-lg shadow-[#FF8A65]/10 hover:shadow-xl hover:translate-y-[-1px] transition-all active:scale-95 active:translate-y-0"
+          <button
+            onClick={() => void handleNewAnalysis()}
+            disabled={isCreatingSession}
+            className="bg-[#FF8A65] text-white rounded-[20px] flex w-full items-center justify-center gap-2 h-12 px-4 text-sm font-bold shadow-lg shadow-[#FF8A65]/10 hover:shadow-xl hover:translate-y-[-1px] transition-all active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
           >
             <span className="material-symbols-outlined text-[20px]">add_circle</span>
-            <span>开启新对话</span>
+            <span>寮€鍚柊瀵硅瘽</span>
           </button>
-          
+
           <div className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-2 pb-10">
             <div>
-              <h3 className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30 mb-4">历史记录</h3>
+              <h3 className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30 mb-4">鍘嗗彶璁板綍</h3>
               <div className="flex flex-col gap-1">
-                {sessions.map(session => {
-                  const lastResult = [...session.messages].reverse().find(m => m.isResult);
+                {sessions.map((session) => {
+                  const lastResult = [...session.messages].reverse().find((message) => message.isResult);
                   return (
-                    <div 
+                    <div
                       key={session.id}
-                      onClick={() => setActiveSessionId(session.id)}
+                      onClick={() => void handleSelectSession(session.id)}
                       className={`group flex items-start gap-4 p-4 rounded-[16px] cursor-pointer transition-all border ${
-                        activeSessionId === session.id 
-                          ? 'bg-[#F7F3E9] border-[#4A453E]/10' 
+                        activeSessionId === session.id
+                          ? 'bg-[#F7F3E9] border-[#4A453E]/10'
                           : 'bg-transparent border-transparent hover:bg-[#F7F3E9]/60'
                       }`}
                     >
@@ -246,7 +232,13 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                           {session.title}
                         </p>
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] text-[#4A453E]/30 font-bold uppercase tracking-wider">{session.messages.length > 0 ? '已记录' : '空'}</span>
+                          <span className="text-[10px] text-[#4A453E]/30 font-bold uppercase tracking-wider">
+                            {isLoadingSessionId === session.id
+                              ? '鍔犺浇涓?...'
+                              : session.messages.length > 0
+                                ? '宸茶褰?'
+                                : '绌?'}
+                          </span>
                           {lastResult?.total && (
                             <span className="text-[10px] bg-white/60 text-[#4A453E]/50 px-1.5 py-0.5 rounded border border-[#4A453E]/05 font-bold">
                               {lastResult.total}
@@ -258,7 +250,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                   );
                 })}
                 {sessions.length === 0 && (
-                  <p className="px-3 text-[11px] text-[#4A453E]/30 italic">暂无历史记录。</p>
+                  <p className="px-3 text-[11px] text-[#4A453E]/30 italic">鏆傛棤鍘嗗彶璁板綍銆?/p>
                 )}
               </div>
             </div>
@@ -276,29 +268,29 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               </span>
             </div>
             <div className="relative flex items-center gap-2" ref={menuRef}>
-              <button 
+              <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className={`p-1 transition-colors rounded-full ${isMenuOpen ? 'text-[#FF8A65] bg-[#FF8A65]/10' : 'text-[#4A453E]/30 hover:text-[#FF8A65] hover:bg-[#FF8A65]/5'}`}
               >
                 <span className="material-symbols-outlined text-[20px]">more_vert</span>
               </button>
-              
+
               {isMenuOpen && (
                 <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-[20px] shadow-xl border border-[#4A453E]/10 py-2 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                  <button 
+                  <button
                     onClick={openRenameModal}
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-[#4A453E]/70 hover:bg-[#F7F3E9] hover:text-[#4A453E] transition-colors"
                   >
                     <span className="material-symbols-outlined text-[18px]">edit</span>
-                    重命名
+                    閲嶅懡鍚?
                   </button>
                   <div className="h-[1px] bg-[#4A453E]/5 mx-2 my-1"></div>
-                  <button 
-                    onClick={() => handleDeleteSession(activeSessionId)}
+                  <button
+                    onClick={() => void handleDeleteSession(activeSessionId)}
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-400 hover:bg-red-50 transition-colors"
                   >
                     <span className="material-symbols-outlined text-[18px]">delete</span>
-                    删除
+                    鍒犻櫎
                   </button>
                 </div>
               )}
@@ -306,7 +298,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           </div>
         )}
 
-        <div 
+        <div
           ref={chatContainerRef}
           className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-10 overflow-y-auto px-6 py-10 scroll-smooth md:px-16"
         >
@@ -315,54 +307,54 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               <div className="size-20 bg-white rounded-[40px] shadow-sm flex items-center justify-center mb-8 border border-[#4A453E]/05">
                 <span className="material-symbols-outlined text-4xl text-[#FF8A65]">restaurant</span>
               </div>
-              <h3 className="text-3xl font-serif-brand font-bold text-[#4A453E] mb-3 italic">你盘子里装了什么？</h3>
+              <h3 className="text-3xl font-serif-brand font-bold text-[#4A453E] mb-3 italic">浣犵洏瀛愰噷瑁呬簡浠€涔堬紵</h3>
               <p className="max-w-md text-[#4A453E]/50 text-base leading-relaxed">
-                描述你的饮食，我将为你分析营养成分并估算热量。
+                鎻忚堪浣犵殑楗锛屾垜灏嗕负浣犲垎鏋愯惀鍏绘垚鍒嗗苟浼扮畻鐑噺銆?
               </p>
               <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
-                <button onClick={() => handleSendMessage("经典的牛油果吐司包含哪些营养？")} className="p-4 bg-white rounded-[20px] border border-[#4A453E]/05 text-left hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20 transition-all group">
-                  <p className="text-[13px] font-bold text-[#4A453E] mb-1">标准查询</p>
-                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">"经典的牛油果吐司包含哪些营养？"</p>
+                <button onClick={() => void handleSendMessage('缁忓吀鐨勭墰娌规灉鍚愬徃鍖呭惈鍝簺钀ュ吇锛?')} className="p-4 bg-white rounded-[20px] border border-[#4A453E]/05 text-left hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20 transition-all group">
+                  <p className="text-[13px] font-bold text-[#4A453E] mb-1">鏍囧噯鏌ヨ</p>
+                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">"缁忓吀鐨勭墰娌规灉鍚愬徃鍖呭惈鍝簺钀ュ吇锛?"</p>
                 </button>
-                <button onClick={() => handleSendMessage("一份波奇饭大约有多少热量？")} className="p-4 bg-white rounded-[20px] border border-[#4A453E]/05 text-left hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20 transition-all group">
-                  <p className="text-[13px] font-bold text-[#4A453E] mb-1">餐食估算</p>
-                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">"一份波奇饭大约有多少热量？"</p>
+                <button onClick={() => void handleSendMessage('涓€浠芥尝濂囬キ澶х害鏈夊灏戠儹閲忥紵')} className="p-4 bg-white rounded-[20px] border border-[#4A453E]/05 text-left hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20 transition-all group">
+                  <p className="text-[13px] font-bold text-[#4A453E] mb-1">椁愰浼扮畻</p>
+                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">"涓€浠芥尝濂囬キ澶х害鏈夊灏戠儹閲忥紵"</p>
                 </button>
               </div>
             </div>
           ) : (
-            activeSession.messages.map((msg, i) => (
-              <div key={i} className={`flex items-start gap-5 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                {msg.role === 'assistant' && (
+            activeSession.messages.map((message, index) => (
+              <div key={message.id ?? index} className={`flex items-start gap-5 ${message.role === 'user' ? 'justify-end' : ''}`}>
+                {message.role === 'assistant' && (
                   <div className="bg-white border border-[#4A453E]/10 flex items-center justify-center rounded-2xl size-10 shrink-0 shadow-sm mt-1">
                     <span className="material-symbols-outlined text-[#FF8A65] text-[22px]">auto_awesome</span>
                   </div>
                 )}
-                
-                <div className={`flex flex-col gap-3 ${msg.role === 'user' ? 'items-end max-w-[80%]' : 'items-start max-w-[95%]'}`}>
-                  {msg.isResult ? (
+
+                <div className={`flex flex-col gap-3 ${message.role === 'user' ? 'items-end max-w-[80%]' : 'items-start max-w-[95%]'}`}>
+                  {message.isResult ? (
                     <div className="bg-white rounded-[32px] shadow-sm border border-[#4A453E]/05 w-full overflow-hidden">
                       <div className="p-8 border-b border-[#4A453E]/5">
                         <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-2xl text-[#4A453E] font-serif-brand font-bold italic">{msg.title}</h3>
+                          <h3 className="text-2xl text-[#4A453E] font-serif-brand font-bold italic">{message.title}</h3>
                           <span className="bg-[#81C784]/10 text-[#81C784] text-[10px] font-bold px-3 py-1.5 rounded-full uppercase border border-[#81C784]/10 tracking-widest">
-                            {msg.confidence}
+                            {message.confidence}
                           </span>
                         </div>
-                        <p className="text-[16px] text-[#4A453E]/70 leading-relaxed font-medium">{msg.description}</p>
+                        <p className="text-[16px] text-[#4A453E]/70 leading-relaxed font-medium">{message.description}</p>
                       </div>
                       <div className="p-0">
                         <table className="w-full text-left">
                           <thead className="bg-[#F7F3E9]/30 text-[#4A453E]/40 text-[10px] font-bold uppercase tracking-widest">
                             <tr>
-                              <th className="px-8 py-4">食材</th>
-                              <th className="px-8 py-4">份量</th>
-                              <th className="px-8 py-4 text-right">估算热量</th>
+                              <th className="px-8 py-4">椋熸潗</th>
+                              <th className="px-8 py-4">浠介噺</th>
+                              <th className="px-8 py-4 text-right">浼扮畻鐑噺</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-[#4A453E]/5 text-[14px]">
-                            {msg.items?.map((item, idx) => (
-                              <tr key={idx} className="hover:bg-[#F7F3E9]/10 transition-colors">
+                            {message.items?.map((item, itemIndex) => (
+                              <tr key={itemIndex} className="hover:bg-[#F7F3E9]/10 transition-colors">
                                 <td className="px-8 py-4 font-bold text-[#4A453E]">{item.name}</td>
                                 <td className="px-8 py-4 text-[#4A453E]/50 font-medium">{item.portion}</td>
                                 <td className="px-8 py-4 text-right font-bold text-[#4A453E]">{item.energy}</td>
@@ -371,8 +363,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                           </tbody>
                           <tfoot className="bg-[#FFFDF5] font-bold border-t border-[#4A453E]/10">
                             <tr>
-                              <td className="px-8 py-6 text-[#4A453E] text-lg" colSpan={2}>预估总量</td>
-                              <td className="px-8 py-6 text-right text-[#FF8A65] text-3xl font-serif-brand italic">{msg.total}</td>
+                              <td className="px-8 py-6 text-[#4A453E] text-lg" colSpan={2}>棰勪及鎬婚噺</td>
+                              <td className="px-8 py-6 text-right text-[#FF8A65] text-3xl font-serif-brand italic">{message.total}</td>
                             </tr>
                           </tfoot>
                         </table>
@@ -380,14 +372,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     </div>
                   ) : (
                     <div className={`text-[15px] leading-relaxed rounded-[24px] px-6 py-4 shadow-sm border ${
-                      msg.role === 'user' 
-                        ? 'bg-[#F7F3E9] text-[#4A453E] border-[#4A453E]/5 rounded-tr-[4px]' 
+                      message.role === 'user'
+                        ? 'bg-[#F7F3E9] text-[#4A453E] border-[#4A453E]/5 rounded-tr-[4px]'
                         : 'bg-white text-[#4A453E] border-[#4A453E]/08 rounded-tl-[4px]'
                     }`}>
-                      {msg.content}
+                      {message.content}
                     </div>
                   )}
-                  <span className="text-[#4A453E]/20 text-[9px] font-bold uppercase tracking-widest px-1">{msg.time || '刚刚'}</span>
+                  <span className="text-[#4A453E]/20 text-[9px] font-bold uppercase tracking-widest px-1">{message.time || '鍒氬垰'}</span>
                 </div>
               </div>
             ))
@@ -411,21 +403,21 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         <div className="shrink-0 bg-gradient-to-t from-[#FFFDF5] via-[#FFFDF5] to-transparent px-10 pb-10 pt-4 z-20">
           <div className="max-w-4xl mx-auto">
             <div className="relative flex items-end bg-white rounded-[28px] border border-[#4A453E]/10 focus-within:border-[#FF8A65]/40 transition-all shadow-xl shadow-[#4A453E]/05 overflow-hidden">
-              <textarea 
-                className="flex-1 bg-transparent border-none focus:ring-0 text-[16px] py-6 pl-8 text-[#4A453E] placeholder-[#4A453E]/30 resize-none max-h-40 custom-scrollbar leading-relaxed" 
-                placeholder="和 Food Pilot 聊聊... (例如：我的寿司里有什么？)" 
+              <textarea
+                className="flex-1 bg-transparent border-none focus:ring-0 text-[16px] py-6 pl-8 text-[#4A453E] placeholder-[#4A453E]/30 resize-none max-h-40 custom-scrollbar leading-relaxed"
+                placeholder="鍜?Food Pilot 鑱婅亰... (渚嬪锛氭垜鐨勫鍙搁噷鏈変粈涔堬紵)"
                 rows={1}
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={(event) => setInputValue(event.target.value)}
                 onKeyDown={handleKeyDown}
               ></textarea>
               <div className="p-3">
-                <button 
-                  onClick={() => handleSendMessage()}
+                <button
+                  onClick={() => void handleSendMessage()}
                   disabled={!inputValue.trim() || isTyping}
                   className={`size-12 rounded-[20px] flex items-center justify-center transition-all active:scale-95 ${
-                    !inputValue.trim() || isTyping 
-                      ? 'bg-[#4A453E]/05 text-[#4A453E]/20 cursor-not-allowed' 
+                    !inputValue.trim() || isTyping
+                      ? 'bg-[#4A453E]/05 text-[#4A453E]/20 cursor-not-allowed'
                       : 'bg-[#FF8A65] text-white hover:bg-[#FF8A65]/90 shadow-lg shadow-[#FF8A65]/20'
                   }`}
                 >
@@ -434,7 +426,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               </div>
             </div>
             <p className="text-center text-[10px] text-[#4A453E]/30 mt-4 font-bold uppercase tracking-[0.2em]">
-              你的均衡饮食助手。
+              浣犵殑鍧囪　楗鍔╂墜銆?
             </p>
           </div>
         </div>
@@ -443,18 +435,18 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       {isRenameModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm px-6">
           <div className="bg-white rounded-[32px] p-8 w-full max-w-md shadow-2xl border border-[#4A453E]/10 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-2xl font-serif-brand font-bold text-[#4A453E] mb-6 italic">重命名对话</h3>
-            <input 
-              type="text" 
+            <h3 className="text-2xl font-serif-brand font-bold text-[#4A453E] mb-6 italic">閲嶅懡鍚嶅璇?/h3>
+            <input
+              type="text"
               value={renamingTitle}
-              onChange={(e) => setRenamingTitle(e.target.value)}
+              onChange={(event) => setRenamingTitle(event.target.value)}
               autoFocus
               className="w-full bg-[#F7F3E9]/40 border border-[#4A453E]/10 rounded-[18px] px-6 py-4 font-bold text-[#4A453E] focus:ring-2 focus:ring-[#FF8A65]/20 focus:bg-white outline-none transition-all mb-8"
-              onKeyDown={(e) => e.key === 'Enter' && handleRenameSession()}
+              onKeyDown={(event) => event.key === 'Enter' && void handleRenameSession()}
             />
             <div className="flex gap-3">
-              <button onClick={() => setIsRenameModalOpen(false)} className="flex-1 py-3 bg-white text-[#4A453E]/40 font-bold text-sm rounded-full border border-[#4A453E]/10 hover:bg-[#F7F3E9] transition-all">取消</button>
-              <button onClick={handleRenameSession} className="flex-1 py-3 bg-[#FF8A65] text-white font-bold text-sm rounded-full shadow-lg shadow-[#FF8A65]/20 hover:translate-y-[-1px] transition-all">保存</button>
+              <button onClick={() => setIsRenameModalOpen(false)} className="flex-1 py-3 bg-white text-[#4A453E]/40 font-bold text-sm rounded-full border border-[#4A453E]/10 hover:bg-[#F7F3E9] transition-all">鍙栨秷</button>
+              <button onClick={() => void handleRenameSession()} className="flex-1 py-3 bg-[#FF8A65] text-white font-bold text-sm rounded-full shadow-lg shadow-[#FF8A65]/20 hover:translate-y-[-1px] transition-all">淇濆瓨</button>
             </div>
           </div>
         </div>
@@ -463,25 +455,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   );
 };
 
-function buildFoodLogEntry(
-  payload: EstimateApiResponse,
-  sessionId: string,
-): FoodLogEntry {
-  const data = payload.data!;
-  const now = new Date();
-
-  return {
-    id: `${sessionId}-${now.getTime()}`,
-    name: data.title,
-    description: data.description,
-    calories: data.total_calories.replace(/\s*kcal/i, '').trim(),
-    date: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    image: `https://picsum.photos/seed/foodpilot-${sessionId}/640/480`,
-    breakdown: data.items.map((item) => ({ ...item })),
-    protein: '--',
-    carbs: '--',
-    fat: '--',
-    sessionId,
-  };
+function handleChatError(error: unknown, fallbackMessage: string): void {
+  console.error('Chat Error:', error);
+  const message = error instanceof ChatApiError
+    ? error.message
+    : error instanceof Error
+      ? error.message
+      : fallbackMessage;
+  window.alert(message || fallbackMessage);
 }

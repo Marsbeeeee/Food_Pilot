@@ -89,9 +89,11 @@ export interface UserProfileForm {
 }
 
 export interface Message {
+  id?: string;
   role: 'user' | 'assistant';
   content?: string;
   time: string;
+  createdAt?: string;
   isResult?: boolean;
   title?: string;
   confidence?: string;
@@ -106,6 +108,7 @@ export interface ChatSession {
   messages: Message[];
   timestamp: Date;
   icon: string;
+  hasLoadedMessages?: boolean;
 }
 
 export interface FoodLogEntry {

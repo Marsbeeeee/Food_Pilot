@@ -1,15 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { AuthApiError, clearSession, deleteCurrentAccount, restoreSession } from '../api/auth';
+import { buildFoodLogFromSessions, getChatSession, listChatSessions } from '../api/chat';
 import { clearStoredProfile, loadStoredProfile, ProfileApiError, toProfileForm } from '../api/profile';
-import {
-  clearUserFoodLog,
-  clearUserSessions,
-  loadUserFoodLog,
-  loadUserSessions,
-  saveUserFoodLog,
-  saveUserSessions,
-} from '../api/userData';
 import { Header } from '../components/Header';
 import { AuthPage } from '../pages/Auth';
 import { Explorer } from '../pages/Explorer';
@@ -45,11 +38,14 @@ const App: React.FC = () => {
   const [authMode, setAuthMode] = useState<AuthScreenMode>('login');
   const [session, setSession] = useState<AuthSession | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [foodLog, setFoodLog] = useState<FoodLogEntry[]>([]);
   const [profile, setProfile] = useState<UserProfileForm>(createDefaultProfile());
   const [isBootstrappingData, setIsBootstrappingData] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
+  const foodLog = useMemo<FoodLogEntry[]>(
+    () => buildFoodLogFromSessions(sessions),
+    [sessions],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -92,26 +88,45 @@ const App: React.FC = () => {
 
     const hydrateUserData = async () => {
       setIsBootstrappingData(true);
-      const userId = session.user.id;
-      const storedSessions = loadUserSessions(userId);
-      const storedFoodLog = loadUserFoodLog(userId);
-
-      if (!cancelled) {
-        setSessions(storedSessions);
-        setFoodLog(storedFoodLog);
-        setActiveSessionId((currentId) =>
-          storedSessions.some((item) => item.id === currentId)
-            ? currentId
-            : storedSessions[0]?.id || '',
-        );
-      }
 
       try {
-        const storedProfile = await loadStoredProfile();
+        const [storedProfile, sessionSummaries] = await Promise.all([
+          loadStoredProfile(),
+          listChatSessions(),
+        ]);
         if (cancelled) {
           return;
         }
+
         setProfile(storedProfile ? toProfileForm(storedProfile) : createDefaultProfile());
+        setSessions(sessionSummaries);
+        setActiveSessionId((currentId) =>
+          sessionSummaries.some((item) => item.id === currentId)
+            ? currentId
+            : sessionSummaries[0]?.id || '',
+        );
+
+        if (sessionSummaries.length > 0) {
+          const detailedSessions = await Promise.all(
+            sessionSummaries.map(async (chatSession) => {
+              try {
+                return await getChatSession(chatSession.id);
+              } catch (error) {
+                console.error(`Failed to load chat session ${chatSession.id}:`, error);
+                return chatSession;
+              }
+            }),
+          );
+
+          if (!cancelled) {
+            setSessions(detailedSessions);
+            setActiveSessionId((currentId) =>
+              detailedSessions.some((item) => item.id === currentId)
+                ? currentId
+                : detailedSessions[0]?.id || '',
+            );
+          }
+        }
       } catch (error) {
         if (cancelled) {
           return;
@@ -119,6 +134,8 @@ const App: React.FC = () => {
         if (!(error instanceof ProfileApiError && error.status === 404)) {
           console.error('Failed to load profile:', error);
         }
+        console.error('Failed to load chat sessions:', error);
+        setSessions([]);
         setProfile(createDefaultProfile());
       } finally {
         if (!cancelled) {
@@ -134,27 +151,12 @@ const App: React.FC = () => {
     };
   }, [authStatus, session]);
 
-  useEffect(() => {
-    if (authStatus !== 'authenticated' || !session || isBootstrappingData) {
-      return;
-    }
-    saveUserSessions(session.user.id, sessions);
-  }, [authStatus, isBootstrappingData, session, sessions]);
-
-  useEffect(() => {
-    if (authStatus !== 'authenticated' || !session || isBootstrappingData) {
-      return;
-    }
-    saveUserFoodLog(session.user.id, foodLog);
-  }, [authStatus, foodLog, isBootstrappingData, session]);
-
   const resetUnauthenticatedState = (nextMode: AuthScreenMode) => {
     setIsBootstrappingData(false);
     setAuthStatus('unauthenticated');
     setAuthMode(nextMode);
     setSession(null);
     setSessions([]);
-    setFoodLog([]);
     setProfile(createDefaultProfile());
     setCurrentView(AppView.WORKSPACE);
     setActiveSessionId('');
@@ -165,7 +167,6 @@ const App: React.FC = () => {
     setSession(nextSession);
     setAuthStatus('authenticated');
     setSessions([]);
-    setFoodLog([]);
     setProfile(createDefaultProfile());
     setCurrentView(AppView.WORKSPACE);
     setActiveSessionId('');
@@ -193,8 +194,6 @@ const App: React.FC = () => {
 
     try {
       await deleteCurrentAccount();
-      clearUserSessions(session.user.id);
-      clearUserFoodLog(session.user.id);
       clearSession();
       clearStoredProfile();
       resetUnauthenticatedState('register');
@@ -257,7 +256,6 @@ const App: React.FC = () => {
           <Workspace
             sessions={sessions}
             setSessions={setSessions}
-            setFoodLog={setFoodLog}
             activeSessionId={activeSessionId}
             setActiveSessionId={setActiveSessionId}
             profileId={profile.id}
@@ -277,7 +275,6 @@ const App: React.FC = () => {
           <Workspace
             sessions={sessions}
             setSessions={setSessions}
-            setFoodLog={setFoodLog}
             activeSessionId={activeSessionId}
             setActiveSessionId={setActiveSessionId}
             profileId={profile.id}
