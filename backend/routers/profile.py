@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter
 from backend.database.connection import get_db_connection
 from backend.schemas.profile import ProfileIn, ProfileOut
@@ -25,7 +27,7 @@ def create_profile(profile: ProfileIn):
             profile.goal,
             profile.kcal_target,
             profile.diet_style,
-            profile.allergies,
+            json.dumps(profile.allergies, ensure_ascii = False),
             profile.exercise_type,
             profile.pace,
         ),

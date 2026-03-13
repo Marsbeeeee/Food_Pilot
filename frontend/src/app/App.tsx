@@ -3,7 +3,7 @@ import { Header } from '../components/Header';
 import { Workspace } from '../pages/Workspace';
 import { Explorer } from '../pages/Explorer';
 import { Profile } from '../pages/Profile';
-import { AppView, ChatSession, FoodLogEntry, UserProfile } from '../types/types';
+import { AppView, ChatSession, FoodLogEntry, UserProfileForm } from '../types/types';
 
 const MOCK_USER_SESSIONS: ChatSession[] = [
   {
@@ -57,7 +57,7 @@ const MOCK_USER_LOG: FoodLogEntry[] = [
   }
 ];
 
-const DEFAULT_PROFILE: UserProfile = {
+const DEFAULT_PROFILE: UserProfileForm = {
   age: '',
   height: '',
   weight: '',
@@ -71,7 +71,8 @@ const DEFAULT_PROFILE: UserProfile = {
   allergies: []
 };
 
-const USER_PROFILE: UserProfile = {
+const USER_PROFILE: UserProfileForm = {
+  id: 1,
   age: '28',
   height: '178',
   weight: '72',
@@ -90,7 +91,7 @@ const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
   const [sessions, setSessions] = useState<ChatSession[]>(MOCK_USER_SESSIONS);
   const [foodLog, setFoodLog] = useState<FoodLogEntry[]>(MOCK_USER_LOG);
-  const [profile, setProfile] = useState<UserProfile>(USER_PROFILE);
+  const [profile, setProfile] = useState<UserProfileForm>(USER_PROFILE);
   const [activeSessionId, setActiveSessionId] = useState<string>(MOCK_USER_SESSIONS[0]?.id || '');
 
   const handleLogout = () => {

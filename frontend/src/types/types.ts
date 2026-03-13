@@ -39,6 +39,24 @@ export interface EstimateApiResponse {
 }
 
 export interface UserProfile {
+  id: number;
+  age: number;
+  height: number;
+  weight: number;
+  sex: string;
+  activityLevel: string;
+  exerciseType: string;
+  goal: string;
+  pace: string;
+  kcalTarget: number;
+  dietStyle: string;
+  allergies: string[];
+}
+
+export type UserProfileInput = Omit<UserProfile, 'id'>;
+
+export interface UserProfileForm {
+  id?: number;
   age: string;
   height: string;
   weight: string;

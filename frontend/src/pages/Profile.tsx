@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserProfile } from '../types/types';
+import { UserProfileForm } from '../types/types';
 
 interface ProfileProps {
-  profile: UserProfile;
-  setProfile: React.Dispatch<React.SetStateAction<UserProfile>>;
+  profile: UserProfileForm;
+  setProfile: React.Dispatch<React.SetStateAction<UserProfileForm>>;
 }
 
 export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
@@ -30,7 +30,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
     }
   }, [saveStatus]);
 
-  const updateProfile = (key: keyof UserProfile, value: any) => {
+  const updateProfile = (key: keyof UserProfileForm, value: string) => {
     setProfile(prev => ({ ...prev, [key]: value }));
   };
 
