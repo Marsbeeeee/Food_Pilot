@@ -125,6 +125,7 @@ const App: React.FC = () => {
             setSessions={setSessions} 
             activeSessionId={activeSessionId}
             setActiveSessionId={setActiveSessionId}
+            profileId={profile.id}
           />
         );
       case AppView.EXPLORER:
@@ -143,6 +144,7 @@ const App: React.FC = () => {
             setSessions={setSessions} 
             activeSessionId={activeSessionId}
             setActiveSessionId={setActiveSessionId}
+            profileId={profile.id}
           />
         );
     }

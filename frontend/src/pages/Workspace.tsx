@@ -7,11 +7,12 @@ interface WorkspaceProps {
   setSessions: React.Dispatch<React.SetStateAction<ChatSession[]>>;
   activeSessionId: string;
   setActiveSessionId: (id: string) => void;
+  profileId?: number;
 }
 
 const ESTIMATE_ENDPOINT = 'http://localhost:8000/estimate';
 
-export const Workspace: React.FC<WorkspaceProps> = ({ sessions, setSessions, activeSessionId, setActiveSessionId }) => {
+export const Workspace: React.FC<WorkspaceProps> = ({ sessions, setSessions, activeSessionId, setActiveSessionId, profileId }) => {
   const [activeSessionIdState, setActiveSessionIdState] = useState<string>(activeSessionId);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -69,7 +70,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({ sessions, setSessions, act
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ query })
+        body: JSON.stringify({
+          query,
+          ...(profileId ? { profileId } : {}),
+        })
       });
       const payload: EstimateApiResponse = await response.json();
 

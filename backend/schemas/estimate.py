@@ -2,9 +2,14 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class EstimateRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     query: str
+    profile_id: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("profile_id", "profileId"),
+        serialization_alias="profileId",
+    )
 
     @field_validator("query")
     @classmethod
@@ -17,6 +22,13 @@ class EstimateRequest(BaseModel):
         if len(normalized) > 500:
             raise ValueError("\u8f93\u5165\u5185\u5bb9\u4e0d\u80fd\u8d85\u8fc7 500 \u4e2a\u5b57\u7b26")
         return normalized
+
+    @field_validator("profile_id")
+    @classmethod
+    def validate_profile_id(cls, value: int | None) -> int | None:
+        if value is not None and value <= 0:
+            raise ValueError("profile_id 必须大于 0")
+        return value
 
 
 class EstimateItem(BaseModel):
