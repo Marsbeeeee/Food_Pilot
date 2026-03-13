@@ -6,17 +6,17 @@ def init_db():
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS profiles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        age INTEGER,
-        height REAL,
-        weight REAL,
-        sex TEXT,
-        activity_level TEXT,
-        goal TEXT,
-        kcal_target INTEGER,
-        diet_style TEXT,
-        allergies TEXT,
-        exercise_type TEXT,
-        pace TEXT
+        age INTEGER NOT NULL,
+        height REAL NOT NULL,
+        weight REAL NOT NULL,
+        sex TEXT NOT NULL,
+        activity_level TEXT NOT NULL,
+        goal TEXT NOT NULL,
+        kcal_target INTEGER NOT NULL,
+        diet_style TEXT NOT NULL,
+        allergies TEXT NOT NULL DEFAULT '[]',
+        exercise_type TEXT NOT NULL,
+        pace TEXT NOT NULL
     );
                    ''')
     

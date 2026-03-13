@@ -1,42 +1,32 @@
-import json
-
-from fastapi import APIRouter
-from backend.database.connection import get_db_connection
+from fastapi import APIRouter, HTTPException
 from backend.schemas.profile import ProfileIn, ProfileOut
+from backend.services.profile_service import (
+    create_profile as create_profile_record,
+    get_profile as get_profile_record,
+    update_profile as update_profile_record,
+)
 
 router = APIRouter(prefix = "/profile", tags = ["profile"])
 
 @router.post("", response_model = ProfileOut)
 def create_profile(profile: ProfileIn):
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    return create_profile_record(profile)
 
-    cursor.execute(
-        '''
-        INSERT INTO profiles (
-            age, height, weight, sex, activity_level, goal,
-            kcal_target, diet_style, allergies, exercise_type, pace
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''',
-        (
-            profile.age,
-            profile.height,
-            profile.weight,
-            profile.sex,
-            profile.activity_level,
-            profile.goal,
-            profile.kcal_target,
-            profile.diet_style,
-            json.dumps(profile.allergies, ensure_ascii = False),
-            profile.exercise_type,
-            profile.pace,
-        ),
-    )
-    conn.commit()
-    profile_id = cursor.lastrowid
-    conn.close()
 
-    return ProfileOut(id = profile_id, **profile.model_dump())
+@router.get("/{profile_id}", response_model = ProfileOut)
+def get_profile(profile_id: int):
+    profile = get_profile_record(profile_id)
+    if profile is None:
+        raise HTTPException(status_code = 404, detail = "Profile not found")
+    return profile
+
+
+@router.put("/{profile_id}", response_model = ProfileOut)
+def update_profile(profile_id: int, profile: ProfileIn):
+    updated_profile = update_profile_record(profile_id, profile)
+    if updated_profile is None:
+        raise HTTPException(status_code = 404, detail = "Profile not found")
+    return updated_profile
 
 @router.post("/echo")
 def echo_profile(profile: ProfileIn):
