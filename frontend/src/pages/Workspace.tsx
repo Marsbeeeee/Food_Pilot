@@ -413,33 +413,35 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           )}
         </div>
 
-        <div className="z-20 shrink-0 bg-gradient-to-t from-[#FFFDF5] via-[#FFFDF5] to-transparent px-6 pb-8 pt-4 md:px-10 md:pb-10">
+        <div className="z-20 bg-gradient-to-t from-[#FFFDF5] via-[#FFFDF5] to-transparent px-10 pb-10 pt-4">
           <div className="mx-auto max-w-4xl">
-            <div className="relative flex items-end gap-3 overflow-hidden rounded-[22px] border border-[#4A453E]/12 bg-white px-3 py-3 shadow-[0_16px_40px_rgba(74,69,62,0.08)] transition-all focus-within:border-[#FF8A65]/35 focus-within:shadow-[0_20px_48px_rgba(255,138,101,0.12)]">
+            <div className="relative flex items-end overflow-hidden rounded-[28px] border border-[#4A453E]/10 bg-white shadow-xl shadow-[#4A453E]/05 transition-all focus-within:border-[#FF8A65]/40">
               <textarea
-                className="custom-scrollbar min-h-[56px] max-h-40 flex-1 resize-none bg-transparent px-4 py-3 text-[15px] leading-7 text-[#4A453E] placeholder-[#4A453E]/35 focus:ring-0"
-                placeholder="Chat with Food Pilot... (e.g. What is in my sushi roll?)"
+                className="custom-scrollbar max-h-40 flex-1 resize-none border-none bg-transparent py-6 pl-8 text-[16px] leading-relaxed text-[#4A453E] placeholder-[#4A453E]/30 focus:ring-0"
+                placeholder="和 Food Pilot 聊聊... (例如：我的寿司里有什么？)"
                 rows={1}
                 value={inputValue}
                 onChange={(event) => setInputValue(event.target.value)}
                 onKeyDown={handleKeyDown}
               ></textarea>
+
               <div className="p-3">
                 <button
                   onClick={() => void handleSendMessage()}
                   disabled={!inputValue.trim() || isTyping}
-                  className={`flex size-11 items-center justify-center rounded-full transition-all active:scale-95 ${
+                  className={`flex size-12 items-center justify-center rounded-[20px] transition-all active:scale-95 ${
                     !inputValue.trim() || isTyping
-                      ? 'cursor-not-allowed bg-[#4A453E]/5 text-[#4A453E]/20'
+                      ? 'cursor-not-allowed bg-[#4A453E]/05 text-[#4A453E]/20'
                       : 'bg-[#FF8A65] text-white shadow-lg shadow-[#FF8A65]/20 hover:bg-[#FF8A65]/90'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[22px]">arrow_upward</span>
+                  <span className="material-symbols-outlined text-[24px]">arrow_upward</span>
                 </button>
               </div>
             </div>
+
             <p className="mt-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-              Your everyday meal assistant.
+              你的均衡饮食助手。
             </p>
           </div>
         </div>
