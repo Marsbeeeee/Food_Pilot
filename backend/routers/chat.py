@@ -1,5 +1,3 @@
-import json
-
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from backend.dependencies.auth import get_current_user
@@ -14,16 +12,14 @@ from backend.schemas.chat import (
 )
 from backend.schemas.user import UserOut
 from backend.services.chat_service import (
-    append_assistant_message,
-    append_user_message,
     create_empty_session,
-    create_session_with_first_user_message,
+    create_session_and_reply,
     delete_session,
     get_session_detail,
     list_user_sessions,
     rename_session,
+    send_message_in_session,
 )
-from backend.services.estimate import estimate_meal
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -81,26 +77,19 @@ def send_chat_message(
     request: ChatSendMessageRequest,
     current_user: UserOut = Depends(get_current_user),
 ):
-    user_message = append_user_message(
+    exchange = send_message_in_session(
         current_user.id,
         session_id,
         request.content,
+        profile_id=request.profile_id,
     )
-    if user_message is None:
+    if exchange is None:
         raise HTTPException(status_code=404, detail="Chat session not found")
 
-    assistant_message = _generate_and_store_assistant_reply(
-        current_user.id,
-        session_id,
-        request.content,
-        request.profile_id,
-    )
-    session = _require_session_summary(current_user.id, session_id)
-
     return ChatMessageExchangeResponse(
-        session=_serialize_session_summary(session),
-        user_message=_serialize_message(user_message),
-        assistant_message=_serialize_message(assistant_message),
+        session=_serialize_session_summary(exchange["session"]),
+        user_message=_serialize_message(exchange["user_message"]),
+        assistant_message=_serialize_message(exchange["assistant_message"]),
     )
 
 
@@ -109,74 +98,17 @@ def create_chat_message(
     request: ChatSendMessageRequest,
     current_user: UserOut = Depends(get_current_user),
 ):
-    session_detail = create_session_with_first_user_message(current_user.id, request.content)
-    session_id = int(session_detail["id"])
-    user_message = session_detail["messages"][0]
-
-    assistant_message = _generate_and_store_assistant_reply(
+    exchange = create_session_and_reply(
         current_user.id,
-        session_id,
         request.content,
-        request.profile_id,
+        profile_id=request.profile_id,
     )
-    session = _require_session_summary(current_user.id, session_id)
 
     return ChatMessageExchangeResponse(
-        session=_serialize_session_summary(session),
-        user_message=_serialize_message(user_message),
-        assistant_message=_serialize_message(assistant_message),
+        session=_serialize_session_summary(exchange["session"]),
+        user_message=_serialize_message(exchange["user_message"]),
+        assistant_message=_serialize_message(exchange["assistant_message"]),
     )
-
-
-def _generate_and_store_assistant_reply(
-    user_id: int,
-    session_id: int,
-    content: str,
-    profile_id: int | None,
-) -> dict[str, object]:
-    try:
-        estimate = estimate_meal(content, profile_id, user_id)
-        assistant_message = append_assistant_message(
-            user_id,
-            session_id,
-            message_type="estimate_result",
-            content=estimate.suggestion,
-            result_title=estimate.title,
-            result_confidence=estimate.confidence,
-            result_description=estimate.description,
-            result_items_json=json.dumps(
-                [item.model_dump() for item in estimate.items],
-                ensure_ascii=False,
-            ),
-            result_total=estimate.total_calories,
-        )
-        if assistant_message is None:
-            raise HTTPException(status_code=404, detail="Chat session not found")
-        return assistant_message
-    except Exception as exc:
-        fallback_message = _build_fallback_message(exc)
-        assistant_message = append_assistant_message(
-            user_id,
-            session_id,
-            content=fallback_message,
-        )
-        if assistant_message is None:
-            raise HTTPException(status_code=404, detail="Chat session not found") from exc
-        return assistant_message
-
-
-def _build_fallback_message(error: Exception) -> str:
-    user_message = getattr(error, "user_message", None)
-    if isinstance(user_message, str) and user_message.strip():
-        return user_message
-    return "Unable to process this meal description right now. Please try again."
-
-
-def _require_session_summary(user_id: int, session_id: int) -> dict[str, object]:
-    session = get_session_detail(user_id, session_id)
-    if session is None:
-        raise HTTPException(status_code=404, detail="Chat session not found")
-    return session
 
 
 def _serialize_session_summary(session: dict[str, object]) -> ChatSessionSummary:

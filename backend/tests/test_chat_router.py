@@ -75,14 +75,8 @@ class ChatRouterTests(unittest.TestCase):
         request = ChatSendMessageRequest.model_validate({"content": "chicken salad"})
 
         with patch(
-            "backend.routers.chat.append_user_message",
-            return_value=build_user_message(),
-        ), patch(
-            "backend.routers.chat._generate_and_store_assistant_reply",
-            return_value=build_assistant_result_message(),
-        ), patch(
-            "backend.routers.chat.get_session_detail",
-            return_value=build_session_detail(),
+            "backend.routers.chat.send_message_in_session",
+            return_value=build_exchange(),
         ):
             response = send_chat_message(1, request, self.user)
 
@@ -94,19 +88,22 @@ class ChatRouterTests(unittest.TestCase):
         request = ChatSendMessageRequest.model_validate({"content": "oatmeal"})
 
         with patch(
-            "backend.routers.chat.create_session_with_first_user_message",
-            return_value=build_session_detail(messages=[build_user_message(content="oatmeal")]),
-        ), patch(
-            "backend.routers.chat._generate_and_store_assistant_reply",
-            return_value=build_assistant_result_message(),
-        ), patch(
-            "backend.routers.chat.get_session_detail",
-            return_value=build_session_detail(),
+            "backend.routers.chat.create_session_and_reply",
+            return_value=build_exchange(user_message=build_user_message(content="oatmeal")),
         ):
             response = create_chat_message(request, self.user)
 
         self.assertEqual(response.session.id, 1)
         self.assertEqual(response.user_message.content, "oatmeal")
+
+    def test_send_chat_message_maps_missing_session_to_404(self) -> None:
+        request = ChatSendMessageRequest.model_validate({"content": "chicken salad"})
+
+        with patch("backend.routers.chat.send_message_in_session", return_value=None):
+            with self.assertRaises(HTTPException) as exc:
+                send_chat_message(99, request, self.user)
+
+        self.assertEqual(exc.exception.status_code, 404)
 
 
 def build_session_summary(
@@ -159,6 +156,19 @@ def build_session_detail(*, messages: list[dict] | None = None) -> dict:
     detail = build_session_summary()
     detail["messages"] = messages or [build_user_message(), build_assistant_result_message()]
     return detail
+
+
+def build_exchange(
+    *,
+    session: dict | None = None,
+    user_message: dict | None = None,
+    assistant_message: dict | None = None,
+) -> dict:
+    return {
+        "session": session or build_session_detail(),
+        "user_message": user_message or build_user_message(),
+        "assistant_message": assistant_message or build_assistant_result_message(),
+    }
 
 
 if __name__ == "__main__":

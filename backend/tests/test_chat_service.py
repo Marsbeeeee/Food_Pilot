@@ -7,14 +7,17 @@ from backend.database.connection import get_db_connection
 from backend.database.init_db import init_db
 from backend.services.chat_service import (
     DEFAULT_SESSION_TITLE,
+    DEFAULT_ASSISTANT_ERROR_MESSAGE,
     append_assistant_message,
     append_user_message,
     create_empty_session,
+    create_session_and_reply,
     create_session_with_first_user_message,
     delete_session,
     get_session_detail,
     list_user_sessions,
     rename_session,
+    send_message_in_session,
 )
 
 
@@ -122,6 +125,108 @@ class ChatServiceTests(unittest.TestCase):
         self.assertEqual(result_message["message_type"], "estimate_result")
         self.assertEqual(len(refreshed["messages"]), 3)
         self.assertEqual(refreshed["messages"][-1]["result_total"], "320 kcal")
+
+    def test_send_message_in_session_orchestrates_user_and_assistant_messages(self) -> None:
+        session = create_empty_session(self.user_id)
+
+        with patch(
+            "backend.services.chat_service.estimate_meal",
+            return_value=type(
+                "EstimateResultStub",
+                (),
+                {
+                    "title": "Chicken salad",
+                    "confidence": "high",
+                    "description": "Protein-forward salad with avocado.",
+                    "items": [
+                        type(
+                            "EstimateItemStub",
+                            (),
+                            {
+                                "model_dump": staticmethod(
+                                    lambda: {
+                                        "name": "Chicken",
+                                        "portion": "150g",
+                                        "energy": "240 kcal",
+                                    }
+                                )
+                            },
+                        )()
+                    ],
+                    "total_calories": "240 kcal",
+                    "suggestion": "A lighter dressing would reduce calories.",
+                },
+            )(),
+        ):
+            exchange = send_message_in_session(
+                self.user_id,
+                int(session["id"]),
+                "chicken salad",
+                profile_id=12,
+            )
+
+        self.assertIsNotNone(exchange)
+        self.assertEqual(exchange["session"]["title"], "chicken salad")
+        self.assertEqual(exchange["user_message"]["role"], "user")
+        self.assertEqual(exchange["assistant_message"]["message_type"], "estimate_result")
+        self.assertEqual(exchange["assistant_message"]["result_total"], "240 kcal")
+
+    def test_send_message_in_session_persists_fallback_assistant_message_on_estimate_error(self) -> None:
+        session = create_empty_session(self.user_id)
+
+        with patch(
+            "backend.services.chat_service.estimate_meal",
+            side_effect=RuntimeError("provider unavailable"),
+        ):
+            exchange = send_message_in_session(
+                self.user_id,
+                int(session["id"]),
+                "omelette",
+            )
+
+        self.assertIsNotNone(exchange)
+        self.assertEqual(exchange["assistant_message"]["message_type"], "text")
+        self.assertEqual(exchange["assistant_message"]["content"], DEFAULT_ASSISTANT_ERROR_MESSAGE)
+
+    def test_create_session_and_reply_creates_session_then_persists_reply(self) -> None:
+        with patch(
+            "backend.services.chat_service.estimate_meal",
+            return_value=type(
+                "EstimateResultStub",
+                (),
+                {
+                    "title": "Oatmeal bowl",
+                    "confidence": "high",
+                    "description": "Balanced breakfast with fruit.",
+                    "items": [
+                        type(
+                            "EstimateItemStub",
+                            (),
+                            {
+                                "model_dump": staticmethod(
+                                    lambda: {
+                                        "name": "Oats",
+                                        "portion": "60g",
+                                        "energy": "230 kcal",
+                                    }
+                                )
+                            },
+                        )()
+                    ],
+                    "total_calories": "320 kcal",
+                    "suggestion": "Add more protein if this is a post-workout meal.",
+                },
+            )(),
+        ):
+            exchange = create_session_and_reply(
+                self.user_id,
+                "oatmeal",
+                profile_id=7,
+            )
+
+        self.assertEqual(exchange["session"]["title"], "oatmeal")
+        self.assertEqual(len(exchange["session"]["messages"]), 2)
+        self.assertEqual(exchange["assistant_message"]["message_type"], "estimate_result")
 
     def test_rename_and_list_sessions_are_user_scoped(self) -> None:
         first = create_empty_session(self.user_id)
