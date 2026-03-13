@@ -1,14 +1,16 @@
-import json
 import sqlite3
 
 from backend.database.connection import get_db_connection
 from backend.repositories.food_log_repository import (
-    create_food_log_entry as create_food_log_entry_record,
-    list_food_log_entries_by_user as list_food_log_entries_by_user_record,
+    create_food_log as create_food_log_record,
+    get_food_log_by_id as get_food_log_by_id_record,
+    list_food_logs_by_session as list_food_logs_by_session_record,
+    list_food_logs_by_user as list_food_logs_by_user_record,
+    list_food_logs_by_user_recent as list_food_logs_by_user_recent_record,
 )
 
 
-def record_food_log_entry(
+def create_food_log(
     user_id: int,
     source_type: str,
     *,
@@ -16,7 +18,7 @@ def record_food_log_entry(
     result_title: str,
     result_description: str,
     total_calories: str,
-    ingredients_json: str,
+    ingredients: str | list[dict[str, object]],
     session_id: int | None = None,
     source_message_id: int | None = None,
     result_confidence: str | None = None,
@@ -29,15 +31,15 @@ def record_food_log_entry(
     active_conn = conn or get_db_connection()
 
     try:
-        return create_food_log_entry_record(
+        return create_food_log_record(
             active_conn,
             user_id,
-            source_type,
+            source_type=source_type,
             meal_description=meal_description,
             result_title=result_title,
             result_description=result_description,
             total_calories=total_calories,
-            ingredients_json=ingredients_json,
+            ingredients=ingredients,
             session_id=session_id,
             source_message_id=source_message_id,
             result_confidence=result_confidence,
@@ -50,7 +52,7 @@ def record_food_log_entry(
             active_conn.close()
 
 
-def record_food_log_entry_from_estimate(
+def create_food_log_from_estimate(
     user_id: int,
     meal_description: str,
     estimate,
@@ -62,17 +64,14 @@ def record_food_log_entry_from_estimate(
     created_at: str | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> dict[str, object]:
-    return record_food_log_entry(
+    return create_food_log(
         user_id,
         source_type,
         meal_description=meal_description,
         result_title=estimate.title,
         result_description=estimate.description,
         total_calories=estimate.total_calories,
-        ingredients_json=json.dumps(
-            [item.model_dump() for item in estimate.items],
-            ensure_ascii=False,
-        ),
+        ingredients=[item.model_dump() for item in estimate.items],
         session_id=session_id,
         source_message_id=source_message_id,
         result_confidence=getattr(estimate, "confidence", None),
@@ -83,9 +82,60 @@ def record_food_log_entry_from_estimate(
     )
 
 
-def list_food_log_entries(user_id: int) -> list[dict[str, object]]:
+def get_food_log_by_id(user_id: int, food_log_id: int) -> dict[str, object] | None:
     conn = get_db_connection()
     try:
-        return list_food_log_entries_by_user_record(conn, user_id)
+        return get_food_log_by_id_record(conn, food_log_id, user_id)
+    finally:
+        conn.close()
+
+
+def list_food_logs_by_user(
+    user_id: int,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+) -> list[dict[str, object]]:
+    conn = get_db_connection()
+    try:
+        return list_food_logs_by_user_record(conn, user_id, limit=limit, offset=offset)
+    finally:
+        conn.close()
+
+
+def list_food_logs_by_session(
+    user_id: int,
+    session_id: int,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+) -> list[dict[str, object]]:
+    conn = get_db_connection()
+    try:
+        return list_food_logs_by_session_record(
+            conn,
+            user_id,
+            session_id,
+            limit=limit,
+            offset=offset,
+        )
+    finally:
+        conn.close()
+
+
+def list_recent_food_logs(
+    user_id: int,
+    *,
+    limit: int,
+    offset: int = 0,
+) -> list[dict[str, object]]:
+    conn = get_db_connection()
+    try:
+        return list_food_logs_by_user_recent_record(
+            conn,
+            user_id,
+            limit=limit,
+            offset=offset,
+        )
     finally:
         conn.close()

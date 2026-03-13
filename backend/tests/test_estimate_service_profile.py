@@ -27,7 +27,7 @@ class EstimateServiceProfileTests(unittest.TestCase):
             "backend.services.estimate_service.estimate_meal",
             return_value=estimate_result,
         ) as estimate_meal_mock, patch(
-            "backend.services.estimate_service.record_food_log_entry_from_estimate",
+            "backend.services.estimate_service.create_food_log_from_estimate",
         ) as record_food_log_mock:
             status_code, response = create_estimate_response(request_model, 34)
 

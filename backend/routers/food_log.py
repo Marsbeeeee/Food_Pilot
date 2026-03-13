@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from backend.dependencies.auth import get_current_user
 from backend.schemas.food_log import FoodLogEntryOut, parse_food_log_items
 from backend.schemas.user import UserOut
-from backend.services.food_log_service import list_food_log_entries
+from backend.services.food_log_service import list_food_logs_by_user
 
 
 router = APIRouter(prefix="/food-log", tags=["food-log"])
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/food-log", tags=["food-log"])
 def get_food_log_entries(
     current_user: UserOut = Depends(get_current_user),
 ) -> list[FoodLogEntryOut]:
-    entries = list_food_log_entries(current_user.id)
+    entries = list_food_logs_by_user(current_user.id)
     return [
         FoodLogEntryOut.model_validate(
             {

@@ -12,7 +12,7 @@ from backend.repositories.message_repository import (
     create_message as create_message_record,
     list_messages_by_session as list_messages_by_session_record,
 )
-from backend.services.food_log_service import record_food_log_entry
+from backend.services.food_log_service import create_food_log
 
 
 DEFAULT_SESSION_TITLE = "New chat"
@@ -342,7 +342,7 @@ def _record_food_log_from_message(
         result_title,
     )
 
-    record_food_log_entry(
+    create_food_log(
         user_id,
         "chat_message",
         meal_description=resolved_meal_description,
@@ -350,7 +350,7 @@ def _record_food_log_from_message(
         result_confidence=message.get("result_confidence") if isinstance(message.get("result_confidence"), str) else None,
         result_description=result_description,
         total_calories=result_total,
-        ingredients_json=result_items_json,
+        ingredients=result_items_json,
         session_id=int(message["session_id"]),
         source_message_id=int(message["id"]),
         assistant_suggestion=message.get("content") if isinstance(message.get("content"), str) else None,
