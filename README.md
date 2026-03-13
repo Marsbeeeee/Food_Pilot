@@ -60,7 +60,7 @@
 
 ### 1️⃣ Ask FoodPilot（对话分析）
 
-### 启动前端
+**启动前端**
 
 ```bash
 在 frontend 目录跑 npm run dev
@@ -103,11 +103,11 @@
 
 ---
 
-## `/estimate` API
+**`/estimate` API**
 
 后端负责统一调用 AI 进行餐食热量估算，前端不要直接调用 Gemini。
 
-### 环境变量
+**环境变量**
 
 必填：
 - `GEMINI_API_KEY`
@@ -116,7 +116,7 @@
 - `GEMINI_MODEL`，默认 `gemini-3-flash-preview`
 - `GEMINI_TIMEOUT_SECONDS`，默认 `20`
 
-### 启动后端
+**启动后端**
 
 ```bash
 uvicorn backend.main:app --reload
@@ -124,7 +124,7 @@ uvicorn backend.main:app --reload
 
 ---
 
-## 🧠 设计理念
+**🧠 设计理念**
 
 * **解释优先**：让用户知道“为什么是这个数”
 * **连续交互**：强调对话上下文，而非单次查询
@@ -133,7 +133,7 @@ uvicorn backend.main:app --reload
 
 ---
 
-## ⚠️ 免责声明
+**⚠️ 免责声明**
 
 FoodPilot 提供的所有热量与营养信息均为**估算结果**，基于常见食材与标准份量假设，仅用于信息参考与饮食认知辅助。
 
