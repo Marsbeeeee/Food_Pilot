@@ -1,6 +1,8 @@
+import { getStoredToken } from './auth';
 import { UserProfile, UserProfileForm, UserProfileInput } from '../types/types';
 
 const PROFILE_ENDPOINT = 'http://localhost:8000/profile';
+const MY_PROFILE_ENDPOINT = `${PROFILE_ENDPOINT}/me`;
 const PROFILE_STORAGE_KEY = 'foodpilot.profileId';
 
 export class ProfileApiError extends Error {
@@ -14,16 +16,26 @@ export class ProfileApiError extends Error {
 }
 
 export async function loadStoredProfile(): Promise<UserProfile | null> {
+  const token = requireAuthToken();
   const profileId = getStoredProfileId();
-  if (profileId === null) {
-    return null;
+  if (profileId !== null) {
+    try {
+      return await getProfile(profileId, token);
+    } catch (error) {
+      if (error instanceof ProfileApiError && error.status === 404) {
+        clearStoredProfileId();
+      } else {
+        throw error;
+      }
+    }
   }
 
   try {
-    return await getProfile(profileId);
+    const profile = await getMyProfile(token);
+    setStoredProfileId(profile.id);
+    return profile;
   } catch (error) {
     if (error instanceof ProfileApiError && error.status === 404) {
-      clearStoredProfileId();
       return null;
     }
     throw error;
@@ -35,6 +47,7 @@ export function clearStoredProfile(): void {
 }
 
 export async function saveProfile(form: UserProfileForm): Promise<UserProfile> {
+  const token = requireAuthToken();
   const profileId = form.id ?? getStoredProfileId();
   const method = profileId ? 'PUT' : 'POST';
   const endpoint = profileId ? `${PROFILE_ENDPOINT}/${profileId}` : PROFILE_ENDPOINT;
@@ -44,6 +57,7 @@ export async function saveProfile(form: UserProfileForm): Promise<UserProfile> {
     method,
     headers: {
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(payload),
   });
@@ -127,8 +141,27 @@ function clearStoredProfileId(): void {
   window.localStorage.removeItem(PROFILE_STORAGE_KEY);
 }
 
-async function getProfile(profileId: number): Promise<UserProfile> {
-  const response = await fetch(`${PROFILE_ENDPOINT}/${profileId}`);
+async function getProfile(profileId: number, token: string): Promise<UserProfile> {
+  const response = await fetch(`${PROFILE_ENDPOINT}/${profileId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const data = await parseJson(response);
+
+  if (!response.ok) {
+    throw new ProfileApiError(getErrorMessage(data, response.status), response.status);
+  }
+
+  return data as UserProfile;
+}
+
+async function getMyProfile(token: string): Promise<UserProfile> {
+  const response = await fetch(MY_PROFILE_ENDPOINT, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
   const data = await parseJson(response);
 
   if (!response.ok) {
@@ -171,6 +204,14 @@ function getErrorMessage(payload: unknown, status: number): string {
 
   if (status === 422) {
     return 'Invalid profile fields. Please check your input.';
+  }
+
+  if (status === 401) {
+    return 'Please sign in again.';
+  }
+
+  if (status === 409) {
+    return 'A profile already exists for this account.';
   }
 
   return 'Profile service is temporarily unavailable. Please try again later.';
@@ -240,4 +281,12 @@ function normalizeNumericText(value: string): string {
 
   const parsed = Number(trimmed);
   return Number.isFinite(parsed) ? String(parsed) : trimmed;
+}
+
+function requireAuthToken(): string {
+  const token = getStoredToken();
+  if (!token) {
+    throw new ProfileApiError('Please sign in again.', 401);
+  }
+  return token;
 }

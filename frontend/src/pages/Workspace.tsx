@@ -1,5 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+
+import { getStoredToken } from '../api/auth';
 import { ChatSession, EstimateApiResponse, Message } from '../types/types';
 
 interface WorkspaceProps {
@@ -65,10 +67,16 @@ export const Workspace: React.FC<WorkspaceProps> = ({ sessions, setSessions, act
   const performAnalysis = async (query: string, sessionId: string) => {
     setIsTyping(true);
     try {
+      const token = getStoredToken();
+      if (!token) {
+        throw new Error('Please sign in again.');
+      }
+
       const response = await fetch(ESTIMATE_ENDPOINT, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           query,

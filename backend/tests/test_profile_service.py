@@ -1,15 +1,19 @@
 import os
+import sqlite3
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from backend.database.init_db import init_db
 from backend.schemas.profile import ProfileIn
+from backend.schemas.user import UserCreate
 from backend.services.profile_service import (
     create_profile,
     get_profile,
+    get_profile_by_user_id,
     update_profile,
 )
+from backend.services.user_service import create_user
 
 
 class ProfileServiceTests(unittest.TestCase):
@@ -20,87 +24,89 @@ class ProfileServiceTests(unittest.TestCase):
         self.db_patch.start()
         init_db()
 
+        self.user = create_user(
+            UserCreate.model_validate(
+                {
+                    "email": "owner@example.com",
+                    "passwordHash": "hashed-password",
+                    "displayName": "Owner",
+                }
+            )
+        )
+        self.other_user = create_user(
+            UserCreate.model_validate(
+                {
+                    "email": "other@example.com",
+                    "passwordHash": "hashed-password",
+                    "displayName": "Other",
+                }
+            )
+        )
+
     def tearDown(self) -> None:
         self.db_patch.stop()
         self.temp_dir.cleanup()
 
     def test_create_get_and_update_profile_round_trip(self) -> None:
-        created = create_profile(
-            ProfileIn.model_validate(
-                {
-                    "age": 28,
-                    "height": 178,
-                    "weight": 72,
-                    "sex": "男",
-                    "activityLevel": "轻度活动",
-                    "exerciseType": "混合运动",
-                    "goal": "增肌",
-                    "pace": "适中",
-                    "kcalTarget": 2400,
-                    "dietStyle": "高蛋白饮食",
-                    "allergies": ["坚果"],
-                }
-            )
-        )
+        created = create_profile(self.user.id, build_profile(age=28))
 
-        fetched = get_profile(created.id)
+        fetched = get_profile(created.id, self.user.id)
         self.assertIsNotNone(fetched)
         self.assertEqual(fetched.id, created.id)
-        self.assertEqual(fetched.allergies, ["坚果"])
-        self.assertEqual(fetched.activity_level, "轻度活动")
+        self.assertEqual(fetched.allergies, ["Nuts"])
+        self.assertEqual(fetched.activity_level, "Lightly active")
 
-        updated = update_profile(
-            created.id,
-            ProfileIn.model_validate(
-                {
-                    "age": 29,
-                    "height": 178,
-                    "weight": 73,
-                    "sex": "男",
-                    "activityLevel": "中度活动",
-                    "exerciseType": "力量训练",
-                    "goal": "减脂",
-                    "pace": "积极",
-                    "kcalTarget": 2200,
-                    "dietStyle": "均衡饮食",
-                    "allergies": ["海鲜"],
-                }
-            ),
-        )
+        updated = update_profile(created.id, self.user.id, build_profile(age=29, goal="Fat loss"))
 
         self.assertIsNotNone(updated)
         self.assertEqual(updated.id, created.id)
-        self.assertEqual(updated.goal, "减脂")
-        self.assertEqual(updated.allergies, ["海鲜"])
+        self.assertEqual(updated.goal, "Fat loss")
 
-        refetched = get_profile(created.id)
+        refetched = get_profile(created.id, self.user.id)
         self.assertIsNotNone(refetched)
-        self.assertEqual(refetched.kcal_target, 2200)
-        self.assertEqual(refetched.exercise_type, "力量训练")
+        self.assertEqual(refetched.kcal_target, 2400)
+        self.assertEqual(refetched.exercise_type, "Strength training")
 
-    def test_get_profile_returns_none_when_missing(self) -> None:
-        self.assertIsNone(get_profile(999))
+    def test_profile_lookup_is_scoped_to_user(self) -> None:
+        created = create_profile(self.user.id, build_profile())
 
-    def test_update_profile_returns_none_when_missing(self) -> None:
-        updated = update_profile(
-            999,
-            ProfileIn.model_validate(
-                {
-                    "age": 29,
-                    "height": 178,
-                    "weight": 73,
-                    "sex": "男",
-                    "activityLevel": "中度活动",
-                    "exerciseType": "力量训练",
-                    "goal": "减脂",
-                    "pace": "积极",
-                    "kcalTarget": 2200,
-                    "dietStyle": "均衡饮食",
-                    "allergies": [],
-                }
-            ),
-        )
+        self.assertIsNone(get_profile(created.id, self.other_user.id))
+        self.assertIsNone(get_profile_by_user_id(self.other_user.id))
+
+    def test_update_profile_returns_none_when_owned_by_other_user(self) -> None:
+        created = create_profile(self.user.id, build_profile())
+
+        updated = update_profile(created.id, self.other_user.id, build_profile(goal="Performance"))
+
         self.assertIsNone(updated)
+
+    def test_create_profile_rejects_second_profile_for_same_user(self) -> None:
+        create_profile(self.user.id, build_profile())
+
+        with self.assertRaises(sqlite3.IntegrityError):
+            create_profile(self.user.id, build_profile(goal="Performance"))
+
+
+def build_profile(
+    *,
+    age: int = 28,
+    goal: str = "Muscle gain",
+) -> ProfileIn:
+    return ProfileIn.model_validate(
+        {
+            "age": age,
+            "height": 178,
+            "weight": 72,
+            "sex": "Male",
+            "activityLevel": "Lightly active",
+            "exerciseType": "Strength training",
+            "goal": goal,
+            "pace": "Moderate",
+            "kcalTarget": 2400,
+            "dietStyle": "High protein",
+            "allergies": ["Nuts"],
+        }
+    )
 
 
 if __name__ == "__main__":

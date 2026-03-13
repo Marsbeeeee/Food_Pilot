@@ -11,9 +11,10 @@ from backend.services.estimate import EstimateServiceError, estimate_meal
 
 def create_estimate_response(
     request_model: EstimateRequest,
+    user_id: int | None = None,
 ) -> tuple[int, EstimateResponse]:
     try:
-        result = estimate_meal(request_model.query, request_model.profile_id)
+        result = estimate_meal(request_model.query, request_model.profile_id, user_id)
     except EstimateServiceError as exc:
         return exc.status_code, EstimateResponse(
             success=False,
@@ -30,7 +31,7 @@ def create_estimate_response(
             data=None,
             error=EstimateError(
                 code="INTERNAL_ERROR",
-                message="估算服务暂时不可用，请稍后重试。",
+                message="浼扮畻鏈嶅姟鏆傛椂涓嶅彲鐢紝璇风◢鍚庨噸璇曘€?",
                 retryable=True,
             ),
         )

@@ -75,8 +75,12 @@ class IncompleteAIResponseError(EstimateServiceError):
         )
 
 
-def estimate_meal(query: str, profile_id: int | None = None) -> EstimateResult:
-    profile_context = _load_profile_context(profile_id)
+def estimate_meal(
+    query: str,
+    profile_id: int | None = None,
+    user_id: int | None = None,
+) -> EstimateResult:
+    profile_context = _load_profile_context(profile_id, user_id)
     raw_response = _call_gemini_api(query, profile_context)
     try:
         return parse_estimate_payload(raw_response)
@@ -162,11 +166,14 @@ def _call_gemini_api(
     return parsed
 
 
-def _load_profile_context(profile_id: int | None) -> str | None:
-    if profile_id is None:
+def _load_profile_context(
+    profile_id: int | None,
+    user_id: int | None,
+) -> str | None:
+    if profile_id is None or user_id is None:
         return None
 
-    profile = get_profile(profile_id)
+    profile = get_profile(profile_id, user_id)
     if profile is None:
         return None
 
