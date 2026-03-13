@@ -1,4 +1,5 @@
 import os
+import sqlite3
 import unittest
 from unittest.mock import patch
 
@@ -142,6 +143,158 @@ class FoodLogServiceTests(unittest.TestCase):
         self.assertEqual(entries[0]["source_type"], "chat_message")
         self.assertEqual(entries[0]["meal_description"], "Chicken salad")
         self.assertEqual(entries[0]["created_at"], "2026-03-13 12:00:00")
+
+    def test_food_logs_table_has_expected_indexes_and_foreign_keys(self) -> None:
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'index'
+                AND tbl_name = 'food_logs'
+                """
+            )
+            index_names = {row["name"] for row in cursor.fetchall()}
+
+            cursor.execute("PRAGMA foreign_key_list(food_logs)")
+            foreign_keys = {
+                (row["from"], row["table"], row["to"], row["on_delete"])
+                for row in cursor.fetchall()
+            }
+        finally:
+            conn.close()
+
+        self.assertTrue(
+            {
+                "idx_food_logs_user_id",
+                "idx_food_logs_session_id",
+                "idx_food_logs_logged_at",
+                "idx_food_logs_user_logged_at",
+                "idx_food_logs_source_message_id_unique",
+            }.issubset(index_names)
+        )
+        self.assertEqual(
+            foreign_keys,
+            {
+                ("user_id", "users", "id", "CASCADE"),
+                ("session_id", "chat_sessions", "id", "SET NULL"),
+                ("source_message_id", "messages", "id", "SET NULL"),
+            },
+        )
+
+    def test_source_message_id_unique_index_blocks_duplicate_food_logs(self) -> None:
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO chat_sessions (user_id, title)
+                VALUES (?, ?)
+                """,
+                (self.user_id, "Lunch"),
+            )
+            session_id = cursor.lastrowid
+            cursor.execute(
+                """
+                INSERT INTO messages (
+                    session_id,
+                    user_id,
+                    role,
+                    message_type,
+                    content,
+                    result_title,
+                    result_confidence,
+                    result_description,
+                    result_items_json,
+                    result_total
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    session_id,
+                    self.user_id,
+                    "assistant",
+                    "estimate_result",
+                    "Assistant suggestion",
+                    "Chicken salad",
+                    "high",
+                    "Protein-forward salad with avocado.",
+                    '[{"name":"Chicken","portion":"150g","energy":"240 kcal"}]',
+                    "240 kcal",
+                ),
+            )
+            message_id = cursor.lastrowid
+            cursor.execute(
+                """
+                INSERT INTO food_logs (
+                    user_id,
+                    session_id,
+                    source_message_id,
+                    meal_description,
+                    logged_at,
+                    result_title,
+                    result_description,
+                    total_calories,
+                    ingredients_json,
+                    source_type,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self.user_id,
+                    session_id,
+                    message_id,
+                    "chicken salad",
+                    "2026-03-14 09:00:00",
+                    "Chicken salad",
+                    "Protein-forward salad with avocado.",
+                    "240 kcal",
+                    '[{"name":"Chicken","portion":"150g","energy":"240 kcal"}]',
+                    "chat_message",
+                    "2026-03-14 09:00:00",
+                    "2026-03-14 09:00:00",
+                ),
+            )
+            conn.commit()
+
+            with self.assertRaises(sqlite3.IntegrityError):
+                cursor.execute(
+                    """
+                    INSERT INTO food_logs (
+                        user_id,
+                        session_id,
+                        source_message_id,
+                        meal_description,
+                        logged_at,
+                        result_title,
+                        result_description,
+                        total_calories,
+                        ingredients_json,
+                        source_type,
+                        created_at,
+                        updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        self.user_id,
+                        session_id,
+                        message_id,
+                        "same message duplicate",
+                        "2026-03-14 09:01:00",
+                        "Chicken salad duplicate",
+                        "Duplicate entry should fail.",
+                        "240 kcal",
+                        '[{"name":"Chicken","portion":"150g","energy":"240 kcal"}]',
+                        "chat_message",
+                        "2026-03-14 09:01:00",
+                        "2026-03-14 09:01:00",
+                    ),
+                )
+                conn.commit()
+        finally:
+            conn.close()
 
 
 def _build_estimate_result() -> EstimateResult:
