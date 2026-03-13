@@ -245,7 +245,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col overflow-hidden bg-[#FFFDF5]">
+    <div className="flex h-screen flex-col overflow-hidden bg-[#FFFDF5]">
       <Header
         currentView={currentView}
         onViewChange={setCurrentView}
@@ -255,7 +255,7 @@ const App: React.FC = () => {
         onAuthModeChange={setAuthMode}
         onLogout={handleLogout}
       />
-      <main className="flex h-[calc(100vh-64px)] flex-1 overflow-hidden">{renderView()}</main>
+      <main className="flex min-h-0 flex-1 overflow-hidden">{renderView()}</main>
     </div>
   );
 };

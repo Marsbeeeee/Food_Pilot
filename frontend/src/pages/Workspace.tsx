@@ -213,9 +213,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   };
 
   return (
-    <div className="flex flex-1 overflow-hidden h-full relative">
-      <aside className="w-72 flex flex-col border-r border-[#4A453E]/5 bg-[#FFFDF5] shrink-0">
-        <div className="p-6 flex flex-col gap-6 h-full">
+    <div className="relative flex h-full min-h-0 flex-1 overflow-hidden">
+      <aside className="flex min-h-0 w-72 shrink-0 flex-col border-r border-[#4A453E]/5 bg-[#FFFDF5]">
+        <div className="flex h-full min-h-0 flex-col gap-6 p-6">
           <button 
             onClick={handleNewAnalysis}
             className="bg-[#FF8A65] text-white rounded-[20px] flex w-full items-center justify-center gap-2 h-12 px-4 text-sm font-bold shadow-lg shadow-[#FF8A65]/10 hover:shadow-xl hover:translate-y-[-1px] transition-all active:scale-95 active:translate-y-0"
@@ -224,7 +224,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             <span>开启新对话</span>
           </button>
           
-          <div className="flex flex-col gap-6 overflow-y-auto custom-scrollbar pr-2 pb-10">
+          <div className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-2 pb-10">
             <div>
               <h3 className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30 mb-4">历史记录</h3>
               <div className="flex flex-col gap-1">
@@ -266,7 +266,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         </div>
       </aside>
 
-      <section className="flex-1 flex flex-col bg-[#FFFDF5] relative min-w-[500px]">
+      <section className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#FFFDF5]">
         {activeSession && (
           <div className="flex items-center justify-between px-10 py-4 border-b border-[#4A453E]/5 bg-white/40 backdrop-blur-sm z-10">
             <div className="flex items-center gap-3">
@@ -308,7 +308,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
         <div 
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto px-6 py-10 md:px-16 flex flex-col gap-10 custom-scrollbar scroll-smooth"
+          className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-10 overflow-y-auto px-6 py-10 scroll-smooth md:px-16"
         >
           {(!activeSession || activeSession.messages.length === 0) ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center py-20">
@@ -408,7 +408,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           )}
         </div>
 
-        <div className="px-10 pb-10 pt-4 bg-gradient-to-t from-[#FFFDF5] via-[#FFFDF5] to-transparent z-20">
+        <div className="shrink-0 bg-gradient-to-t from-[#FFFDF5] via-[#FFFDF5] to-transparent px-10 pb-10 pt-4 z-20">
           <div className="max-w-4xl mx-auto">
             <div className="relative flex items-end bg-white rounded-[28px] border border-[#4A453E]/10 focus-within:border-[#FF8A65]/40 transition-all shadow-xl shadow-[#4A453E]/05 overflow-hidden">
               <textarea 
