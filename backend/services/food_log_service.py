@@ -26,6 +26,7 @@ def create_food_log(
     logged_at: str | None = None,
     created_at: str | None = None,
     conn: sqlite3.Connection | None = None,
+    auto_commit: bool = True,
 ) -> dict[str, object]:
     owns_connection = conn is None
     active_conn = conn or get_db_connection()
@@ -46,7 +47,12 @@ def create_food_log(
             assistant_suggestion=assistant_suggestion,
             logged_at=logged_at,
             created_at=created_at,
+            auto_commit=auto_commit,
         )
+    except Exception:
+        if owns_connection:
+            active_conn.rollback()
+        raise
     finally:
         if owns_connection:
             active_conn.close()
@@ -64,22 +70,36 @@ def create_food_log_from_estimate(
     created_at: str | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> dict[str, object]:
-    return create_food_log(
-        user_id,
-        source_type,
-        meal_description=meal_description,
-        result_title=estimate.title,
-        result_description=estimate.description,
-        total_calories=estimate.total_calories,
-        ingredients=[item.model_dump() for item in estimate.items],
-        session_id=session_id,
-        source_message_id=source_message_id,
-        result_confidence=getattr(estimate, "confidence", None),
-        assistant_suggestion=getattr(estimate, "suggestion", None),
-        logged_at=logged_at,
-        created_at=created_at,
-        conn=conn,
-    )
+    owns_connection = conn is None
+    active_conn = conn or get_db_connection()
+    try:
+        food_log = create_food_log(
+            user_id,
+            source_type,
+            meal_description=meal_description,
+            result_title=estimate.title,
+            result_description=estimate.description,
+            total_calories=estimate.total_calories,
+            ingredients=[item.model_dump() for item in estimate.items],
+            session_id=session_id,
+            source_message_id=source_message_id,
+            result_confidence=getattr(estimate, "confidence", None),
+            assistant_suggestion=getattr(estimate, "suggestion", None),
+            logged_at=logged_at,
+            created_at=created_at,
+            conn=active_conn,
+            auto_commit=False,
+        )
+        if owns_connection:
+            active_conn.commit()
+        return food_log
+    except Exception:
+        if owns_connection:
+            active_conn.rollback()
+        raise
+    finally:
+        if owns_connection:
+            active_conn.close()
 
 
 def get_food_log_by_id(user_id: int, food_log_id: int) -> dict[str, object] | None:

@@ -1,5 +1,6 @@
 from fastapi.responses import JSONResponse
 
+from backend.database.connection import get_db_connection
 from backend.schemas.estimate import (
     EstimateError,
     EstimateErrorField,
@@ -17,12 +18,21 @@ def create_estimate_response(
     try:
         result = estimate_meal(request_model.query, request_model.profile_id, user_id)
         if user_id is not None:
-            create_food_log_from_estimate(
-                user_id,
-                request_model.query,
-                result,
-                source_type="estimate_api",
-            )
+            conn = get_db_connection()
+            try:
+                create_food_log_from_estimate(
+                    user_id,
+                    request_model.query,
+                    result,
+                    source_type="estimate_api",
+                    conn=conn,
+                )
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+            finally:
+                conn.close()
     except EstimateServiceError as exc:
         return exc.status_code, EstimateResponse(
             success=False,

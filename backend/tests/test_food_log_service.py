@@ -86,6 +86,22 @@ class FoodLogServiceTests(unittest.TestCase):
         self.assertEqual(entries[0]["meal_description"], "chicken salad")
         self.assertEqual(entries[0]["result_title"], "Chicken salad")
 
+    def test_estimate_api_returns_500_when_food_log_insert_fails(self) -> None:
+        request_model = EstimateRequest(query="chicken salad")
+
+        with patch(
+            "backend.services.estimate_service.estimate_meal",
+            return_value=_build_estimate_result(),
+        ), patch(
+            "backend.services.estimate_service.create_food_log_from_estimate",
+            side_effect=sqlite3.IntegrityError("food log insert failed"),
+        ):
+            status_code, response = create_estimate_response(request_model, self.user_id)
+
+        self.assertEqual(status_code, 500)
+        self.assertFalse(response.success)
+        self.assertEqual(len(_list_food_log_entries()), 0)
+
     def test_init_db_backfills_existing_estimate_result_messages(self) -> None:
         conn = get_db_connection()
         try:

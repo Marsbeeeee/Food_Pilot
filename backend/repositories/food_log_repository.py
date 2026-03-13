@@ -38,6 +38,7 @@ def create_food_log(
     assistant_suggestion: str | None = None,
     logged_at: str | None = None,
     created_at: str | None = None,
+    auto_commit: bool = True,
 ) -> dict[str, object]:
     cursor = conn.cursor()
     cursor.execute(
@@ -76,7 +77,8 @@ def create_food_log(
             created_at,
         ),
     )
-    conn.commit()
+    if auto_commit:
+        conn.commit()
     food_log = get_food_log_by_id(conn, cursor.lastrowid, user_id)
     if food_log is None:
         raise LookupError("food log not found after insert")

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 from backend.schemas.estimate import EstimateRequest, EstimateResult
 from backend.services.estimate_service import create_estimate_response
@@ -39,6 +39,7 @@ class EstimateServiceProfileTests(unittest.TestCase):
             "chicken salad",
             estimate_result,
             source_type="estimate_api",
+            conn=ANY,
         )
 
 

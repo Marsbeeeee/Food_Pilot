@@ -15,6 +15,7 @@ def create_message(
     result_items_json: str | None = None,
     result_total: str | None = None,
     created_at: str | None = None,
+    auto_commit: bool = True,
 ) -> dict[str, object]:
     message_columns = _get_table_columns(conn, "messages")
     insert_columns = [
@@ -63,7 +64,8 @@ def create_message(
         """,
         tuple(insert_values),
     )
-    conn.commit()
+    if auto_commit:
+        conn.commit()
     return _get_message_by_id(conn, cursor.lastrowid, user_id)
 
 

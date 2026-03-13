@@ -168,14 +168,21 @@ def append_assistant_message(
             result_items_json=result_items_json,
             result_total=result_total,
             created_at=created_at,
+            auto_commit=message_type != "estimate_result",
         )
-        _record_food_log_from_message(
-            conn,
-            message,
-            user_id,
-            meal_description=meal_description,
-        )
+        if message_type == "estimate_result":
+            _record_food_log_from_message(
+                conn,
+                message,
+                user_id,
+                meal_description=meal_description,
+                auto_commit=False,
+            )
+            conn.commit()
         return message
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 
@@ -276,29 +283,15 @@ def _generate_assistant_reply_with_conn(
 ) -> dict[str, object]:
     try:
         estimate = estimate_meal(content, profile_id, user_id)
-        assistant_message = create_message_record(
+        assistant_message = _create_estimate_result_and_food_log_with_conn(
             conn,
+            user_id,
             session_id,
-            user_id,
-            "assistant",
-            "estimate_result",
-            content=estimate.suggestion,
-            result_title=estimate.title,
-            result_confidence=estimate.confidence,
-            result_description=estimate.description,
-            result_items_json=json.dumps(
-                [item.model_dump() for item in estimate.items],
-                ensure_ascii=False,
-            ),
-            result_total=estimate.total_calories,
-        )
-        _record_food_log_from_message(
-            conn,
-            assistant_message,
-            user_id,
             meal_description=content,
+            estimate=estimate,
         )
     except Exception as exc:
+        conn.rollback()
         assistant_message = create_message_record(
             conn,
             session_id,
@@ -310,12 +303,49 @@ def _generate_assistant_reply_with_conn(
     return assistant_message
 
 
+def _create_estimate_result_and_food_log_with_conn(
+    conn,
+    user_id: int,
+    session_id: int,
+    *,
+    meal_description: str,
+    estimate,
+) -> dict[str, object]:
+    assistant_message = create_message_record(
+        conn,
+        session_id,
+        user_id,
+        "assistant",
+        "estimate_result",
+        content=estimate.suggestion,
+        result_title=estimate.title,
+        result_confidence=estimate.confidence,
+        result_description=estimate.description,
+        result_items_json=json.dumps(
+            [item.model_dump() for item in estimate.items],
+            ensure_ascii=False,
+        ),
+        result_total=estimate.total_calories,
+        auto_commit=False,
+    )
+    _record_food_log_from_message(
+        conn,
+        assistant_message,
+        user_id,
+        meal_description=meal_description,
+        auto_commit=False,
+    )
+    conn.commit()
+    return assistant_message
+
+
 def _record_food_log_from_message(
     conn,
     message: dict[str, object],
     user_id: int,
     *,
     meal_description: str | None = None,
+    auto_commit: bool = True,
 ) -> None:
     if message.get("message_type") != "estimate_result":
         return
@@ -357,6 +387,7 @@ def _record_food_log_from_message(
         logged_at=message.get("created_at") if isinstance(message.get("created_at"), str) else None,
         created_at=message.get("created_at") if isinstance(message.get("created_at"), str) else None,
         conn=conn,
+        auto_commit=auto_commit,
     )
 
 
