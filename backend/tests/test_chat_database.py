@@ -266,6 +266,116 @@ class ChatDatabaseTests(unittest.TestCase):
         self.assertEqual(message_row["user_id"], self.user_id)
         self.assertEqual(message_row["message_type"], "text")
 
+    def test_init_db_rebuilds_mixed_legacy_messages_table(self) -> None:
+        conn = get_db_connection()
+        try:
+            session_id = _insert_session(conn, self.user_id, "Legacy mixed schema")
+            cursor = conn.cursor()
+            cursor.execute("DROP TABLE messages")
+            cursor.execute(
+                """
+                CREATE TABLE messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id INTEGER NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+                    role TEXT NOT NULL,
+                    content TEXT,
+                    time TEXT NOT NULL,
+                    is_result INTEGER NOT NULL DEFAULT 0,
+                    title TEXT,
+                    confidence TEXT,
+                    description TEXT,
+                    items_json TEXT,
+                    total TEXT,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    user_id INTEGER,
+                    message_type TEXT,
+                    result_title TEXT,
+                    result_confidence TEXT,
+                    result_description TEXT,
+                    result_items_json TEXT,
+                    result_total TEXT
+                );
+                """
+            )
+            cursor.execute(
+                """
+                INSERT INTO messages (
+                    session_id,
+                    role,
+                    content,
+                    time,
+                    is_result,
+                    title,
+                    confidence,
+                    description,
+                    items_json,
+                    total,
+                    created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    session_id,
+                    "assistant",
+                    "Balanced lunch with vegetables.",
+                    "2026-03-13 12:30:00",
+                    1,
+                    "Lunch estimate",
+                    "high",
+                    "Estimated meal summary.",
+                    '[{"name":"Rice","portion":"1 bowl","energy":"230 kcal"}]',
+                    "230 kcal",
+                    "2026-03-13 12:30:00",
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        init_db()
+
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(messages)")
+            message_columns = {row["name"] for row in cursor.fetchall()}
+            cursor.execute(
+                """
+                SELECT user_id, message_type, result_title, result_items_json, created_at
+                FROM messages
+                WHERE session_id = ?
+                """,
+                (session_id,),
+            )
+            message_row = cursor.fetchone()
+        finally:
+            conn.close()
+
+        self.assertEqual(
+            message_columns,
+            {
+                "id",
+                "session_id",
+                "user_id",
+                "role",
+                "message_type",
+                "content",
+                "result_title",
+                "result_confidence",
+                "result_description",
+                "result_items_json",
+                "result_total",
+                "created_at",
+            },
+        )
+        self.assertEqual(message_row["user_id"], self.user_id)
+        self.assertEqual(message_row["message_type"], "estimate_result")
+        self.assertEqual(message_row["result_title"], "Lunch estimate")
+        self.assertEqual(
+            message_row["result_items_json"],
+            '[{"name":"Rice","portion":"1 bowl","energy":"230 kcal"}]',
+        )
+        self.assertEqual(message_row["created_at"], "2026-03-13 12:30:00")
+
     def test_message_constraints_accept_supported_shapes(self) -> None:
         conn = get_db_connection()
         try:

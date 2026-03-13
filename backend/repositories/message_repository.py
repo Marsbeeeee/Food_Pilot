@@ -16,36 +16,52 @@ def create_message(
     result_total: str | None = None,
     created_at: str | None = None,
 ) -> dict[str, object]:
+    message_columns = _get_table_columns(conn, "messages")
+    insert_columns = [
+        "session_id",
+        "user_id",
+        "role",
+        "message_type",
+        "content",
+        "result_title",
+        "result_confidence",
+        "result_description",
+        "result_items_json",
+        "result_total",
+    ]
+    insert_values: list[object] = [
+        session_id,
+        user_id,
+        role,
+        message_type,
+        content,
+        result_title,
+        result_confidence,
+        result_description,
+        result_items_json,
+        result_total,
+    ]
+
+    if "time" in message_columns:
+        insert_columns.append("time")
+        insert_values.append(created_at)
+
+    insert_columns.append("created_at")
+    insert_values.append(created_at)
+
+    placeholders = [
+        "COALESCE(?, CURRENT_TIMESTAMP)" if column in {"time", "created_at"} else "?"
+        for column in insert_columns
+    ]
+
     cursor = conn.cursor()
     cursor.execute(
-        """
+        f"""
         INSERT INTO messages (
-            session_id,
-            user_id,
-            role,
-            message_type,
-            content,
-            result_title,
-            result_confidence,
-            result_description,
-            result_items_json,
-            result_total,
-            created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))
+            {", ".join(insert_columns)}
+        ) VALUES ({", ".join(placeholders)})
         """,
-        (
-            session_id,
-            user_id,
-            role,
-            message_type,
-            content,
-            result_title,
-            result_confidence,
-            result_description,
-            result_items_json,
-            result_total,
-            created_at,
-        ),
+        tuple(insert_values),
     )
     conn.commit()
     return _get_message_by_id(conn, cursor.lastrowid, user_id)
@@ -137,3 +153,9 @@ def _get_message_by_id(
     if row is None:
         raise LookupError("message not found after insert")
     return dict(row)
+
+
+def _get_table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
+    cursor = conn.cursor()
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    return {str(row[1]) for row in cursor.fetchall()}
