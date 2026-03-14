@@ -18,8 +18,6 @@ export async function listFoodLogs(params?: FoodLogListParams): Promise<FoodLogE
   return requestJson<FoodLogEntry[]>(query ? `?${query}` : '');
 }
 
-export const listFoodLogEntries = listFoodLogs;
-
 async function requestJson<T = unknown>(endpoint: string, init?: RequestInit): Promise<T> {
   const token = requireAuthToken();
   const response = await fetch(`${FOOD_LOG_BASE_URL}${endpoint}`, {
