@@ -168,7 +168,7 @@ class FoodLogSaveRequest(BaseModel):
 
 
 def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
-    timestamp = _resolve_timestamp(entry)
+    timestamp = _resolve_saved_timestamp(entry)
 
     return FoodLogEntryOut.model_validate(
         {
@@ -198,11 +198,11 @@ def parse_food_log_items(value: object) -> list[EstimateItem]:
     return [EstimateItem.model_validate(item) for item in parsed]
 
 
-def _resolve_timestamp(entry: dict[str, object]) -> datetime:
+def _resolve_saved_timestamp(entry: dict[str, object]) -> datetime:
     candidates = (
-        entry.get("logged_at"),
-        entry.get("created_at"),
         entry.get("updated_at"),
+        entry.get("created_at"),
+        entry.get("logged_at"),
     )
     for value in candidates:
         if not isinstance(value, str) or not value.strip():

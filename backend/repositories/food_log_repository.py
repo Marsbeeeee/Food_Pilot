@@ -224,11 +224,11 @@ def list_food_logs_by_user(
         parameters.append(session_id)
 
     if date_from is not None:
-        query += " AND logged_at >= ?"
+        query += " AND updated_at >= ?"
         parameters.append(f"{date_from.isoformat()} 00:00:00")
 
     if date_to is not None:
-        query += " AND logged_at < ?"
+        query += " AND updated_at < ?"
         parameters.append(f"{(date_to + timedelta(days=1)).isoformat()} 00:00:00")
 
     if meal:

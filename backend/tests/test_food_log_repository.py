@@ -1,5 +1,6 @@
 import os
 import unittest
+from datetime import date
 from unittest.mock import patch
 
 from backend.database.connection import get_db_connection
@@ -234,6 +235,55 @@ class FoodLogRepositoryTests(unittest.TestCase):
             [entry["result_title"] for entry in session_logs],
             ["Meal one", "Meal three"],
         )
+
+    def test_list_food_logs_date_filters_use_last_save_time(self) -> None:
+        conn = get_db_connection()
+        try:
+            resaved = create_food_log(
+                conn,
+                self.user_id,
+                source_type="estimate_api",
+                meal_description="meal one",
+                result_title="Meal one",
+                result_description="Description one",
+                total_calories="100 kcal",
+                ingredients=[],
+                logged_at="2000-01-01 08:00:00",
+                created_at="2000-01-01 08:00:00",
+            )
+            create_food_log(
+                conn,
+                self.user_id,
+                source_type="estimate_api",
+                meal_description="meal two",
+                result_title="Meal two",
+                result_description="Description two",
+                total_calories="200 kcal",
+                ingredients=[],
+                logged_at="2000-01-02 08:00:00",
+                created_at="2000-01-02 08:00:00",
+            )
+
+            conn.execute(
+                """
+                UPDATE food_logs
+                SET updated_at = ?
+                WHERE id = ?
+                """,
+                ("2026-03-15 09:00:00", int(resaved["id"])),
+            )
+            conn.commit()
+
+            filtered_logs = list_food_logs_by_user(
+                conn,
+                self.user_id,
+                date_from=date(2026, 3, 15),
+                date_to=date(2026, 3, 15),
+            )
+        finally:
+            conn.close()
+
+        self.assertEqual([entry["result_title"] for entry in filtered_logs], ["Meal one"])
 
     def test_save_food_log_overwrites_existing_chat_message_entry(self) -> None:
         conn = get_db_connection()
