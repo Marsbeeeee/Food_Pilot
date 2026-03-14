@@ -1,0 +1,121 @@
+import os
+import unittest
+from unittest.mock import patch
+
+from backend.database.init_db import init_db
+from backend.routers.food_log import list_food_log_entries
+from backend.schemas.user import UserCreate
+from backend.services.chat_service import create_empty_session
+from backend.services.food_log_service import create_food_log
+from backend.services.user_service import create_user
+
+
+class FoodLogApiTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.db_path = os.path.join(
+            os.getcwd(),
+            "backend",
+            "database",
+            "test_food_log_api.db",
+        )
+        if os.path.exists(self.db_path):
+            os.remove(self.db_path)
+        self.db_patch = patch("backend.database.connection.db_path", self.db_path)
+        self.db_patch.start()
+        init_db()
+
+        user = create_user(
+            UserCreate.model_validate(
+                {
+                    "email": "owner@example.com",
+                    "passwordHash": "hashed-password",
+                    "displayName": "Owner",
+                }
+            )
+        )
+        self.user = user
+        self.user_id = user.id
+
+    def tearDown(self) -> None:
+        self.db_patch.stop()
+        if os.path.exists(self.db_path):
+            os.remove(self.db_path)
+
+    def test_get_food_logs_returns_explorer_ready_fields(self) -> None:
+        session = create_empty_session(self.user_id)
+        create_food_log(
+            self.user_id,
+            "chat_message",
+            meal_description="chicken salad",
+            result_title="Chicken Salad",
+            result_description="Protein-forward salad with avocado.",
+            total_calories="240 kcal",
+            ingredients=[
+                {
+                    "name": "Chicken",
+                    "portion": "150g",
+                    "energy": "240 kcal",
+                }
+            ],
+            session_id=int(session["id"]),
+            logged_at="2026-03-14 08:15:00",
+            created_at="2026-03-14 08:15:00",
+        )
+        create_food_log(
+            self.user_id,
+            "estimate_api",
+            meal_description="oatmeal bowl",
+            result_title="Oatmeal Bowl",
+            result_description="Oats with banana and milk.",
+            total_calories="320 kcal",
+            ingredients=[
+                {
+                    "name": "Oats",
+                    "portion": "1 bowl",
+                    "energy": "320 kcal",
+                }
+            ],
+            logged_at="2026-03-14 09:30:00",
+            created_at="2026-03-14 09:30:00",
+        )
+
+        entries = list_food_log_entries(current_user=self.user)
+        payload = [entry.model_dump(by_alias=True, exclude_none=True) for entry in entries]
+
+        self.assertEqual(len(payload), 2)
+
+        latest_entry = payload[0]
+        self.assertEqual(
+            latest_entry,
+            {
+                "id": latest_entry["id"],
+                "name": "Oatmeal Bowl",
+                "description": "Oats with banana and milk.",
+                "calories": "320",
+                "date": "Mar 14",
+                "time": "09:30 AM",
+                "image": f"https://picsum.photos/seed/foodpilot-log-{latest_entry['id']}/640/480",
+                "breakdown": [
+                    {
+                        "name": "Oats",
+                        "portion": "1 bowl",
+                        "energy": "320 kcal",
+                    }
+                ],
+                "protein": "--",
+                "carbs": "--",
+                "fat": "--",
+            },
+        )
+        self.assertNotIn("sessionId", latest_entry)
+
+        linked_entry = payload[1]
+        self.assertEqual(linked_entry["name"], "Chicken Salad")
+        self.assertEqual(linked_entry["calories"], "240")
+        self.assertEqual(linked_entry["date"], "Mar 14")
+        self.assertEqual(linked_entry["time"], "08:15 AM")
+        self.assertEqual(linked_entry["sessionId"], str(session["id"]))
+
+
+if __name__ == "__main__":
+    unittest.main()

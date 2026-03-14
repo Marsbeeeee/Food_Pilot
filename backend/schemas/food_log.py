@@ -1,57 +1,117 @@
 import json
+import re
+from datetime import datetime
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from backend.schemas.estimate import EstimateItem
 
 
+MONTH_ABBREVIATIONS = (
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+)
+
+
 class FoodLogEntryOut(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
-    id: int
-    source_type: str = Field(
-        validation_alias=AliasChoices("source_type", "sourceType"),
-        serialization_alias="sourceType",
-    )
-    session_id: int | None = Field(
+    id: str
+    name: str
+    description: str
+    calories: str
+    date: str
+    time: str
+    image: str
+    breakdown: list[EstimateItem]
+    protein: str
+    carbs: str
+    fat: str
+    session_id: str | None = Field(
         default=None,
         validation_alias=AliasChoices("session_id", "sessionId"),
         serialization_alias="sessionId",
     )
-    source_message_id: int | None = Field(
-        default=None,
-        validation_alias=AliasChoices("source_message_id", "sourceMessageId", "message_id", "messageId"),
-        serialization_alias="sourceMessageId",
-    )
-    meal_description: str = Field(
-        validation_alias=AliasChoices("meal_description", "mealDescription"),
-        serialization_alias="mealDescription",
-    )
-    logged_at: str = Field(
-        validation_alias=AliasChoices("logged_at", "loggedAt"),
-        serialization_alias="loggedAt",
-    )
-    title: str
-    confidence: str | None = None
-    description: str
-    items: list[EstimateItem] = Field(
-        validation_alias=AliasChoices("items", "result_items"),
-        serialization_alias="items",
-    )
-    total: str
-    suggestion: str | None = None
-    created_at: str = Field(
-        validation_alias=AliasChoices("created_at", "createdAt"),
-        serialization_alias="createdAt",
-    )
-    updated_at: str = Field(
-        validation_alias=AliasChoices("updated_at", "updatedAt"),
-        serialization_alias="updatedAt",
+
+
+def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
+    timestamp = _resolve_timestamp(entry)
+
+    return FoodLogEntryOut.model_validate(
+        {
+            "id": str(entry["id"]),
+            "name": entry["result_title"],
+            "description": entry["result_description"],
+            "calories": _normalize_calories(entry["total_calories"]),
+            "date": _format_entry_date(timestamp),
+            "time": _format_entry_time(timestamp),
+            "image": f"https://picsum.photos/seed/foodpilot-log-{entry['id']}/640/480",
+            "breakdown": parse_food_log_items(entry["ingredients_json"]),
+            "protein": "--",
+            "carbs": "--",
+            "fat": "--",
+            "session_id": (
+                str(entry["session_id"])
+                if entry.get("session_id") is not None
+                else None
+            ),
+        }
     )
 
 
-def parse_food_log_items(value: str) -> list[EstimateItem]:
+def parse_food_log_items(value: object) -> list[EstimateItem]:
+    if not isinstance(value, str):
+        raise ValueError("ingredients_json must be a JSON string")
+
     parsed = json.loads(value)
     if not isinstance(parsed, list):
-        raise ValueError("items_json must decode to a list")
+        raise ValueError("ingredients_json must decode to a list")
     return [EstimateItem.model_validate(item) for item in parsed]
+
+
+def _resolve_timestamp(entry: dict[str, object]) -> datetime:
+    candidates = (
+        entry.get("logged_at"),
+        entry.get("created_at"),
+        entry.get("updated_at"),
+    )
+    for value in candidates:
+        if not isinstance(value, str) or not value.strip():
+            continue
+
+        try:
+            return datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            continue
+
+    return datetime(1970, 1, 1, 0, 0, 0)
+
+
+def _format_entry_date(timestamp: datetime) -> str:
+    return f"{MONTH_ABBREVIATIONS[timestamp.month - 1]} {timestamp.day}"
+
+
+def _format_entry_time(timestamp: datetime) -> str:
+    period = "AM" if timestamp.hour < 12 else "PM"
+    hour = timestamp.hour % 12 or 12
+    return f"{hour:02d}:{timestamp.minute:02d} {period}"
+
+
+def _normalize_calories(value: object) -> str:
+    if not isinstance(value, str):
+        return "0"
+
+    match = re.search(r"\d+(?:\.\d+)?", value.replace(",", ""))
+    if match is None:
+        return "0"
+    return match.group(0)

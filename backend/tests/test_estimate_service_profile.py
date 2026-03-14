@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import ANY, patch
+from unittest.mock import ANY, Mock, patch
 
 from backend.schemas.estimate import EstimateRequest, EstimateResult
 from backend.services.estimate_service import create_estimate_response
@@ -27,6 +27,9 @@ class EstimateServiceProfileTests(unittest.TestCase):
             "backend.services.estimate_service.estimate_meal",
             return_value=estimate_result,
         ) as estimate_meal_mock, patch(
+            "backend.services.estimate_service.get_db_connection",
+            return_value=Mock(),
+        ) as get_db_connection_mock, patch(
             "backend.services.estimate_service._resolve_food_log_session_id",
             return_value=56,
         ) as resolve_session_id_mock, patch(
@@ -37,6 +40,7 @@ class EstimateServiceProfileTests(unittest.TestCase):
         self.assertEqual(status_code, 200)
         self.assertTrue(response.success)
         estimate_meal_mock.assert_called_once_with("chicken salad", 12, 34)
+        get_db_connection_mock.assert_called_once()
         resolve_session_id_mock.assert_called_once()
         record_food_log_mock.assert_called_once_with(
             34,

@@ -1,24 +1,7 @@
 import { clearSession, getStoredToken } from './auth';
-import { FoodLogEntry, IngredientResult } from '../types/types';
+import { FoodLogEntry } from '../types/types';
 
-const FOOD_LOG_BASE_URL = 'http://localhost:8000/food-log';
-
-interface FoodLogEntryResponse {
-  id: number;
-  sourceType: 'estimate_api' | 'chat_message';
-  sessionId: number | null;
-  sourceMessageId: number | null;
-  mealDescription: string;
-  loggedAt: string;
-  title: string;
-  confidence: string | null;
-  description: string;
-  items: IngredientResult[];
-  total: string;
-  suggestion: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+const FOOD_LOG_BASE_URL = 'http://localhost:8000/food-logs';
 
 export class FoodLogApiError extends Error {
   status: number;
@@ -31,28 +14,7 @@ export class FoodLogApiError extends Error {
 }
 
 export async function listFoodLogEntries(): Promise<FoodLogEntry[]> {
-  const data = await requestJson<FoodLogEntryResponse[]>('');
-  return data.map((entry) => mapFoodLogEntry(entry));
-}
-
-function mapFoodLogEntry(entry: FoodLogEntryResponse): FoodLogEntry {
-  const createdAt = new Date(entry.createdAt);
-  const timestamp = Number.isNaN(createdAt.getTime()) ? new Date() : createdAt;
-
-  return {
-    id: String(entry.id),
-    name: entry.title,
-    description: entry.description,
-    calories: entry.total.replace(/\s*kcal/i, '').trim(),
-    date: timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    time: timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    image: `https://picsum.photos/seed/foodpilot-log-${entry.id}/640/480`,
-    breakdown: entry.items.map((item) => ({ ...item })),
-    protein: '--',
-    carbs: '--',
-    fat: '--',
-    sessionId: entry.sessionId !== null ? String(entry.sessionId) : undefined,
-  };
+  return requestJson<FoodLogEntry[]>('');
 }
 
 async function requestJson<T = unknown>(endpoint: string, init?: RequestInit): Promise<T> {
