@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { AuthApiError, clearSession, deleteCurrentAccount, restoreSession } from '../api/auth';
+import { buildFoodLogNavigationState } from './foodLogNavigation';
 import { getChatSession, listChatSessions } from '../api/chat';
 import { listFoodLogs } from '../api/foodLog';
 import { clearStoredProfile, loadStoredProfile, ProfileApiError, toProfileForm } from '../api/profile';
@@ -227,8 +228,12 @@ const App: React.FC = () => {
   };
 
   const handleNavigateToSession = (sessionId: string) => {
-    setActiveSessionId(sessionId);
-    setCurrentView(AppView.WORKSPACE);
+    const nextState = buildFoodLogNavigationState(sessionId) as {
+      activeSessionId: string;
+      currentView: AppView;
+    };
+    setActiveSessionId(nextState.activeSessionId);
+    setCurrentView(nextState.currentView);
   };
 
   const renderView = () => {
