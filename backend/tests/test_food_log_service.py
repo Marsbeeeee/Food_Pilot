@@ -52,7 +52,7 @@ class FoodLogServiceTests(unittest.TestCase):
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
 
-    def test_chat_estimate_result_creates_food_log_entry(self) -> None:
+    def test_chat_estimate_result_does_not_create_food_log_entry(self) -> None:
         session = create_empty_session(self.user_id)
 
         with patch(
@@ -68,14 +68,9 @@ class FoodLogServiceTests(unittest.TestCase):
 
         self.assertIsNotNone(exchange)
         entries = _list_food_log_entries()
-        self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0]["source_type"], "chat_message")
-        self.assertEqual(entries[0]["session_id"], int(session["id"]))
-        self.assertEqual(entries[0]["source_message_id"], int(exchange["assistant_message"]["id"]))
-        self.assertEqual(entries[0]["meal_description"], "chicken salad")
-        self.assertEqual(entries[0]["total_calories"], "240 kcal")
+        self.assertEqual(len(entries), 0)
 
-    def test_estimate_api_creates_food_log_entry(self) -> None:
+    def test_estimate_api_does_not_create_food_log_entry(self) -> None:
         request_model = EstimateRequest(query="chicken salad")
 
         with patch(
@@ -87,14 +82,9 @@ class FoodLogServiceTests(unittest.TestCase):
         self.assertEqual(status_code, 200)
         self.assertTrue(response.success)
         entries = _list_food_log_entries()
-        self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0]["source_type"], "estimate_api")
-        self.assertIsNone(entries[0]["session_id"])
-        self.assertIsNone(entries[0]["source_message_id"])
-        self.assertEqual(entries[0]["meal_description"], "chicken salad")
-        self.assertEqual(entries[0]["result_title"], "Chicken salad")
+        self.assertEqual(len(entries), 0)
 
-    def test_estimate_api_creates_food_log_entry_with_session_id_when_linked(self) -> None:
+    def test_estimate_api_ignores_session_id_for_food_log_until_save(self) -> None:
         session = create_empty_session(self.user_id)
         request_model = EstimateRequest(
             query="chicken salad",
@@ -109,13 +99,9 @@ class FoodLogServiceTests(unittest.TestCase):
 
         self.assertEqual(status_code, 200)
         self.assertTrue(response.success)
-        entries = _list_food_log_entries()
-        self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0]["source_type"], "estimate_api")
-        self.assertEqual(entries[0]["session_id"], int(session["id"]))
-        self.assertIsNone(entries[0]["source_message_id"])
+        self.assertEqual(len(_list_food_log_entries()), 0)
 
-    def test_estimate_api_returns_404_when_session_id_is_not_owned_by_user(self) -> None:
+    def test_estimate_api_does_not_require_owned_session_id_until_save(self) -> None:
         session = create_empty_session(self.other_user_id)
         request_model = EstimateRequest(
             query="chicken salad",
@@ -128,29 +114,11 @@ class FoodLogServiceTests(unittest.TestCase):
         ):
             status_code, response = create_estimate_response(request_model, self.user_id)
 
-        self.assertEqual(status_code, 404)
-        self.assertFalse(response.success)
-        self.assertIsNotNone(response.error)
-        self.assertEqual(response.error.code, "SESSION_NOT_FOUND")
+        self.assertEqual(status_code, 200)
+        self.assertTrue(response.success)
         self.assertEqual(len(_list_food_log_entries()), 0)
 
-    def test_estimate_api_returns_500_when_food_log_insert_fails(self) -> None:
-        request_model = EstimateRequest(query="chicken salad")
-
-        with patch(
-            "backend.services.estimate_service.estimate_meal",
-            return_value=_build_estimate_result(),
-        ), patch(
-            "backend.services.estimate_service.create_food_log_from_estimate",
-            side_effect=sqlite3.IntegrityError("food log insert failed"),
-        ):
-            status_code, response = create_estimate_response(request_model, self.user_id)
-
-        self.assertEqual(status_code, 500)
-        self.assertFalse(response.success)
-        self.assertEqual(len(_list_food_log_entries()), 0)
-
-    def test_init_db_backfills_existing_estimate_result_messages(self) -> None:
+    def test_init_db_does_not_backfill_existing_estimate_result_messages(self) -> None:
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
@@ -201,14 +169,9 @@ class FoodLogServiceTests(unittest.TestCase):
 
         init_db()
 
-        entries = _list_food_log_entries()
-        self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0]["source_message_id"], message_id)
-        self.assertEqual(entries[0]["source_type"], "chat_message")
-        self.assertEqual(entries[0]["meal_description"], "Chicken salad")
-        self.assertEqual(entries[0]["created_at"], "2026-03-13 12:00:00")
+        self.assertEqual(len(_list_food_log_entries()), 0)
 
-    def test_init_db_adds_food_logs_table_to_existing_database_without_rebuild(self) -> None:
+    def test_init_db_adds_food_logs_table_to_existing_database_without_backfill(self) -> None:
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
@@ -271,11 +234,9 @@ class FoodLogServiceTests(unittest.TestCase):
             table_row = cursor.fetchone()
             cursor.execute(
                 """
-                SELECT source_message_id, result_title, total_calories
+                SELECT COUNT(*) AS total
                 FROM food_logs
-                WHERE source_message_id = ?
                 """,
-                (message_id,),
             )
             food_log_row = cursor.fetchone()
         finally:
@@ -283,9 +244,7 @@ class FoodLogServiceTests(unittest.TestCase):
 
         self.assertIsNotNone(table_row)
         self.assertIsNotNone(food_log_row)
-        self.assertEqual(food_log_row["source_message_id"], message_id)
-        self.assertEqual(food_log_row["result_title"], "Legacy meal")
-        self.assertEqual(food_log_row["total_calories"], "230 kcal")
+        self.assertEqual(food_log_row["total"], 0)
 
     def test_food_logs_table_has_expected_indexes_and_foreign_keys(self) -> None:
         conn = get_db_connection()

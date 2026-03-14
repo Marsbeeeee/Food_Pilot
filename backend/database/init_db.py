@@ -417,7 +417,6 @@ def _ensure_food_logs_table(cursor) -> None:
     )
 
     _migrate_legacy_food_log_entries(cursor)
-    _backfill_food_logs_from_messages(cursor)
 
 
 def _create_messages_table(cursor, table_name: str = "messages") -> None:
@@ -692,62 +691,6 @@ def _migrate_legacy_food_log_entries(cursor) -> None:
                 AND current_logs.logged_at = COALESCE(legacy.created_at, CURRENT_TIMESTAMP)
                 AND current_logs.result_title = legacy.title
             )
-        )
-        """
-    )
-
-
-def _backfill_food_logs_from_messages(cursor) -> None:
-    cursor.execute(
-        """
-        INSERT INTO food_logs (
-            user_id,
-            session_id,
-            source_message_id,
-            meal_description,
-            logged_at,
-            result_title,
-            result_confidence,
-            result_description,
-            total_calories,
-            ingredients_json,
-            source_type,
-            assistant_suggestion,
-            created_at,
-            updated_at
-        )
-        SELECT
-            m.user_id,
-            m.session_id,
-            m.id,
-            COALESCE(
-                (
-                    SELECT user_message.content
-                    FROM messages AS user_message
-                    WHERE user_message.session_id = m.session_id
-                    AND user_message.role = 'user'
-                    AND user_message.id < m.id
-                    ORDER BY user_message.id DESC
-                    LIMIT 1
-                ),
-                m.result_title
-            ),
-            m.created_at,
-            m.result_title,
-            m.result_confidence,
-            m.result_description,
-            m.result_total,
-            m.result_items_json,
-            'chat_message',
-            m.content,
-            m.created_at,
-            m.created_at
-        FROM messages AS m
-        WHERE m.message_type = 'estimate_result'
-        AND NOT EXISTS (
-            SELECT 1
-            FROM food_logs AS current_logs
-            WHERE current_logs.source_message_id = m.id
         )
         """
     )

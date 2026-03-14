@@ -143,7 +143,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           optimisticSessionId,
         ));
         setActiveSessionId(exchange.session.id);
-        void refreshFoodLog();
         return;
       }
 
@@ -155,7 +154,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         null,
       ));
       setActiveSessionId(exchange.session.id);
-      void refreshFoodLog();
     } catch (error) {
       setInputValue(finalQuery);
       setSessions((prev) => rollbackOptimisticUserMessage(

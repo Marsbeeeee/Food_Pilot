@@ -1,7 +1,5 @@
 from fastapi.responses import JSONResponse
 
-from backend.database.connection import get_db_connection
-from backend.repositories.chat_session_repository import get_session_by_id as get_session_by_id_record
 from backend.schemas.estimate import (
     EstimateError,
     EstimateErrorField,
@@ -9,7 +7,6 @@ from backend.schemas.estimate import (
     EstimateResponse,
 )
 from backend.services.estimate import EstimateServiceError, estimate_meal
-from backend.services.food_log_service import create_food_log_from_estimate
 
 
 def create_estimate_response(
@@ -18,28 +15,6 @@ def create_estimate_response(
 ) -> tuple[int, EstimateResponse]:
     try:
         result = estimate_meal(request_model.query, request_model.profile_id, user_id)
-        if user_id is not None:
-            conn = get_db_connection()
-            try:
-                session_id = _resolve_food_log_session_id(
-                    conn,
-                    request_model.session_id,
-                    user_id,
-                )
-                create_food_log_from_estimate(
-                    user_id,
-                    request_model.query,
-                    result,
-                    source_type="estimate_api",
-                    session_id=session_id,
-                    conn=conn,
-                )
-                conn.commit()
-            except Exception:
-                conn.rollback()
-                raise
-            finally:
-                conn.close()
     except EstimateServiceError as exc:
         return exc.status_code, EstimateResponse(
             success=False,
@@ -83,26 +58,6 @@ def create_estimate_validation_error_response(errors: list[dict]) -> JSONRespons
         ),
     )
     return JSONResponse(status_code=422, content=payload.model_dump())
-
-
-def _resolve_food_log_session_id(
-    conn,
-    session_id: int | None,
-    user_id: int,
-) -> int | None:
-    if session_id is None:
-        return None
-
-    session = get_session_by_id_record(conn, session_id, user_id)
-    if session is None:
-        raise EstimateServiceError(
-            code="SESSION_NOT_FOUND",
-            status_code=404,
-            message=f"Chat session {session_id} was not found for user {user_id}.",
-            user_message="Chat session not found.",
-            retryable=False,
-        )
-    return int(session["id"])
 
 
 def _format_field_name(location: tuple[object, ...]) -> str:

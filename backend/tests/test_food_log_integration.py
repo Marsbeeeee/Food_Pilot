@@ -74,7 +74,7 @@ class FoodLogIntegrationTests(unittest.TestCase):
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
 
-    def test_new_chat_analysis_appears_immediately_in_food_log_and_links_back_to_session(self) -> None:
+    def test_new_chat_analysis_does_not_appear_in_food_log_until_saved(self) -> None:
         with patch(
             "backend.services.chat_service.estimate_meal",
             return_value=build_estimate_result(
@@ -95,12 +95,10 @@ class FoodLogIntegrationTests(unittest.TestCase):
             current_user=self.user,
         )
 
-        self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0].name, "Chicken Salad")
-        self.assertEqual(entries[0].session_id, str(exchange["session"]["id"]))
+        self.assertEqual(len(entries), 0)
         self.assertEqual(exchange["assistant_message"]["message_type"], "estimate_result")
 
-    def test_direct_estimate_appears_immediately_in_food_log_without_session(self) -> None:
+    def test_direct_estimate_does_not_appear_in_food_log_until_saved(self) -> None:
         with patch(
             "backend.services.estimate_service.estimate_meal",
             return_value=build_estimate_result(
@@ -122,11 +120,9 @@ class FoodLogIntegrationTests(unittest.TestCase):
 
         self.assertEqual(status_code, 200)
         self.assertTrue(response.success)
-        self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0].name, "Oatmeal Bowl")
-        self.assertIsNone(entries[0].session_id)
+        self.assertEqual(len(entries), 0)
 
-    def test_food_log_entries_are_user_scoped(self) -> None:
+    def test_automatic_analysis_results_do_not_create_food_log_entries_for_any_user(self) -> None:
         with patch(
             "backend.services.chat_service.estimate_meal",
             return_value=build_estimate_result(
@@ -164,8 +160,8 @@ class FoodLogIntegrationTests(unittest.TestCase):
             current_user=self.other_user,
         )
 
-        self.assertEqual([entry.name for entry in owner_entries], ["Chicken Salad"])
-        self.assertEqual([entry.name for entry in other_entries], ["Rice Bowl"])
+        self.assertEqual(owner_entries, [])
+        self.assertEqual(other_entries, [])
 
 
 if __name__ == "__main__":

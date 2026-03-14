@@ -188,7 +188,7 @@ class ChatServiceTests(unittest.TestCase):
         self.assertEqual(exchange["assistant_message"]["message_type"], "text")
         self.assertEqual(exchange["assistant_message"]["content"], DEFAULT_ASSISTANT_ERROR_MESSAGE)
 
-    def test_send_message_in_session_rolls_back_estimate_result_when_food_log_insert_fails(self) -> None:
+    def test_send_message_in_session_does_not_create_food_log_entries(self) -> None:
         session = create_empty_session(self.user_id)
 
         with patch(
@@ -219,9 +219,6 @@ class ChatServiceTests(unittest.TestCase):
                     "suggestion": "A lighter dressing would reduce calories.",
                 },
             )(),
-        ), patch(
-            "backend.services.chat_service.create_food_log",
-            side_effect=sqlite3.IntegrityError("food log insert failed"),
         ):
             exchange = send_message_in_session(
                 self.user_id,
@@ -231,11 +228,11 @@ class ChatServiceTests(unittest.TestCase):
             )
 
         self.assertIsNotNone(exchange)
-        self.assertEqual(exchange["assistant_message"]["message_type"], "text")
+        self.assertEqual(exchange["assistant_message"]["message_type"], "estimate_result")
 
         refreshed = get_session_detail(self.user_id, int(session["id"]))
         self.assertEqual(len(refreshed["messages"]), 2)
-        self.assertEqual(refreshed["messages"][1]["message_type"], "text")
+        self.assertEqual(refreshed["messages"][1]["message_type"], "estimate_result")
 
         conn = get_db_connection()
         try:
@@ -255,7 +252,7 @@ class ChatServiceTests(unittest.TestCase):
             conn.close()
 
         self.assertEqual(food_log_total, 0)
-        self.assertEqual(result_message_total, 0)
+        self.assertEqual(result_message_total, 1)
 
     def test_create_session_and_reply_creates_session_then_persists_reply(self) -> None:
         with patch(

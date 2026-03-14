@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { FoodLogEntry } from '../types/types';
 
@@ -27,16 +27,6 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
     });
   }, [logEntries]);
 
-  const totalCalories = useMemo(
-    () => logEntries.reduce((sum, entry) => sum + parseCalories(entry.calories), 0),
-    [logEntries],
-  );
-
-  const averageCalories = useMemo(
-    () => (logEntries.length > 0 ? Math.round(totalCalories / logEntries.length) : 0),
-    [logEntries.length, totalCalories],
-  );
-
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-[#FFFDF5] lg:flex-row">
       <main className="custom-scrollbar flex min-w-0 flex-1 flex-col overflow-y-auto p-6 md:p-8 lg:p-12">
@@ -54,19 +44,9 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
             </p>
           </div>
 
-          <div className="mb-12 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
+          <div className="mb-12 grid grid-cols-1 gap-4 md:max-w-sm">
             <SummaryCard
-              label="Total Calories"
-              value={String(totalCalories)}
-              unit="kcal"
-            />
-            <SummaryCard
-              label="Average Meal"
-              value={String(averageCalories)}
-              unit="kcal"
-            />
-            <SummaryCard
-              label="Entries"
+              label="Saved Entries"
               value={String(logEntries.length)}
               unit="logs"
               accent
@@ -147,7 +127,8 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
                 </div>
                 <p className="text-base font-bold text-[#4A453E]/45">No food log entries yet.</p>
                 <p className="mt-2 text-sm text-[#4A453E]/35">
-                  Start a meal analysis in the workspace and saved records will appear here.
+                  Food Log is a saved collection. Analysis results will not appear here until you
+                  explicitly save them.
                 </p>
               </div>
             )}
@@ -373,9 +354,4 @@ const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({ compact = false }) 
 
 function hasMacroData(entry: FoodLogEntry): boolean {
   return Boolean(entry.protein || entry.carbs || entry.fat);
-}
-
-function parseCalories(value: string): number {
-  const match = value.replace(/,/g, '').match(/\d+(\.\d+)?/);
-  return match ? Number(match[0]) : 0;
 }
