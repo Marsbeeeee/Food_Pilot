@@ -4,7 +4,6 @@ import {
   buildFoodLogCollectionStats,
   buildFoodLogEditPayload,
   formatSavedMoment,
-  parseSavedAt,
   sortFoodLogEntries,
 } from '../app/foodLogFavorites';
 import { FoodLogEntry, FoodLogPatchInput, IngredientResult } from '../types/types';
@@ -35,20 +34,21 @@ export const Explorer: React.FC<ExplorerProps> = ({
   const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(
     orderedEntries[0] ?? null,
   );
+  const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const [undoableDeletedEntry, setUndoableDeletedEntry] = useState<FoodLogEntry | null>(null);
   const [restoringEntryId, setRestoringEntryId] = useState<string | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editDraft, setEditDraft] = useState<FoodLogEditDraft | null>(null);
   const collectionStats = buildFoodLogCollectionStats(orderedEntries);
-  const selectedEntrySavedMoment = selectedEntry
-    ? formatSavedMoment(selectedEntry.savedAt)
-    : null;
 
   useEffect(() => {
     if (orderedEntries.length === 0) {
       setSelectedEntry(null);
+      setIsMobileDetailOpen(false);
+      setIsEditing(false);
+      setEditDraft(null);
       return;
     }
 
@@ -77,6 +77,9 @@ export const Explorer: React.FC<ExplorerProps> = ({
     try {
       await onDeleteFoodLog(selectedEntry.id);
       setUndoableDeletedEntry(selectedEntry);
+      setIsMobileDetailOpen(false);
+      setIsEditing(false);
+      setEditDraft(null);
     } catch (error) {
       const message = error instanceof Error
         ? error.message
@@ -112,7 +115,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
     }
 
     setEditDraft(buildEditDraft(selectedEntry));
-    setIsEditModalOpen(true);
+    setIsEditing(true);
   };
 
   const handleCloseEditModal = () => {
@@ -120,7 +123,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
       return;
     }
 
-    setIsEditModalOpen(false);
+    setIsEditing(false);
     setEditDraft(null);
   };
 
@@ -188,10 +191,15 @@ export const Explorer: React.FC<ExplorerProps> = ({
       return;
     }
 
+    const nextDraft = {
+      ...editDraft,
+      calories: getDraftTotalCalories(editDraft),
+    };
+
     setIsSavingEdit(true);
     try {
-      await onUpdateFoodLog(selectedEntry.id, buildFoodLogEditPayload(editDraft));
-      setIsEditModalOpen(false);
+      await onUpdateFoodLog(selectedEntry.id, buildFoodLogEditPayload(nextDraft));
+      setIsEditing(false);
       setEditDraft(null);
     } catch (error) {
       const message = error instanceof Error
@@ -203,10 +211,20 @@ export const Explorer: React.FC<ExplorerProps> = ({
     }
   };
 
+  const handleSelectEntry = (entry: FoodLogEntry) => {
+    setSelectedEntry(entry);
+    setIsEditing(false);
+    setEditDraft(null);
+
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+      setIsMobileDetailOpen(true);
+    }
+  };
+
   return (
-    <div className="flex h-full flex-1 flex-col overflow-hidden bg-[#FFFDF5] lg:flex-row">
-      <main className="custom-scrollbar flex min-w-0 flex-1 flex-col overflow-y-auto p-6 md:p-8 lg:p-12">
-        <div className="mx-auto mb-10 w-full max-w-4xl">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#FFFDF5] lg:flex-row">
+      <main className="custom-scrollbar flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10 xl:px-12">
+        <div className="mx-auto w-full max-w-4xl pb-10">
           <div className="mb-8 flex flex-col gap-2">
             <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#FF8A65]/70">
               Food Log
@@ -261,7 +279,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                   <button
                     key={entry.id}
                     type="button"
-                    onClick={() => setSelectedEntry(entry)}
+                    onClick={() => handleSelectEntry(entry)}
                     className={`group flex w-full flex-col rounded-[28px] border p-5 text-left transition-all md:flex-row md:items-center ${
                       isActive
                         ? 'translate-x-1 border-[#4A453E]/10 bg-white shadow-md'
@@ -324,279 +342,65 @@ export const Explorer: React.FC<ExplorerProps> = ({
       </main>
 
       {selectedEntry && (
-        <aside className="flex h-full w-full flex-col border-t border-[#4A453E]/05 bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.02)] lg:w-[440px] lg:shrink-0 lg:border-l lg:border-t-0">
-          <div className="border-b border-[#4A453E]/05 p-6 md:p-8">
-            <div className="mb-6 flex items-start justify-between gap-4">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#FF8A65]">
-                  Saved Favorite
-                </span>
-                <p className="mt-2 text-[11px] font-semibold text-[#4A453E]/35">
-                  Last updated {selectedEntrySavedMoment?.date} / {selectedEntrySavedMoment?.time}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedEntry(null)}
-                className="rounded-full p-1 text-[#4A453E]/20 transition-colors hover:bg-[#4A453E]/5 hover:text-[#4A453E]"
+        <>
+          <aside className="hidden min-h-0 bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.02)] lg:flex lg:w-[400px] lg:shrink-0 lg:border-l lg:border-[#4A453E]/05 xl:w-[450px]">
+            <SelectedEntryPanel
+              entry={selectedEntry}
+              isEditing={isEditing}
+              editDraft={editDraft}
+              isSavingEdit={isSavingEdit}
+              isDeleting={deletingEntryId === selectedEntry.id}
+              onClose={() => {
+                setSelectedEntry(null);
+                setIsEditing(false);
+                setEditDraft(null);
+              }}
+              onEdit={handleOpenEditModal}
+              onCancelEdit={handleCloseEditModal}
+              onSaveEdit={() => void handleSaveEdit()}
+              onEditFieldChange={handleEditFieldChange}
+              onIngredientChange={handleIngredientChange}
+              onAddIngredient={handleAddIngredient}
+              onRemoveIngredient={handleRemoveIngredient}
+              onDelete={() => void handleDeleteSelectedEntry()}
+              onOpenChat={() => selectedEntry.sessionId && onNavigateToSession(selectedEntry.sessionId)}
+            />
+          </aside>
+
+          {isMobileDetailOpen && (
+            <div
+              className="fixed inset-0 z-[90] bg-[#4A453E]/18 px-4 pb-4 pt-20 lg:hidden"
+              onClick={() => setIsMobileDetailOpen(false)}
+            >
+              <div
+                className="mx-auto flex h-full w-full max-w-3xl overflow-hidden rounded-[32px] border border-[#4A453E]/8 bg-white shadow-[0_32px_90px_rgba(74,69,62,0.18)]"
+                onClick={(event) => event.stopPropagation()}
               >
-                <span className="material-symbols-outlined text-xl">close</span>
-              </button>
-            </div>
-            <h2 className="mb-2 font-serif-brand text-3xl font-bold italic leading-tight text-[#4A453E]">
-              {selectedEntry.name}
-            </h2>
-            <p className="text-sm leading-relaxed text-[#4A453E]/60">
-              {selectedEntry.description}
-            </p>
-          </div>
-
-          <div className="custom-scrollbar flex-1 space-y-8 overflow-y-auto p-6 md:p-8">
-            <div className="relative aspect-video overflow-hidden rounded-[32px] border border-[#4A453E]/05 shadow-sm">
-              <FoodLogImage
-                src={selectedEntry.image}
-                alt={selectedEntry.name}
-                className="h-full w-full object-cover"
-              />
-            </div>
-
-            <div className="rounded-[32px] border border-[#4A453E]/8 bg-[#FFFDF5] p-6 shadow-sm md:p-8">
-              <div className="mb-8 flex items-center justify-between gap-4">
-                <h5 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.1em] text-[#4A453E]/40">
-                  <span className="material-symbols-outlined text-lg text-[#FF8A65]">
-                    analytics
-                  </span>
-                  Nutrition Breakdown
-                </h5>
-                <span className="font-serif-brand text-[28px] font-bold italic text-[#4A453E]">
-                  {selectedEntry.calories}{' '}
-                  <span className="font-sans text-sm font-bold not-italic text-[#4A453E]/20">
-                    kcal
-                  </span>
-                </span>
-              </div>
-
-              <div className="mb-8 space-y-4">
-                {selectedEntry.breakdown.map((item, index) => (
-                  <div key={`${item.name}-${index}`} className="group/row flex items-center justify-between py-1">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-[#4A453E] transition-colors group-hover/row:text-[#FF8A65]">
-                        {item.name}
-                      </span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A453E]/40">
-                        {item.portion}
-                      </span>
-                    </div>
-                    <span className="text-xs font-bold text-[#4A453E]/80">{item.energy}</span>
-                  </div>
-                ))}
-              </div>
-
-              {hasMacroData(selectedEntry) ? (
-                <div className="grid grid-cols-3 gap-3 border-t border-[#4A453E]/05 pt-8">
-                  <MacroStat label="Protein" value={selectedEntry.protein ?? 'N/A'} accent />
-                  <MacroStat label="Carbs" value={selectedEntry.carbs ?? 'N/A'} />
-                  <MacroStat label="Fat" value={selectedEntry.fat ?? 'N/A'} />
-                </div>
-              ) : (
-                <div className="rounded-[24px] border border-dashed border-[#4A453E]/10 bg-white/50 px-5 py-4 text-sm text-[#4A453E]/55">
-                  Macro nutrients were not recorded for this saved favorite. Food Log currently
-                  stores the calorie estimate and ingredient-level breakdown only.
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 border-t border-[#4A453E]/05 bg-white p-6 md:p-8">
-            <div className="rounded-[20px] border border-[#4A453E]/8 bg-[#FFFDF5] px-4 py-3 text-sm leading-6 text-[#4A453E]/55">
-              Food Log treats saved analyses like favorites. Editing this card refines the saved
-              version in place instead of creating a duplicate record.
-            </div>
-            <button
-              type="button"
-              onClick={handleOpenEditModal}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-[#FF8A65]/15 bg-[#FF8A65] text-sm font-bold text-white shadow-lg shadow-[#FF8A65]/20 transition-all hover:bg-[#FF8A65]/90"
-            >
-              <span className="material-symbols-outlined text-lg">edit</span>
-              Edit Saved Favorite
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleDeleteSelectedEntry()}
-              disabled={deletingEntryId === selectedEntry.id}
-              className={`flex h-12 w-full items-center justify-center gap-2 rounded-full border text-sm font-bold transition-all ${
-                deletingEntryId === selectedEntry.id
-                  ? 'cursor-wait border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/45'
-                  : 'border-red-200 bg-red-50 text-red-500 hover:bg-red-100'
-              }`}
-            >
-              <span className="material-symbols-outlined text-lg">delete</span>
-              {deletingEntryId === selectedEntry.id ? 'Removing...' : 'Remove Favorite'}
-            </button>
-            <button
-              type="button"
-              onClick={() => selectedEntry.sessionId && onNavigateToSession(selectedEntry.sessionId)}
-              disabled={!selectedEntry.sessionId}
-              className={`flex h-14 w-full items-center justify-center gap-2 rounded-full text-sm font-bold text-white shadow-lg transition-all ${
-                selectedEntry.sessionId
-                  ? 'bg-[#FF8A65] shadow-[#FF8A65]/20 hover:bg-[#FF8A65]/90'
-                  : 'cursor-not-allowed bg-[#4A453E]/20 shadow-none'
-              }`}
-            >
-              <span className="material-symbols-outlined text-lg">forum</span>
-              {selectedEntry.sessionId ? 'Open Source Chat' : 'Source Chat Deleted'}
-            </button>
-          </div>
-        </aside>
-      )}
-
-      {isEditModalOpen && editDraft && selectedEntry && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 px-6 py-8"
-          onClick={handleCloseEditModal}
-        >
-          <div
-            className="custom-scrollbar max-h-full w-full max-w-3xl overflow-y-auto rounded-[28px] border border-[#4A453E]/10 bg-[#FFFDF5] p-6 shadow-[0_28px_70px_rgba(74,69,62,0.18)] md:p-8"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mb-6 flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-bold text-[#4A453E]">Edit Saved Favorite</h3>
-                <p className="mt-1 text-sm text-[#4A453E]/55">
-                  Update the saved card without creating a new Food Log entry.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleCloseEditModal}
-                disabled={isSavingEdit}
-                className="rounded-full p-1 text-[#4A453E]/20 transition-colors hover:bg-[#4A453E]/5 hover:text-[#4A453E]"
-              >
-                <span className="material-symbols-outlined text-xl">close</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-              <label className="flex flex-col gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/40">
-                  Meal Name
-                </span>
-                <input
-                  type="text"
-                  value={editDraft.name}
-                  onChange={(event) => handleEditFieldChange('name', event.target.value)}
-                  autoFocus
-                  className="rounded-[18px] border border-[#4A453E]/10 bg-white px-4 py-3 text-sm font-medium text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
+                <SelectedEntryPanel
+                  entry={selectedEntry}
+                  isEditing={isEditing}
+                  editDraft={editDraft}
+                  isSavingEdit={isSavingEdit}
+                  isDeleting={deletingEntryId === selectedEntry.id}
+                  onClose={() => {
+                    setIsMobileDetailOpen(false);
+                    setIsEditing(false);
+                    setEditDraft(null);
+                  }}
+                  onEdit={handleOpenEditModal}
+                  onCancelEdit={handleCloseEditModal}
+                  onSaveEdit={() => void handleSaveEdit()}
+                  onEditFieldChange={handleEditFieldChange}
+                  onIngredientChange={handleIngredientChange}
+                  onAddIngredient={handleAddIngredient}
+                  onRemoveIngredient={handleRemoveIngredient}
+                  onDelete={() => void handleDeleteSelectedEntry()}
+                  onOpenChat={() => selectedEntry.sessionId && onNavigateToSession(selectedEntry.sessionId)}
                 />
-              </label>
-              <label className="flex flex-col gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/40">
-                  Total Calories
-                </span>
-                <input
-                  type="text"
-                  value={editDraft.calories}
-                  onChange={(event) => handleEditFieldChange('calories', event.target.value)}
-                  placeholder="260 kcal"
-                  className="rounded-[18px] border border-[#4A453E]/10 bg-white px-4 py-3 text-sm font-medium text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
-                />
-              </label>
-            </div>
-
-            <label className="mt-5 flex flex-col gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/40">
-                Description
-              </span>
-              <textarea
-                value={editDraft.description}
-                onChange={(event) => handleEditFieldChange('description', event.target.value)}
-                rows={4}
-                className="custom-scrollbar rounded-[18px] border border-[#4A453E]/10 bg-white px-4 py-3 text-sm leading-6 text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
-              />
-            </label>
-
-            <div className="mt-6 rounded-[24px] border border-[#4A453E]/8 bg-white/70 p-5">
-              <div className="mb-4 flex items-center justify-between gap-4">
-                <div>
-                  <h4 className="text-sm font-bold text-[#4A453E]">Ingredient Breakdown</h4>
-                  <p className="mt-1 text-xs text-[#4A453E]/45">
-                    Update each ingredient line or add your own corrected breakdown.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAddIngredient}
-                  className="inline-flex h-10 items-center gap-2 rounded-full border border-[#4A453E]/10 bg-[#FFFDF5] px-4 text-sm font-bold text-[#4A453E]/75 transition-colors hover:border-[#FF8A65]/20 hover:text-[#FF8A65]"
-                >
-                  <span className="material-symbols-outlined text-[18px]">add</span>
-                  Add Ingredient
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {editDraft.ingredients.map((ingredient, index) => (
-                  <div
-                    key={`edit-ingredient-${index}`}
-                    className="grid grid-cols-1 gap-3 rounded-[20px] border border-[#4A453E]/8 bg-[#FFFDF5] p-4 md:grid-cols-[1.3fr_1fr_1fr_auto]"
-                  >
-                    <input
-                      type="text"
-                      value={ingredient.name}
-                      onChange={(event) => handleIngredientChange(index, 'name', event.target.value)}
-                      placeholder="Ingredient"
-                      className="rounded-[14px] border border-[#4A453E]/10 bg-white px-3 py-2.5 text-sm text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
-                    />
-                    <input
-                      type="text"
-                      value={ingredient.portion}
-                      onChange={(event) => handleIngredientChange(index, 'portion', event.target.value)}
-                      placeholder="Portion"
-                      className="rounded-[14px] border border-[#4A453E]/10 bg-white px-3 py-2.5 text-sm text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
-                    />
-                    <input
-                      type="text"
-                      value={ingredient.energy}
-                      onChange={(event) => handleIngredientChange(index, 'energy', event.target.value)}
-                      placeholder="Energy"
-                      className="rounded-[14px] border border-[#4A453E]/10 bg-white px-3 py-2.5 text-sm text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveIngredient(index)}
-                      className="inline-flex h-11 items-center justify-center rounded-[14px] border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-500 transition-colors hover:bg-red-100"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                {editDraft.ingredients.length === 0 && (
-                  <div className="rounded-[20px] border border-dashed border-[#4A453E]/10 bg-[#FFFDF5] px-4 py-6 text-center text-sm text-[#4A453E]/45">
-                    Add at least one ingredient before saving.
-                  </div>
-                )}
               </div>
             </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={handleCloseEditModal}
-                disabled={isSavingEdit}
-                className="rounded-[14px] border border-[#4A453E]/10 bg-white px-4 py-2.5 text-sm font-semibold text-[#4A453E]/55 transition-colors hover:bg-[#F7F3E9] disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleSaveEdit()}
-                disabled={isSavingEdit}
-                className="rounded-[14px] bg-[#FF8A65] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#FF8A65]/20 transition-colors hover:bg-[#FF8A65]/90 disabled:cursor-wait disabled:opacity-80"
-              >
-                {isSavingEdit ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
 
       {undoableDeletedEntry && (
@@ -646,6 +450,309 @@ interface SummaryCardProps {
   accent?: boolean;
 }
 
+interface SelectedEntryPanelProps {
+  entry: FoodLogEntry;
+  isEditing: boolean;
+  editDraft: FoodLogEditDraft | null;
+  isSavingEdit: boolean;
+  isDeleting: boolean;
+  onClose: () => void;
+  onEdit: () => void;
+  onCancelEdit: () => void;
+  onSaveEdit: () => void;
+  onEditFieldChange: (
+    field: keyof Omit<FoodLogEditDraft, 'ingredients'>,
+    value: string,
+  ) => void;
+  onIngredientChange: (
+    ingredientIndex: number,
+    field: keyof IngredientResult,
+    value: string,
+  ) => void;
+  onAddIngredient: () => void;
+  onRemoveIngredient: (ingredientIndex: number) => void;
+  onDelete: () => void;
+  onOpenChat: () => void;
+}
+
+const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
+  entry,
+  isEditing,
+  editDraft,
+  isSavingEdit,
+  isDeleting,
+  onClose,
+  onEdit,
+  onCancelEdit,
+  onSaveEdit,
+  onEditFieldChange,
+  onIngredientChange,
+  onAddIngredient,
+  onRemoveIngredient,
+  onDelete,
+  onOpenChat,
+}) => {
+  const savedMoment = formatSavedMoment(entry.savedAt);
+  const totalCalories = isEditing && editDraft
+    ? getDraftTotalCalories(editDraft)
+    : entry.calories;
+
+  return (
+    <div className="flex min-h-0 w-full flex-1 flex-col bg-white">
+      <div className="shrink-0 border-b border-[#4A453E]/05 px-5 py-5 md:px-6 md:py-6">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#FF8A65]">
+              Saved Favorite
+            </span>
+            <p className="mt-2 text-[11px] font-semibold text-[#4A453E]/35">
+              Last updated {savedMoment.date} / {savedMoment.time}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {!isEditing && (
+              <button
+                type="button"
+                onClick={onEdit}
+                className="flex size-9 items-center justify-center rounded-full text-[#4A453E]/40 transition-all hover:bg-[#FF8A65]/5 hover:text-[#FF8A65]"
+                title="Edit saved favorite"
+              >
+                <span className="material-symbols-outlined text-lg">edit</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSavingEdit}
+              className="shrink-0 rounded-full p-1 text-[#4A453E]/20 transition-colors hover:bg-[#4A453E]/5 hover:text-[#4A453E] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <span className="material-symbols-outlined text-xl">close</span>
+            </button>
+          </div>
+        </div>
+
+        {isEditing && editDraft ? (
+          <input
+            type="text"
+            value={editDraft.name}
+            onChange={(event) => onEditFieldChange('name', event.target.value)}
+            autoFocus
+            placeholder="Meal name"
+            className="w-full rounded-[18px] border border-[#4A453E]/10 bg-[#F7F3E9]/40 px-4 py-3 font-serif-brand text-[26px] font-bold italic leading-[1.16] text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/30 focus:ring-2 focus:ring-[#FF8A65]/15 md:text-[32px]"
+          />
+        ) : (
+          <h2 className="text-balance font-serif-brand text-[28px] font-bold italic leading-[1.14] text-[#4A453E] md:text-[34px]">
+            {entry.name}
+          </h2>
+        )}
+      </div>
+
+      <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-5 md:px-6 md:py-6">
+        <div className="space-y-5 md:space-y-6">
+          <div className="rounded-[24px] border border-[#4A453E]/8 bg-[#FFFDF5] p-5 shadow-sm md:rounded-[28px] md:p-6">
+            <div className="mb-5 flex flex-col gap-2 md:mb-6 md:flex-row md:items-center md:justify-between">
+              <h5 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/40">
+                <span className="material-symbols-outlined text-lg text-[#FF8A65]">
+                  analytics
+                </span>
+                Nutrition Details
+              </h5>
+              <span className="font-serif-brand text-[26px] font-bold italic leading-none text-[#4A453E] md:text-[28px]">
+                {totalCalories}{' '}
+                <span className="font-sans text-xs font-bold not-italic uppercase tracking-wide text-[#4A453E]/20">
+                  kcal
+                </span>
+              </span>
+            </div>
+
+            {isEditing && editDraft ? (
+              <div className="mb-5 space-y-3 md:mb-6 md:space-y-4">
+                {editDraft.ingredients.map((item, index) => (
+                  <div
+                    key={`edit-ingredient-${index}`}
+                    className="group/edit-row relative rounded-[20px] border border-[#4A453E]/05 bg-white p-3.5 shadow-sm"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onRemoveIngredient(index)}
+                      className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-red-500 text-white opacity-100 shadow-sm transition-opacity sm:opacity-0 sm:group-hover/edit-row:opacity-100 focus:opacity-100"
+                      aria-label={`Remove ingredient ${index + 1}`}
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <input
+                        type="text"
+                        value={item.name}
+                        placeholder="Ingredient"
+                        onChange={(event) => onIngredientChange(index, 'name', event.target.value)}
+                        className="rounded-[12px] border border-transparent bg-[#F7F3E9]/20 px-3 py-2 text-[13px] font-bold text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/30 focus:bg-white"
+                      />
+                      <input
+                        type="text"
+                        value={item.energy}
+                        placeholder="Energy, e.g. 100 kcal"
+                        onChange={(event) => onIngredientChange(index, 'energy', event.target.value)}
+                        className="rounded-[12px] border border-transparent bg-[#F7F3E9]/20 px-3 py-2 text-[13px] font-bold text-[#4A453E]/80 outline-none transition-all focus:border-[#FF8A65]/30 focus:bg-white sm:text-right"
+                      />
+                    </div>
+
+                    <input
+                      type="text"
+                      value={item.portion}
+                      placeholder="Portion, e.g. 150g"
+                      onChange={(event) => onIngredientChange(index, 'portion', event.target.value)}
+                      className="mt-2 w-full rounded-[12px] border border-transparent bg-[#F7F3E9]/20 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/45 outline-none transition-all focus:border-[#FF8A65]/30 focus:bg-white"
+                    />
+                  </div>
+                ))}
+
+                {editDraft.ingredients.length === 0 && (
+                  <div className="rounded-[20px] border border-dashed border-[#4A453E]/10 bg-white/70 px-4 py-6 text-center text-sm text-[#4A453E]/45">
+                    Add at least one ingredient before saving.
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={onAddIngredient}
+                  className="flex w-full items-center justify-center gap-2 rounded-[18px] border border-dashed border-[#4A453E]/10 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[#4A453E]/35 transition-all hover:border-[#FF8A65]/30 hover:text-[#FF8A65]"
+                >
+                  <span className="material-symbols-outlined text-sm">add</span>
+                  Add Ingredient
+                </button>
+              </div>
+            ) : (
+              <div className="mb-5 space-y-3 md:mb-6 md:space-y-4">
+                {entry.breakdown.map((item, index) => (
+                  <div key={`${item.name}-${index}`} className="group/row flex items-center justify-between gap-4 py-1">
+                    <div className="min-w-0 flex flex-col">
+                      <span className="text-[13px] font-bold text-[#4A453E] transition-colors group-hover/row:text-[#FF8A65] md:text-sm">
+                        {item.name}
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A453E]/40">
+                        {item.portion}
+                      </span>
+                    </div>
+                    <span className="shrink-0 text-[11px] font-bold text-[#4A453E]/80 md:text-xs">{item.energy}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {hasMacroData(entry) ? (
+              <>
+                <div className="grid grid-cols-3 gap-2 border-t border-[#4A453E]/05 pt-5 md:gap-3 md:pt-6">
+                  <MacroStat label="Protein" value={entry.protein ?? 'N/A'} accent />
+                  <MacroStat label="Carbs" value={entry.carbs ?? 'N/A'} />
+                  <MacroStat label="Fat" value={entry.fat ?? 'N/A'} />
+                </div>
+                {isEditing && (
+                  <p className="mt-3 text-center text-[10px] leading-5 text-[#4A453E]/40">
+                    Macro values stay read-only for now. This editor updates the title,
+                    description, calories, and ingredient breakdown.
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="rounded-[20px] border border-dashed border-[#4A453E]/10 bg-white/50 px-4 py-3 text-[13px] leading-6 text-[#4A453E]/55">
+                Macro nutrients were not recorded for this saved favorite. Food Log currently
+                stores the calorie estimate and ingredient-level breakdown only.
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-[24px] border border-[#4A453E]/8 bg-white p-5 shadow-sm md:rounded-[28px] md:p-6">
+            <h5 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/40">
+              <span className="material-symbols-outlined text-lg text-[#FF8A65]">
+                notes
+              </span>
+              Description
+            </h5>
+
+            {isEditing && editDraft ? (
+              <textarea
+                value={editDraft.description}
+                onChange={(event) => onEditFieldChange('description', event.target.value)}
+                rows={4}
+                placeholder="Meal description"
+                className="custom-scrollbar w-full rounded-[16px] border border-[#4A453E]/10 bg-[#F7F3E9]/40 px-4 py-3 text-sm leading-7 text-[#4A453E]/70 outline-none transition-all focus:border-[#FF8A65]/30 focus:ring-2 focus:ring-[#FF8A65]/15"
+              />
+            ) : (
+              <p className="text-sm leading-7 text-[#4A453E]/60">
+                {entry.description}
+              </p>
+            )}
+          </div>
+
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[24px] border border-[#4A453E]/05 shadow-sm md:aspect-video md:rounded-[28px]">
+            <FoodLogImage
+              src={entry.image}
+              alt={entry.name}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="shrink-0 border-t border-[#4A453E]/05 bg-white px-5 py-4 md:px-6 md:py-6">
+        <div className="flex flex-col gap-3">
+          {isEditing ? (
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onCancelEdit}
+                disabled={isSavingEdit}
+                className="flex-1 rounded-full bg-[#4A453E]/5 px-4 py-3.5 text-sm font-bold text-[#4A453E]/45 transition-all hover:bg-[#4A453E]/10 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onSaveEdit}
+                disabled={isSavingEdit}
+                className="flex-[1.5] rounded-full bg-[#FF8A65] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#FF8A65]/20 transition-all hover:bg-[#FF8A65]/90 disabled:cursor-wait disabled:opacity-80"
+              >
+                {isSavingEdit ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={onDelete}
+                disabled={isDeleting}
+                className={`flex h-11 w-full items-center justify-center gap-2 rounded-full border px-5 text-sm font-bold transition-all ${
+                  isDeleting
+                    ? 'cursor-wait border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/45'
+                    : 'border-red-200 bg-red-50 text-red-500 hover:bg-red-100'
+                }`}
+              >
+                <span className="material-symbols-outlined text-lg">delete</span>
+                {isDeleting ? 'Removing...' : 'Remove Favorite'}
+              </button>
+              <button
+                type="button"
+                onClick={onOpenChat}
+                disabled={!entry.sessionId}
+                className={`flex h-12 w-full items-center justify-center gap-2 rounded-full px-5 text-sm font-bold text-white shadow-lg transition-all ${
+                  entry.sessionId
+                    ? 'bg-[#FF8A65] shadow-[#FF8A65]/20 hover:bg-[#FF8A65]/90'
+                    : 'cursor-not-allowed bg-[#4A453E]/20 shadow-none'
+                }`}
+              >
+                <span className="material-symbols-outlined text-lg">forum</span>
+                {entry.sessionId ? 'Open Source Chat' : 'Source Chat Deleted'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, unit, accent = false }) => (
   <div
     className={`rounded-[24px] border p-6 shadow-sm ${
@@ -688,8 +795,10 @@ interface MacroStatProps {
 
 const MacroStat: React.FC<MacroStatProps> = ({ label, value, accent = false }) => (
   <div className="text-center">
-    <span className="mb-1 block text-[10px] font-bold uppercase text-[#4A453E]/30">{label}</span>
-    <span className={`text-lg font-bold ${accent ? 'text-[#FF8A65]' : 'text-[#4A453E]'}`}>
+    <span className="mb-1 block text-[9px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/30">
+      {label}
+    </span>
+    <span className={`text-[17px] font-bold md:text-lg ${accent ? 'text-[#FF8A65]' : 'text-[#4A453E]'}`}>
       {value}
     </span>
   </div>
@@ -761,4 +870,27 @@ function buildEditDraft(entry: FoodLogEntry): FoodLogEditDraft {
 
 function hasMacroData(entry: FoodLogEntry): boolean {
   return Boolean(entry.protein || entry.carbs || entry.fat);
+}
+
+function getDraftTotalCalories(draft: FoodLogEditDraft): string {
+  const total = draft.ingredients.reduce(
+    (sum, ingredient) => sum + extractCaloriesValue(ingredient.energy),
+    0,
+  );
+
+  if (total > 0 || draft.ingredients.length > 0) {
+    return Number.isInteger(total) ? String(total) : total.toFixed(1);
+  }
+
+  return draft.calories;
+}
+
+function extractCaloriesValue(value: string): number {
+  const match = value.match(/(\d+(?:\.\d+)?)/);
+  if (!match) {
+    return 0;
+  }
+
+  const parsed = Number.parseFloat(match[1]);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
