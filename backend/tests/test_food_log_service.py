@@ -35,6 +35,14 @@ class FoodLogServiceTests(unittest.TestCase):
                 ("owner@example.com", "hashed-password", "Owner"),
             )
             self.user_id = cursor.lastrowid
+            cursor.execute(
+                """
+                INSERT INTO users (email, password_hash, display_name)
+                VALUES (?, ?, ?)
+                """,
+                ("other@example.com", "hashed-password", "Other"),
+            )
+            self.other_user_id = cursor.lastrowid
             conn.commit()
         finally:
             conn.close()
@@ -85,6 +93,46 @@ class FoodLogServiceTests(unittest.TestCase):
         self.assertIsNone(entries[0]["source_message_id"])
         self.assertEqual(entries[0]["meal_description"], "chicken salad")
         self.assertEqual(entries[0]["result_title"], "Chicken salad")
+
+    def test_estimate_api_creates_food_log_entry_with_session_id_when_linked(self) -> None:
+        session = create_empty_session(self.user_id)
+        request_model = EstimateRequest(
+            query="chicken salad",
+            sessionId=int(session["id"]),
+        )
+
+        with patch(
+            "backend.services.estimate_service.estimate_meal",
+            return_value=_build_estimate_result(),
+        ):
+            status_code, response = create_estimate_response(request_model, self.user_id)
+
+        self.assertEqual(status_code, 200)
+        self.assertTrue(response.success)
+        entries = _list_food_log_entries()
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["source_type"], "estimate_api")
+        self.assertEqual(entries[0]["session_id"], int(session["id"]))
+        self.assertIsNone(entries[0]["source_message_id"])
+
+    def test_estimate_api_returns_404_when_session_id_is_not_owned_by_user(self) -> None:
+        session = create_empty_session(self.other_user_id)
+        request_model = EstimateRequest(
+            query="chicken salad",
+            sessionId=int(session["id"]),
+        )
+
+        with patch(
+            "backend.services.estimate_service.estimate_meal",
+            return_value=_build_estimate_result(),
+        ):
+            status_code, response = create_estimate_response(request_model, self.user_id)
+
+        self.assertEqual(status_code, 404)
+        self.assertFalse(response.success)
+        self.assertIsNotNone(response.error)
+        self.assertEqual(response.error.code, "SESSION_NOT_FOUND")
+        self.assertEqual(len(_list_food_log_entries()), 0)
 
     def test_estimate_api_returns_500_when_food_log_insert_fails(self) -> None:
         request_model = EstimateRequest(query="chicken salad")

@@ -10,6 +10,11 @@ class EstimateRequest(BaseModel):
         validation_alias=AliasChoices("profile_id", "profileId"),
         serialization_alias="profileId",
     )
+    session_id: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("session_id", "sessionId"),
+        serialization_alias="sessionId",
+    )
 
     @field_validator("query")
     @classmethod
@@ -27,7 +32,14 @@ class EstimateRequest(BaseModel):
     @classmethod
     def validate_profile_id(cls, value: int | None) -> int | None:
         if value is not None and value <= 0:
-            raise ValueError("profile_id 必须大于 0")
+            raise ValueError("profile_id \u5fc5\u987b\u5927\u4e8e 0")
+        return value
+
+    @field_validator("session_id")
+    @classmethod
+    def validate_session_id(cls, value: int | None) -> int | None:
+        if value is not None and value <= 0:
+            raise ValueError("session_id \u5fc5\u987b\u5927\u4e8e 0")
         return value
 
 
