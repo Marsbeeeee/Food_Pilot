@@ -6,6 +6,7 @@ import {
   formatSavedMoment,
   sortFoodLogEntries,
 } from '../app/foodLogFavorites';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { FoodLogEntry, FoodLogPatchInput, IngredientResult } from '../types/types';
 
 interface ExplorerProps {
@@ -37,6 +38,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [undoableDeletedEntry, setUndoableDeletedEntry] = useState<FoodLogEntry | null>(null);
   const [restoringEntryId, setRestoringEntryId] = useState<string | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -48,6 +50,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
       setSelectedEntry(null);
       setIsMobileDetailOpen(false);
       setIsEditing(false);
+      setIsDeleteDialogOpen(false);
       setEditDraft(null);
       return;
     }
@@ -66,17 +69,11 @@ export const Explorer: React.FC<ExplorerProps> = ({
       return;
     }
 
-    const shouldDelete = window.confirm(
-      'Remove this saved favorite from Food Log? It will disappear from your collection, but you can save it again from a new analysis later.',
-    );
-    if (!shouldDelete) {
-      return;
-    }
-
     setDeletingEntryId(selectedEntry.id);
     try {
       await onDeleteFoodLog(selectedEntry.id);
       setUndoableDeletedEntry(selectedEntry);
+      setIsDeleteDialogOpen(false);
       setIsMobileDetailOpen(false);
       setIsEditing(false);
       setEditDraft(null);
@@ -214,6 +211,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
   const handleSelectEntry = (entry: FoodLogEntry) => {
     setSelectedEntry(entry);
     setIsEditing(false);
+    setIsDeleteDialogOpen(false);
     setEditDraft(null);
 
     if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
@@ -353,6 +351,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
               onClose={() => {
                 setSelectedEntry(null);
                 setIsEditing(false);
+                setIsDeleteDialogOpen(false);
                 setEditDraft(null);
               }}
               onEdit={handleOpenEditModal}
@@ -362,7 +361,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
               onIngredientChange={handleIngredientChange}
               onAddIngredient={handleAddIngredient}
               onRemoveIngredient={handleRemoveIngredient}
-              onDelete={() => void handleDeleteSelectedEntry()}
+              onDelete={() => setIsDeleteDialogOpen(true)}
               onOpenChat={() => selectedEntry.sessionId && onNavigateToSession(selectedEntry.sessionId)}
             />
           </aside>
@@ -385,6 +384,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                   onClose={() => {
                     setIsMobileDetailOpen(false);
                     setIsEditing(false);
+                    setIsDeleteDialogOpen(false);
                     setEditDraft(null);
                   }}
                   onEdit={handleOpenEditModal}
@@ -394,7 +394,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                   onIngredientChange={handleIngredientChange}
                   onAddIngredient={handleAddIngredient}
                   onRemoveIngredient={handleRemoveIngredient}
-                  onDelete={() => void handleDeleteSelectedEntry()}
+                  onDelete={() => setIsDeleteDialogOpen(true)}
                   onOpenChat={() => selectedEntry.sessionId && onNavigateToSession(selectedEntry.sessionId)}
                 />
               </div>
@@ -439,6 +439,28 @@ export const Explorer: React.FC<ExplorerProps> = ({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(selectedEntry) && isDeleteDialogOpen}
+        title="Remove Saved Favorite?"
+        description={(
+          <>
+            <span className="font-bold text-[#4A453E]">
+              {selectedEntry?.name ?? 'This saved favorite'}
+            </span>{' '}
+            will disappear from Food Log, but you can save it again from a new analysis later.
+          </>
+        )}
+        confirmLabel={deletingEntryId ? 'Removing...' : 'Remove Favorite'}
+        icon="delete"
+        isConfirming={Boolean(deletingEntryId)}
+        onClose={() => {
+          if (!deletingEntryId) {
+            setIsDeleteDialogOpen(false);
+          }
+        }}
+        onConfirm={() => void handleDeleteSelectedEntry()}
+      />
     </div>
   );
 };

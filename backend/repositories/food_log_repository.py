@@ -79,7 +79,33 @@ def create_food_log(
     )
     if existing is not None:
         if _is_deleted_food_log(existing):
-            raise ValueError("idempotency_key already belongs to a deleted food log")
+            restore_food_log(
+                conn,
+                int(existing["id"]),
+                user_id,
+                auto_commit=False,
+            )
+            return update_food_log(
+                conn,
+                int(existing["id"]),
+                user_id,
+                source_type=source_type,
+                meal_description=meal_description,
+                result_title=result_title,
+                result_description=result_description,
+                total_calories=total_calories,
+                ingredients=ingredients,
+                session_id=session_id,
+                source_message_id=source_message_id,
+                result_confidence=result_confidence,
+                assistant_suggestion=assistant_suggestion,
+                meal_occurred_at=meal_occurred_at,
+                logged_at=logged_at,
+                status=ACTIVE_FOOD_LOG_STATUS,
+                idempotency_key=resolved_idempotency_key,
+                is_manual=resolved_is_manual,
+                auto_commit=auto_commit,
+            )
         return existing
 
     resolved_deleted_at = _resolve_deleted_at(

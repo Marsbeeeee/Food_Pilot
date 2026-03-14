@@ -480,6 +480,102 @@ class FoodLogRepositoryTests(unittest.TestCase):
         self.assertNotEqual(first_save["id"], second_save["id"])
         self.assertEqual(first_save["normalized_query"], second_save["normalized_query"])
 
+    def test_save_food_log_reactivates_deleted_entry_for_same_chat_message(self) -> None:
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO messages (
+                    session_id,
+                    user_id,
+                    role,
+                    message_type,
+                    content,
+                    result_title,
+                    result_confidence,
+                    result_description,
+                    result_items_json,
+                    result_total
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self.session_id,
+                    self.user_id,
+                    "assistant",
+                    "estimate_result",
+                    "Original assistant suggestion",
+                    "Chicken Salad",
+                    "high",
+                    "Original description",
+                    '[{"name":"Chicken","portion":"150g","energy":"240 kcal"}]',
+                    "240 kcal",
+                ),
+            )
+            source_message_id = cursor.lastrowid
+            conn.commit()
+
+            first_save = save_food_log(
+                conn,
+                self.user_id,
+                source_type="chat_message",
+                session_id=self.session_id,
+                source_message_id=source_message_id,
+                meal_description="chicken salad",
+                result_title="Chicken Salad",
+                result_description="Original description",
+                total_calories="240 kcal",
+                ingredients=[
+                    {"name": "Chicken", "portion": "150g", "energy": "240 kcal"},
+                ],
+                created_at="2000-01-01 09:00:00",
+            )
+            delete_food_log(conn, int(first_save["id"]), self.user_id)
+            second_save = save_food_log(
+                conn,
+                self.user_id,
+                source_type="chat_message",
+                session_id=self.session_id,
+                source_message_id=source_message_id,
+                meal_description="chicken salad with avocado",
+                result_title="Chicken Salad Reloaded",
+                result_description="Updated after re-adding.",
+                total_calories="280 kcal",
+                ingredients=[
+                    {"name": "Chicken", "portion": "150g", "energy": "240 kcal"},
+                    {"name": "Avocado", "portion": "40g", "energy": "40 kcal"},
+                ],
+            )
+            row = conn.execute(
+                """
+                SELECT status, deleted_at, result_title, total_calories
+                FROM food_logs
+                WHERE id = ?
+                """,
+                (int(first_save["id"]),),
+            ).fetchone()
+            total = conn.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM food_logs
+                WHERE user_id = ?
+                """,
+                (self.user_id,),
+            ).fetchone()["total"]
+        finally:
+            conn.close()
+
+        self.assertEqual(second_save["id"], first_save["id"])
+        self.assertEqual(second_save["status"], "active")
+        self.assertIsNone(second_save["deleted_at"])
+        self.assertEqual(second_save["result_title"], "Chicken Salad Reloaded")
+        self.assertEqual(second_save["total_calories"], "280 kcal")
+        self.assertEqual(total, 1)
+        self.assertEqual(row["status"], "active")
+        self.assertIsNone(row["deleted_at"])
+        self.assertEqual(row["result_title"], "Chicken Salad Reloaded")
+        self.assertEqual(row["total_calories"], "280 kcal")
+
     def test_list_food_logs_excludes_soft_deleted_entries(self) -> None:
         conn = get_db_connection()
         try:

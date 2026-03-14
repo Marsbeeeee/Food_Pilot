@@ -334,6 +334,60 @@ class FoodLogIntegrationTests(unittest.TestCase):
         self.assertEqual(restored.id, str(created["id"]))
         self.assertEqual([entry.id for entry in entries_after_restore], [str(created["id"])])
 
+    def test_save_after_delete_reactivates_same_food_log_record(self) -> None:
+        with patch(
+            "backend.services.chat_service.estimate_meal",
+            return_value=build_estimate_result(
+                title="Chicken Salad",
+                description="Protein-forward salad with avocado.",
+                total_calories="240 kcal",
+                suggestion="A lighter dressing would reduce calories.",
+            ),
+        ):
+            exchange = create_session_and_reply(
+                self.user.id,
+                "chicken salad",
+            )
+
+        request_payload = FoodLogSaveRequest.model_validate(
+            {
+                "sourceType": "chat_message",
+                "mealDescription": "chicken salad",
+                "resultTitle": "Chicken Salad",
+                "resultConfidence": "high",
+                "resultDescription": "Protein-forward salad with avocado.",
+                "totalCalories": "240 kcal",
+                "ingredients": [
+                    {
+                        "name": "Chicken Salad",
+                        "portion": "1 serving",
+                        "energy": "240 kcal",
+                    }
+                ],
+                "sessionId": exchange["session"]["id"],
+                "sourceMessageId": exchange["assistant_message"]["id"],
+                "assistantSuggestion": exchange["assistant_message"]["content"],
+            }
+        )
+
+        first_save = save_food_log_entry(
+            request=request_payload,
+            current_user=self.user,
+        )
+        delete_food_log(self.user.id, int(first_save.id))
+        second_save = save_food_log_entry(
+            request=FoodLogSaveRequest.model_validate(request_payload.model_dump(by_alias=True)),
+            current_user=self.user,
+        )
+        entries = list_food_log_entries(
+            filters=FoodLogListQuery(),
+            current_user=self.user,
+        )
+
+        self.assertEqual(second_save.id, first_save.id)
+        self.assertEqual(second_save.status, "active")
+        self.assertEqual([entry.id for entry in entries], [first_save.id])
+
     def test_automatic_analysis_results_do_not_create_food_log_entries_for_any_user(self) -> None:
         with patch(
             "backend.services.chat_service.estimate_meal",

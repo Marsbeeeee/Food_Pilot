@@ -12,6 +12,7 @@ import {
   sendChatMessage,
 } from '../api/chat';
 import { FoodLogApiError, saveFoodLogEntry } from '../api/foodLog';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ChatSession, FoodLogEntry, Message } from '../types/types';
 
 interface WorkspaceProps {
@@ -42,6 +43,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [renamingTitle, setRenamingTitle] = useState('');
+  const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
+  const [isDeletingSession, setIsDeletingSession] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [isLoadingSessionId, setIsLoadingSessionId] = useState<string | null>(null);
   const [savingFoodLogMessageIds, setSavingFoodLogMessageIds] = useState<string[]>([]);
@@ -62,6 +65,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
   const activeSession = sessions.find((session) => session.id === activeSessionId)
     || (sessions.length > 0 ? sessions[0] : null);
+  const deleteSessionTarget = deleteSessionId
+    ? sessions.find((session) => session.id === deleteSessionId) ?? null
+    : null;
   const persistedSavedFoodLogEntriesByMessageId = new Map(
     foodLog
       .filter((entry): entry is FoodLogEntry & { sourceMessageId: string } => Boolean(entry.sourceMessageId))
@@ -194,22 +200,30 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     }
   };
 
-  const handleDeleteSession = async (sessionId: string) => {
-    const shouldDelete = window.confirm(
-      'Delete this chat permanently? This action cannot be undone. Saved Food Log entries will remain, but they will no longer be able to open this chat.',
-    );
-    if (!shouldDelete) {
-      setIsMenuOpen(false);
+  const openDeleteSessionDialog = (sessionId: string) => {
+    if (!sessionId) {
       return;
     }
 
-    const confirmedIrreversibleDelete = window.confirm(
-      'Confirm permanent deletion. This chat will be deleted permanently and cannot be recovered.',
-    );
-    if (!confirmedIrreversibleDelete) {
-      setIsMenuOpen(false);
+    setDeleteSessionId(sessionId);
+    setIsMenuOpen(false);
+  };
+
+  const closeDeleteSessionDialog = () => {
+    if (isDeletingSession) {
       return;
     }
+
+    setDeleteSessionId(null);
+  };
+
+  const handleDeleteSession = async () => {
+    if (!deleteSessionId || isDeletingSession) {
+      return;
+    }
+
+    const sessionId = deleteSessionId;
+    setIsDeletingSession(true);
 
     try {
       await deleteChatSession(sessionId);
@@ -221,9 +235,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         setActiveSessionId(remainingSessions[0].id);
       }
       await unlinkDeletedChatFromFoodLog(sessionId);
+      setDeleteSessionId(null);
       setIsMenuOpen(false);
     } catch (error) {
       handleChatError(error, 'Unable to delete this chat right now.');
+    } finally {
+      setIsDeletingSession(false);
     }
   };
 
@@ -454,7 +471,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                   </button>
                   <div className="mx-2 my-1 h-[1px] bg-[#4A453E]/5"></div>
                   <button
-                    onClick={() => void handleDeleteSession(activeSessionId)}
+                    onClick={() => openDeleteSessionDialog(activeSessionId)}
                     className="flex w-full items-center gap-3 px-4 py-3 text-sm font-bold text-red-400 transition-colors hover:bg-red-50"
                   >
                     <span className="material-symbols-outlined text-[18px]">delete</span>
@@ -733,6 +750,26 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteSessionTarget)}
+        title="Delete Chat Permanently?"
+        description={(
+          <>
+            This chat cannot be recovered after deletion. Saved Food Log entries will remain,
+            but they will no longer be able to open{' '}
+            <span className="font-bold text-[#4A453E]">
+              {deleteSessionTarget?.title ?? 'this chat'}
+            </span>
+            .
+          </>
+        )}
+        confirmLabel={isDeletingSession ? 'Deleting...' : 'Delete Permanently'}
+        icon="delete"
+        isConfirming={isDeletingSession}
+        onClose={closeDeleteSessionDialog}
+        onConfirm={() => void handleDeleteSession()}
+      />
     </div>
   );
 };
