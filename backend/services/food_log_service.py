@@ -83,6 +83,9 @@ def save_food_log(
     active_conn = conn or get_db_connection()
 
     try:
+        # Food Log is intentionally save-only. There is no standalone edit flow;
+        # users update saved content by generating a fresh analysis and saving it
+        # again so the duplicate key can overwrite the existing favorite.
         _validate_food_log_source(
             active_conn,
             user_id,

@@ -476,7 +476,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                               </tfoot>
                             </table>
                           </div>
-                          <div className="flex justify-end border-t border-[#4A453E]/5 bg-white px-8 py-5">
+                          <div className="flex flex-col items-end gap-2 border-t border-[#4A453E]/5 bg-white px-8 py-5">
+                            <p className="max-w-sm text-right text-[11px] leading-5 text-[#4A453E]/40">
+                              Food Log has no direct edit. To change saved content, run a new
+                              analysis and save again to replace the existing favorite.
+                            </p>
                             <button
                               type="button"
                               onClick={() => mealDescription && void handleSaveFoodLogEntry(activeSession.id, message, mealDescription)}

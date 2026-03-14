@@ -37,6 +37,8 @@ def save_food_log_entry(
     request: FoodLogSaveRequest,
     current_user: UserOut = Depends(get_current_user),
 ) -> FoodLogEntryOut:
+    # Food Log exposes save-only writes. Updating a saved item must happen by
+    # saving a fresh analysis, which then overwrites the matching favorite.
     try:
         entry = save_food_log(
             current_user.id,

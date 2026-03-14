@@ -40,7 +40,8 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
             </h1>
             <p className="max-w-2xl text-sm leading-7 text-[#4A453E]/60 md:text-base">
               Food Log is your saved collection of meal analyses. It only includes items you
-              explicitly save, not your complete eating history.
+              explicitly save, not your complete eating history. It also does not support direct
+              edits. To change a saved item, run a new analysis and save it again.
             </p>
           </div>
 
@@ -221,6 +222,10 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
           </div>
 
           <div className="flex flex-col gap-3 border-t border-[#4A453E]/05 bg-white p-6 md:p-8">
+            <div className="rounded-[20px] border border-[#4A453E]/8 bg-[#FFFDF5] px-4 py-3 text-sm leading-6 text-[#4A453E]/55">
+              Food Log does not provide a standalone edit flow. If you want to change this saved
+              analysis, reopen the chat or run a new analysis, then save again to overwrite it.
+            </div>
             <button
               type="button"
               onClick={() => selectedEntry.sessionId && onNavigateToSession(selectedEntry.sessionId)}
