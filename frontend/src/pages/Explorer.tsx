@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
 
+import {
+  buildFoodLogCollectionStats,
+  buildFoodLogEditPayload,
+  formatSavedMoment,
+  parseSavedAt,
+  sortFoodLogEntries,
+} from '../app/foodLogFavorites';
 import { FoodLogEntry, FoodLogPatchInput, IngredientResult } from '../types/types';
 
 interface ExplorerProps {
@@ -34,7 +41,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editDraft, setEditDraft] = useState<FoodLogEditDraft | null>(null);
-  const collectionStats = buildCollectionStats(orderedEntries);
+  const collectionStats = buildFoodLogCollectionStats(orderedEntries);
   const selectedEntrySavedMoment = selectedEntry
     ? formatSavedMoment(selectedEntry.savedAt)
     : null;
@@ -183,7 +190,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
     setIsSavingEdit(true);
     try {
-      await onUpdateFoodLog(selectedEntry.id, buildFoodLogPatchPayload(editDraft));
+      await onUpdateFoodLog(selectedEntry.id, buildFoodLogEditPayload(editDraft));
       setIsEditModalOpen(false);
       setEditDraft(null);
     } catch (error) {
@@ -752,108 +759,6 @@ function buildEditDraft(entry: FoodLogEntry): FoodLogEditDraft {
   };
 }
 
-function buildFoodLogPatchPayload(draft: FoodLogEditDraft): FoodLogPatchInput {
-  const ingredients = draft.ingredients.map((ingredient, index) => ({
-    name: normalizeRequiredText(ingredient.name, `Ingredient ${index + 1} name`),
-    portion: normalizeRequiredText(ingredient.portion, `Ingredient ${index + 1} portion`),
-    energy: normalizeEnergyText(ingredient.energy, `Ingredient ${index + 1} energy`),
-  }));
-
-  if (ingredients.length === 0) {
-    throw new Error('Add at least one ingredient before saving.');
-  }
-
-  return {
-    resultTitle: normalizeRequiredText(draft.name, 'Meal name'),
-    resultDescription: normalizeRequiredText(draft.description, 'Description'),
-    totalCalories: normalizeEnergyText(draft.calories, 'Total calories'),
-    ingredients,
-  };
-}
-
-function normalizeRequiredText(value: string, fieldLabel: string): string {
-  const normalized = value.trim().replace(/\s+/g, ' ');
-  if (!normalized) {
-    throw new Error(`${fieldLabel} cannot be empty.`);
-  }
-  return normalized;
-}
-
-function normalizeEnergyText(value: string, fieldLabel: string): string {
-  const normalized = normalizeRequiredText(value, fieldLabel);
-  return /\bkcal\b/i.test(normalized) ? normalized : `${normalized} kcal`;
-}
-
 function hasMacroData(entry: FoodLogEntry): boolean {
   return Boolean(entry.protein || entry.carbs || entry.fat);
-}
-
-function buildCollectionStats(logEntries: FoodLogEntry[]): {
-  updatedThisWeek: number;
-  chatLinked: number;
-} {
-  const now = new Date();
-  const windowStart = new Date(now);
-  windowStart.setHours(0, 0, 0, 0);
-  windowStart.setDate(windowStart.getDate() - 6);
-
-  let updatedThisWeek = 0;
-  let chatLinked = 0;
-
-  logEntries.forEach((entry) => {
-    if (entry.sessionId) {
-      chatLinked += 1;
-    }
-
-    const savedAt = parseSavedAt(entry.savedAt);
-    if (savedAt && savedAt >= windowStart) {
-      updatedThisWeek += 1;
-    }
-  });
-
-  return {
-    updatedThisWeek,
-    chatLinked,
-  };
-}
-
-function sortFoodLogEntries(logEntries: FoodLogEntry[]): FoodLogEntry[] {
-  return [...logEntries].sort((left, right) => (
-    resolveSortTimestamp(right).getTime() - resolveSortTimestamp(left).getTime()
-  ));
-}
-
-function resolveSortTimestamp(entry: FoodLogEntry): Date {
-  return parseSavedAt(entry.savedAt) ?? new Date(0);
-}
-
-function formatSavedMoment(value: string | undefined): { date: string; time: string } {
-  const timestamp = parseSavedAt(value);
-  if (!timestamp) {
-    return {
-      date: '--',
-      time: '--:--',
-    };
-  }
-
-  return {
-    date: timestamp.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    }),
-    time: timestamp.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
-  };
-}
-
-function parseSavedAt(value: string | undefined): Date | null {
-  if (!value) {
-    return null;
-  }
-
-  const normalized = value.replace(' ', 'T');
-  const parsed = new Date(normalized);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }

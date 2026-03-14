@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+import { resolveFoodLogSavePresentation } from '../app/workspaceFoodLogState';
 import {
   ChatApiError,
   createChatMessage,
@@ -516,13 +517,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 const isDeletingSavedFoodLog = Boolean(
                   message.id && deletingFoodLogMessageIds.includes(message.id),
                 );
-                const saveState = isSavedToFoodLog
-                  ? 'saved'
-                  : isSavingToFoodLog
-                    ? 'saving'
-                    : isSaveFailedToFoodLog
-                      ? 'failed'
-                      : 'not_saved';
+                const savePresentation = resolveFoodLogSavePresentation({
+                  savedEntryId: savedFoodLogEntryId,
+                  isSaving: isSavingToFoodLog,
+                  failedMessage: isSaveFailedToFoodLog ? saveFailureMessage : undefined,
+                });
+                const saveState = savePresentation.state;
 
                 return (
                   <div key={message.id ?? index} className={`flex items-start gap-5 ${message.role === 'user' ? 'justify-end' : ''}`}>
@@ -582,23 +582,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                       : 'border-[#4A453E]/10 bg-[#FFFDF5] text-[#4A453E]/60'
                               }`}>
                                 <span className="material-symbols-outlined text-[18px]">
-                                  {saveState === 'saved'
-                                    ? 'bookmark_added'
-                                    : saveState === 'saving'
-                                      ? 'hourglass_top'
-                                      : saveState === 'failed'
-                                        ? 'error'
-                                        : 'bookmark_add'}
+                                  {savePresentation.badgeIcon}
                                 </span>
-                                <span>
-                                  {saveState === 'saved'
-                                    ? 'Saved'
-                                    : saveState === 'saving'
-                                      ? 'Saving'
-                                      : saveState === 'failed'
-                                        ? 'Save failed'
-                                        : 'Not saved'}
-                                </span>
+                                <span>{savePresentation.badgeLabel}</span>
                               </div>
 
                               <div className="flex flex-wrap items-center justify-end gap-2 text-[11px] font-semibold">
@@ -629,27 +615,15 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                     }`}
                                   >
                                     <span className="material-symbols-outlined text-[18px]">
-                                      {saveState === 'failed' ? 'refresh' : 'bookmark_add'}
+                                      {savePresentation.saveActionIcon}
                                     </span>
-                                    <span>
-                                      {isSavingToFoodLog
-                                        ? 'Saving...'
-                                        : saveState === 'failed'
-                                          ? 'Retry save'
-                                          : 'Save to Food Log'}
-                                    </span>
+                                    <span>{savePresentation.saveActionLabel}</span>
                                   </button>
                                 )}
                               </div>
                             </div>
                             <p className="w-full text-right text-[11px] leading-5 text-[#4A453E]/40">
-                              {saveState === 'saved'
-                                ? 'This analysis is already in Food Log. You can undo the save without losing the source chat.'
-                                : saveState === 'saving'
-                                  ? 'Food Log is saving this analysis now.'
-                                  : saveState === 'failed'
-                                    ? (saveFailureMessage ?? 'Food Log could not save this analysis. Try again.')
-                                    : 'Food Log keeps each saved analysis as its own record. Saving here will not overwrite older entries just because the meal text matches.'}
+                              {savePresentation.helperText}
                             </p>
                           </div>
                         </div>
