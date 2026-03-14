@@ -13,10 +13,12 @@ export class FoodLogApiError extends Error {
   }
 }
 
-export async function listFoodLogEntries(params?: FoodLogListParams): Promise<FoodLogEntry[]> {
+export async function listFoodLogs(params?: FoodLogListParams): Promise<FoodLogEntry[]> {
   const query = buildQueryString(params);
   return requestJson<FoodLogEntry[]>(query ? `?${query}` : '');
 }
+
+export const listFoodLogEntries = listFoodLogs;
 
 async function requestJson<T = unknown>(endpoint: string, init?: RequestInit): Promise<T> {
   const token = requireAuthToken();

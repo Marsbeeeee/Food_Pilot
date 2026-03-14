@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { AuthApiError, clearSession, deleteCurrentAccount, restoreSession } from '../api/auth';
 import { getChatSession, listChatSessions } from '../api/chat';
-import { listFoodLogEntries } from '../api/foodLog';
+import { listFoodLogs } from '../api/foodLog';
 import { clearStoredProfile, loadStoredProfile, ProfileApiError, toProfileForm } from '../api/profile';
 import { Header } from '../components/Header';
 import { AuthPage } from '../pages/Auth';
@@ -91,7 +91,7 @@ const App: React.FC = () => {
         const [storedProfile, sessionSummaries, foodLogEntries] = await Promise.all([
           loadStoredProfile(),
           listChatSessions(),
-          listFoodLogEntries(),
+          listFoodLogs(),
         ]);
         if (cancelled) {
           return;
@@ -177,7 +177,7 @@ const App: React.FC = () => {
 
   const refreshFoodLog = async () => {
     try {
-      const entries = await listFoodLogEntries();
+      const entries = await listFoodLogs();
       setFoodLog(entries);
     } catch (error) {
       console.error('Failed to load food log:', error);
