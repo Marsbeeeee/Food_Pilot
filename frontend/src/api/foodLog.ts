@@ -4,6 +4,7 @@ import {
   FoodLogFromEstimateInput,
   FoodLogFromEstimateResponse,
   FoodLogListParams,
+  FoodLogPatchInput,
   FoodLogSaveInput,
 } from '../types/types';
 
@@ -24,9 +25,23 @@ export async function listFoodLogs(params?: FoodLogListParams): Promise<FoodLogE
   return requestJson<FoodLogEntry[]>(query ? `?${query}` : '');
 }
 
+export async function getFoodLogEntry(entryId: string): Promise<FoodLogEntry> {
+  return requestJson<FoodLogEntry>(`/${entryId}`);
+}
+
 export async function saveFoodLogEntry(payload: FoodLogSaveInput): Promise<FoodLogEntry> {
   return requestJson<FoodLogEntry>('', {
     method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateFoodLogEntry(
+  entryId: string,
+  payload: FoodLogPatchInput,
+): Promise<FoodLogEntry> {
+  return requestJson<FoodLogEntry>(`/${entryId}`, {
+    method: 'PATCH',
     body: JSON.stringify(payload),
   });
 }
@@ -43,6 +58,12 @@ export async function saveFoodLogFromEstimate(
 export async function deleteFoodLogEntry(entryId: string): Promise<void> {
   await requestJson(`/${entryId}`, {
     method: 'DELETE',
+  });
+}
+
+export async function restoreFoodLogEntry(entryId: string): Promise<FoodLogEntry> {
+  return requestJson<FoodLogEntry>(`/${entryId}/restore`, {
+    method: 'POST',
   });
 }
 

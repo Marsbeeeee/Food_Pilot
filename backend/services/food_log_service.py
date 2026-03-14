@@ -10,6 +10,7 @@ from backend.repositories.food_log_repository import (
     list_food_logs_by_session as list_food_logs_by_session_record,
     list_food_logs_by_user as list_food_logs_by_user_record,
     list_food_logs_by_user_recent as list_food_logs_by_user_recent_record,
+    restore_food_log as restore_food_log_record,
     save_food_log as save_food_log_record,
 )
 
@@ -205,12 +206,118 @@ def build_estimate_api_idempotency_key(client_request_id: str) -> str:
     return f"estimate_api:{normalized}"
 
 
-def get_food_log_by_id(user_id: int, food_log_id: int) -> dict[str, object] | None:
+def get_food_log_by_id(
+    user_id: int,
+    food_log_id: int,
+    *,
+    include_deleted: bool = False,
+) -> dict[str, object] | None:
     conn = get_db_connection()
     try:
-        return get_food_log_by_id_record(conn, food_log_id, user_id)
+        return get_food_log_by_id_record(
+            conn,
+            food_log_id,
+            user_id,
+            include_deleted=include_deleted,
+        )
     finally:
         conn.close()
+
+
+def update_food_log_entry(
+    user_id: int,
+    food_log_id: int,
+    *,
+    meal_description: str | None = None,
+    result_title: str | None = None,
+    result_confidence: str | None = None,
+    result_description: str | None = None,
+    total_calories: str | None = None,
+    ingredients: str | list[dict[str, object]] | None = None,
+    assistant_suggestion: str | None = None,
+    meal_occurred_at: str | None = None,
+    conn: sqlite3.Connection | None = None,
+    auto_commit: bool = True,
+) -> dict[str, object]:
+    owns_connection = conn is None
+    active_conn = conn or get_db_connection()
+
+    try:
+        existing = get_food_log_by_id_record(
+            active_conn,
+            food_log_id,
+            user_id,
+            include_deleted=True,
+        )
+        if existing is None:
+            raise LookupError("food log not found")
+        if existing.get("status") == "deleted" or existing.get("deleted_at"):
+            raise LookupError("food log entry has been deleted")
+
+        return save_food_log_record(
+            active_conn,
+            user_id,
+            source_type=str(existing["source_type"]),
+            meal_description=(
+                str(existing["meal_description"])
+                if meal_description is None
+                else meal_description
+            ),
+            result_title=(
+                str(existing["result_title"])
+                if result_title is None
+                else result_title
+            ),
+            result_description=(
+                str(existing["result_description"])
+                if result_description is None
+                else result_description
+            ),
+            total_calories=(
+                str(existing["total_calories"])
+                if total_calories is None
+                else total_calories
+            ),
+            ingredients=(
+                str(existing["ingredients_json"])
+                if ingredients is None
+                else ingredients
+            ),
+            food_log_id=food_log_id,
+            session_id=existing["session_id"],
+            source_message_id=existing["source_message_id"],
+            result_confidence=(
+                existing["result_confidence"]
+                if result_confidence is None
+                else result_confidence
+            ),
+            assistant_suggestion=(
+                existing["assistant_suggestion"]
+                if assistant_suggestion is None
+                else assistant_suggestion
+            ),
+            meal_occurred_at=(
+                str(existing["meal_occurred_at"])
+                if meal_occurred_at is None and existing["meal_occurred_at"] is not None
+                else meal_occurred_at
+            ),
+            logged_at=existing["logged_at"],
+            status=str(existing["status"]),
+            idempotency_key=(
+                str(existing["idempotency_key"])
+                if existing["idempotency_key"] is not None
+                else None
+            ),
+            is_manual=bool(existing["is_manual"]),
+            auto_commit=auto_commit,
+        )
+    except Exception:
+        if owns_connection:
+            active_conn.rollback()
+        raise
+    finally:
+        if owns_connection:
+            active_conn.close()
 
 
 def delete_food_log(
@@ -227,6 +334,32 @@ def delete_food_log(
         # Food Log deletion is soft-delete only so the row still carries
         # lifecycle state for audit and idempotency.
         return delete_food_log_record(
+            active_conn,
+            food_log_id,
+            user_id,
+            auto_commit=auto_commit,
+        )
+    except Exception:
+        if owns_connection:
+            active_conn.rollback()
+        raise
+    finally:
+        if owns_connection:
+            active_conn.close()
+
+
+def restore_food_log(
+    user_id: int,
+    food_log_id: int,
+    *,
+    conn: sqlite3.Connection | None = None,
+    auto_commit: bool = True,
+) -> dict[str, object]:
+    owns_connection = conn is None
+    active_conn = conn or get_db_connection()
+
+    try:
+        return restore_food_log_record(
             active_conn,
             food_log_id,
             user_id,

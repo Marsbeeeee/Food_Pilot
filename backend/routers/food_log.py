@@ -8,6 +8,7 @@ from backend.schemas.food_log import (
     FoodLogFromEstimateRequest,
     FoodLogFromEstimateResponse,
     FoodLogListQuery,
+    FoodLogPatchRequest,
     FoodLogSaveRequest,
     serialize_food_log_from_estimate_response,
     serialize_food_log_entry,
@@ -17,8 +18,11 @@ from backend.services.food_log_service import (
     build_estimate_api_idempotency_key,
     create_food_log_from_estimate,
     delete_food_log,
+    get_food_log_by_id,
     list_food_logs_by_user,
+    restore_food_log,
     save_food_log,
+    update_food_log_entry,
 )
 
 
@@ -39,6 +43,17 @@ def list_food_log_entries(
         limit=filters.limit,
     )
     return [serialize_food_log_entry(entry) for entry in entries]
+
+
+@router.get("/{food_log_id}", response_model=FoodLogEntryOut, response_model_exclude_none=True)
+def get_food_log_entry(
+    food_log_id: int,
+    current_user: UserOut = Depends(get_current_user),
+) -> FoodLogEntryOut:
+    entry = get_food_log_by_id(current_user.id, food_log_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Food log entry not found")
+    return serialize_food_log_entry(entry)
 
 
 @router.post("", response_model=FoodLogEntryOut, response_model_exclude_none=True)
@@ -64,6 +79,37 @@ def save_food_log_entry(
             status=request.status or "active",
             idempotency_key=request.idempotency_key,
             is_manual=request.is_manual,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return serialize_food_log_entry(entry)
+
+
+@router.patch("/{food_log_id}", response_model=FoodLogEntryOut, response_model_exclude_none=True)
+def patch_food_log_entry(
+    food_log_id: int,
+    request: FoodLogPatchRequest,
+    current_user: UserOut = Depends(get_current_user),
+) -> FoodLogEntryOut:
+    try:
+        entry = update_food_log_entry(
+            current_user.id,
+            food_log_id,
+            meal_description=request.meal_description,
+            result_title=request.result_title,
+            result_confidence=request.result_confidence,
+            result_description=request.result_description,
+            total_calories=request.total_calories,
+            ingredients=(
+                [item.model_dump() for item in request.ingredients]
+                if request.ingredients is not None
+                else None
+            ),
+            assistant_suggestion=request.assistant_suggestion,
+            meal_occurred_at=request.meal_occurred_at,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -100,6 +146,25 @@ def save_food_log_from_estimate_entry(
         entry,
         client_request_id=request.client_request_id,
     )
+
+
+@router.post(
+    "/{food_log_id}/restore",
+    response_model=FoodLogEntryOut,
+    response_model_exclude_none=True,
+)
+def restore_saved_food_log_entry(
+    food_log_id: int,
+    current_user: UserOut = Depends(get_current_user),
+) -> FoodLogEntryOut:
+    try:
+        entry = restore_food_log(current_user.id, food_log_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return serialize_food_log_entry(entry)
 
 
 @router.delete("/{food_log_id}", status_code=status.HTTP_204_NO_CONTENT)

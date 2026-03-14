@@ -12,6 +12,7 @@ from backend.repositories.food_log_repository import (
     list_food_logs_by_session,
     list_food_logs_by_user,
     list_food_logs_by_user_recent,
+    restore_food_log,
     save_food_log,
 )
 
@@ -546,6 +547,52 @@ class FoodLogRepositoryTests(unittest.TestCase):
         self.assertIsNotNone(row["deleted_at"])
         self.assertEqual(listed, [])
         self.assertIsNone(fetched)
+
+    def test_restore_food_log_reactivates_soft_deleted_entry(self) -> None:
+        conn = get_db_connection()
+        try:
+            created = create_food_log(
+                conn,
+                self.user_id,
+                source_type="estimate_api",
+                meal_description="salmon bowl",
+                result_title="Salmon Bowl",
+                result_description="Description",
+                total_calories="520 kcal",
+                ingredients=[],
+                created_at="2026-03-14 09:00:00",
+            )
+
+            delete_food_log(conn, int(created["id"]), self.user_id)
+            restored = restore_food_log(conn, int(created["id"]), self.user_id)
+            listed = list_food_logs_by_user(conn, self.user_id)
+        finally:
+            conn.close()
+
+        self.assertEqual(restored["id"], created["id"])
+        self.assertEqual(restored["status"], "active")
+        self.assertIsNone(restored["deleted_at"])
+        self.assertEqual([entry["id"] for entry in listed], [created["id"]])
+
+    def test_restore_food_log_is_idempotent_for_active_entry(self) -> None:
+        conn = get_db_connection()
+        try:
+            created = create_food_log(
+                conn,
+                self.user_id,
+                source_type="estimate_api",
+                meal_description="yogurt bowl",
+                result_title="Yogurt Bowl",
+                result_description="Description",
+                total_calories="210 kcal",
+                ingredients=[],
+            )
+            restored = restore_food_log(conn, int(created["id"]), self.user_id)
+        finally:
+            conn.close()
+
+        self.assertEqual(restored["id"], created["id"])
+        self.assertEqual(restored["status"], "active")
 
     def test_save_food_log_updates_existing_entry_by_food_log_id(self) -> None:
         conn = get_db_connection()

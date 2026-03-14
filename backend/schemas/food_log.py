@@ -3,7 +3,14 @@ import re
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from backend.schemas.estimate import EstimateItem, EstimateResult
 
@@ -237,6 +244,87 @@ class FoodLogSaveRequest(BaseModel):
             return None
         normalized = value.strip()
         return normalized or None
+
+
+class FoodLogPatchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    meal_description: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("meal_description", "mealDescription"),
+        serialization_alias="mealDescription",
+    )
+    result_title: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("result_title", "resultTitle"),
+        serialization_alias="resultTitle",
+    )
+    result_confidence: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("result_confidence", "resultConfidence"),
+        serialization_alias="resultConfidence",
+    )
+    result_description: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("result_description", "resultDescription"),
+        serialization_alias="resultDescription",
+    )
+    total_calories: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("total_calories", "totalCalories", "total"),
+        serialization_alias="totalCalories",
+    )
+    ingredients: list[EstimateItem] | None = None
+    assistant_suggestion: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("assistant_suggestion", "assistantSuggestion"),
+        serialization_alias="assistantSuggestion",
+    )
+    meal_occurred_at: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("meal_occurred_at", "mealOccurredAt"),
+        serialization_alias="mealOccurredAt",
+    )
+
+    @field_validator(
+        "meal_description",
+        "result_title",
+        "result_confidence",
+        "result_description",
+        "total_calories",
+        "assistant_suggestion",
+    )
+    @classmethod
+    def validate_patch_text_fields(cls, value: str | None, info) -> str | None:
+        if value is None:
+            return None
+        normalized = " ".join(value.strip().split())
+        if normalized:
+            return normalized
+        raise ValueError(f"{info.field_name} cannot be empty")
+
+    @field_validator("meal_occurred_at")
+    @classmethod
+    def validate_patch_meal_occurred_at(cls, value: str | None) -> str | None:
+        return _normalize_timestamp_string(value)
+
+    @model_validator(mode="after")
+    def validate_patch_has_changes(self) -> "FoodLogPatchRequest":
+        if not any(
+            getattr(self, field_name) is not None
+            for field_name in (
+                "meal_description",
+                "result_title",
+                "result_confidence",
+                "result_description",
+                "total_calories",
+                "ingredients",
+                "assistant_suggestion",
+                "meal_occurred_at",
+            )
+        ):
+            raise ValueError("at least one field must be provided")
+        return self
 
 
 class FoodLogFromEstimateRequest(BaseModel):

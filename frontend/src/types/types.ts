@@ -184,3 +184,14 @@ export interface FoodLogFromEstimateResponse {
   saveStatus: 'saved';
   foodLog: FoodLogEntry;
 }
+
+export interface FoodLogPatchInput {
+  mealDescription?: string;
+  resultTitle?: string;
+  resultConfidence?: string;
+  resultDescription?: string;
+  totalCalories?: string;
+  ingredients?: IngredientResult[];
+  assistantSuggestion?: string;
+  mealOccurredAt?: string;
+}

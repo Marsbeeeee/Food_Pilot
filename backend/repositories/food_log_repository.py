@@ -500,6 +500,41 @@ def delete_food_log(
     return cursor.rowcount > 0
 
 
+def restore_food_log(
+    conn: sqlite3.Connection,
+    food_log_id: int,
+    user_id: int,
+    *,
+    auto_commit: bool = True,
+) -> dict[str, object]:
+    existing = get_food_log_by_id(conn, food_log_id, user_id, include_deleted=True)
+    if existing is None:
+        raise LookupError("food log not found")
+    if not _is_deleted_food_log(existing):
+        return existing
+
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE food_logs
+        SET
+            status = ?,
+            deleted_at = NULL
+        WHERE id = ? AND user_id = ?
+        """,
+        (ACTIVE_FOOD_LOG_STATUS, food_log_id, user_id),
+    )
+    if cursor.rowcount == 0:
+        raise LookupError("food log not found")
+    if auto_commit:
+        conn.commit()
+
+    restored = get_food_log_by_id(conn, food_log_id, user_id, include_deleted=False)
+    if restored is None:
+        raise LookupError("food log not found after restore")
+    return restored
+
+
 def _serialize_ingredients(value: str | Sequence[dict[str, object]]) -> str:
     if isinstance(value, str):
         return value
