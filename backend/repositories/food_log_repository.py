@@ -22,6 +22,8 @@ FOOD_LOG_SELECT_COLUMNS = """
     updated_at
 """
 
+FOOD_LOG_DEFAULT_ORDER_BY = "updated_at DESC, id DESC"
+
 
 def create_food_log(
     conn: sqlite3.Connection,
@@ -145,8 +147,8 @@ def list_food_logs_by_user(
         keyword = f"%{_escape_like_value(meal)}%"
         parameters.extend([keyword, keyword])
 
-    query += """
-        ORDER BY logged_at DESC, id DESC
+    query += f"""
+        ORDER BY {FOOD_LOG_DEFAULT_ORDER_BY}
         LIMIT COALESCE(?, -1) OFFSET ?
     """
     parameters.extend([limit, offset])
@@ -173,7 +175,7 @@ def list_food_logs_by_session(
             {FOOD_LOG_SELECT_COLUMNS}
         FROM food_logs
         WHERE user_id = ? AND session_id = ?
-        ORDER BY logged_at DESC, id DESC
+        ORDER BY {FOOD_LOG_DEFAULT_ORDER_BY}
         LIMIT COALESCE(?, -1) OFFSET ?
         """,
         (user_id, session_id, limit, offset),

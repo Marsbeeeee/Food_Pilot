@@ -127,6 +127,7 @@ class FoodLogRepositoryTests(unittest.TestCase):
                 total_calories="100 kcal",
                 ingredients=[],
                 logged_at="2026-03-14 08:00:00",
+                created_at="2026-03-14 08:00:00",
             )
             create_food_log(
                 conn,
@@ -139,6 +140,7 @@ class FoodLogRepositoryTests(unittest.TestCase):
                 total_calories="200 kcal",
                 ingredients=[],
                 logged_at="2026-03-14 09:00:00",
+                created_at="2026-03-14 09:00:00",
             )
             create_food_log(
                 conn,
@@ -151,6 +153,7 @@ class FoodLogRepositoryTests(unittest.TestCase):
                 total_calories="300 kcal",
                 ingredients=[],
                 logged_at="2026-03-14 10:00:00",
+                created_at="2026-03-14 10:00:00",
             )
 
             session_logs = list_food_logs_by_session(conn, self.user_id, self.session_id)
@@ -162,6 +165,73 @@ class FoodLogRepositoryTests(unittest.TestCase):
         self.assertEqual([entry["result_title"] for entry in session_logs], ["Meal three", "Meal one"])
         self.assertEqual([entry["result_title"] for entry in paged_logs], ["Meal two", "Meal one"])
         self.assertEqual([entry["result_title"] for entry in recent_logs], ["Meal three", "Meal two"])
+
+    def test_list_food_logs_orders_by_last_update_time(self) -> None:
+        conn = get_db_connection()
+        try:
+            oldest = create_food_log(
+                conn,
+                self.user_id,
+                source_type="chat_message",
+                session_id=self.session_id,
+                meal_description="meal one",
+                result_title="Meal one",
+                result_description="Description one",
+                total_calories="100 kcal",
+                ingredients=[],
+                logged_at="2000-01-01 08:00:00",
+                created_at="2000-01-01 08:00:00",
+            )
+            create_food_log(
+                conn,
+                self.user_id,
+                source_type="chat_message",
+                session_id=self.second_session_id,
+                meal_description="meal two",
+                result_title="Meal two",
+                result_description="Description two",
+                total_calories="200 kcal",
+                ingredients=[],
+                logged_at="2000-01-01 09:00:00",
+                created_at="2000-01-01 09:00:00",
+            )
+            create_food_log(
+                conn,
+                self.user_id,
+                source_type="chat_message",
+                session_id=self.session_id,
+                meal_description="meal three",
+                result_title="Meal three",
+                result_description="Description three",
+                total_calories="300 kcal",
+                ingredients=[],
+                logged_at="2000-01-01 10:00:00",
+                created_at="2000-01-01 10:00:00",
+            )
+
+            conn.execute(
+                """
+                UPDATE food_logs
+                SET result_description = ?
+                WHERE id = ?
+                """,
+                ("Updated after re-save", int(oldest["id"])),
+            )
+            conn.commit()
+
+            all_logs = list_food_logs_by_user(conn, self.user_id)
+            session_logs = list_food_logs_by_session(conn, self.user_id, self.session_id)
+        finally:
+            conn.close()
+
+        self.assertEqual(
+            [entry["result_title"] for entry in all_logs],
+            ["Meal one", "Meal three", "Meal two"],
+        )
+        self.assertEqual(
+            [entry["result_title"] for entry in session_logs],
+            ["Meal one", "Meal three"],
+        )
 
 
 if __name__ == "__main__":
