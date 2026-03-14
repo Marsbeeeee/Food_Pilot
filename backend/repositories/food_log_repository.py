@@ -3,6 +3,8 @@ import sqlite3
 from collections.abc import Sequence
 from datetime import date, timedelta
 
+from backend.text import normalize_food_log_query
+
 
 FOOD_LOG_SELECT_COLUMNS = """
     id,
@@ -10,6 +12,7 @@ FOOD_LOG_SELECT_COLUMNS = """
     session_id,
     source_message_id,
     meal_description,
+    normalized_query,
     logged_at,
     result_title,
     result_confidence,
@@ -43,6 +46,7 @@ def create_food_log(
     created_at: str | None = None,
     auto_commit: bool = True,
 ) -> dict[str, object]:
+    normalized_query = normalize_food_log_query(meal_description)
     cursor = conn.cursor()
     cursor.execute(
         """
@@ -51,6 +55,7 @@ def create_food_log(
             session_id,
             source_message_id,
             meal_description,
+            normalized_query,
             logged_at,
             result_title,
             result_confidence,
@@ -61,13 +66,14 @@ def create_food_log(
             assistant_suggestion,
             created_at,
             updated_at
-        ) VALUES (?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), COALESCE(?, CURRENT_TIMESTAMP))
+        ) VALUES (?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), COALESCE(?, CURRENT_TIMESTAMP))
         """,
         (
             user_id,
             session_id,
             source_message_id,
             meal_description,
+            normalized_query,
             logged_at,
             result_title,
             result_confidence,
@@ -106,7 +112,9 @@ def save_food_log(
     created_at: str | None = None,
     auto_commit: bool = True,
 ) -> dict[str, object]:
-    existing_id = _get_food_log_id_by_source_message_id(conn, user_id, source_message_id)
+    normalized_query = normalize_food_log_query(meal_description)
+    # Food Log overwrite semantics are keyed by user_id + normalized_query.
+    existing_id = _get_food_log_id_by_normalized_query(conn, user_id, normalized_query)
     if existing_id is None:
         return create_food_log(
             conn,
@@ -132,7 +140,9 @@ def save_food_log(
         UPDATE food_logs
         SET
             session_id = ?,
+            source_message_id = ?,
             meal_description = ?,
+            normalized_query = ?,
             logged_at = COALESCE(?, CURRENT_TIMESTAMP),
             result_title = ?,
             result_confidence = ?,
@@ -145,7 +155,9 @@ def save_food_log(
         """,
         (
             session_id,
+            source_message_id,
             meal_description,
+            normalized_query,
             logged_at,
             result_title,
             result_confidence,
@@ -296,22 +308,19 @@ def _escape_like_value(value: str) -> str:
     )
 
 
-def _get_food_log_id_by_source_message_id(
+def _get_food_log_id_by_normalized_query(
     conn: sqlite3.Connection,
     user_id: int,
-    source_message_id: int | None,
+    normalized_query: str,
 ) -> int | None:
-    if source_message_id is None:
-        return None
-
     cursor = conn.cursor()
     cursor.execute(
         """
         SELECT id
         FROM food_logs
-        WHERE user_id = ? AND source_message_id = ?
+        WHERE user_id = ? AND normalized_query = ?
         """,
-        (user_id, source_message_id),
+        (user_id, normalized_query),
     )
     row = cursor.fetchone()
     if row is None:

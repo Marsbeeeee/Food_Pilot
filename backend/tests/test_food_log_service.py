@@ -274,7 +274,8 @@ class FoodLogServiceTests(unittest.TestCase):
                 "idx_food_logs_session_id",
                 "idx_food_logs_logged_at",
                 "idx_food_logs_user_logged_at",
-                "idx_food_logs_source_message_id_unique",
+                "idx_food_logs_source_message_id",
+                "idx_food_logs_user_normalized_query_unique",
             }.issubset(index_names)
         )
         self.assertEqual(
@@ -286,7 +287,7 @@ class FoodLogServiceTests(unittest.TestCase):
             },
         )
 
-    def test_source_message_id_unique_index_blocks_duplicate_food_logs(self) -> None:
+    def test_user_normalized_query_unique_index_blocks_duplicate_food_logs(self) -> None:
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
@@ -334,6 +335,7 @@ class FoodLogServiceTests(unittest.TestCase):
                     session_id,
                     source_message_id,
                     meal_description,
+                    normalized_query,
                     logged_at,
                     result_title,
                     result_description,
@@ -348,6 +350,7 @@ class FoodLogServiceTests(unittest.TestCase):
                     self.user_id,
                     session_id,
                     message_id,
+                    " Chicken   Salad ",
                     "chicken salad",
                     "2026-03-14 09:00:00",
                     "Chicken salad",
@@ -369,6 +372,7 @@ class FoodLogServiceTests(unittest.TestCase):
                         session_id,
                         source_message_id,
                         meal_description,
+                        normalized_query,
                         logged_at,
                         result_title,
                         result_description,
@@ -383,7 +387,8 @@ class FoodLogServiceTests(unittest.TestCase):
                         self.user_id,
                         session_id,
                         message_id,
-                        "same message duplicate",
+                        "chicken salad",
+                        "chicken salad",
                         "2026-03-14 09:01:00",
                         "Chicken salad duplicate",
                         "Duplicate entry should fail.",

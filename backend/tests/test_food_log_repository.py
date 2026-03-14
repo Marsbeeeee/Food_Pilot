@@ -266,7 +266,36 @@ class FoodLogRepositoryTests(unittest.TestCase):
                     "240 kcal",
                 ),
             )
-            source_message_id = cursor.lastrowid
+            first_source_message_id = cursor.lastrowid
+            cursor.execute(
+                """
+                INSERT INTO messages (
+                    session_id,
+                    user_id,
+                    role,
+                    message_type,
+                    content,
+                    result_title,
+                    result_confidence,
+                    result_description,
+                    result_items_json,
+                    result_total
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self.second_session_id,
+                    self.user_id,
+                    "assistant",
+                    "estimate_result",
+                    "Assistant suggestion updated",
+                    "Chicken Salad",
+                    "high",
+                    "Updated description",
+                    '[{"name":"Chicken","portion":"150g","energy":"260 kcal"}]',
+                    "260 kcal",
+                ),
+            )
+            second_source_message_id = cursor.lastrowid
             conn.commit()
 
             first_save = save_food_log(
@@ -274,8 +303,8 @@ class FoodLogRepositoryTests(unittest.TestCase):
                 self.user_id,
                 source_type="chat_message",
                 session_id=self.session_id,
-                source_message_id=source_message_id,
-                meal_description="chicken salad",
+                source_message_id=first_source_message_id,
+                meal_description=" Chicken   Salad ",
                 result_title="Chicken Salad",
                 result_description="First description",
                 total_calories="240 kcal",
@@ -285,9 +314,9 @@ class FoodLogRepositoryTests(unittest.TestCase):
                 conn,
                 self.user_id,
                 source_type="chat_message",
-                session_id=self.session_id,
-                source_message_id=source_message_id,
-                meal_description="chicken salad with avocado",
+                session_id=self.second_session_id,
+                source_message_id=second_source_message_id,
+                meal_description="chicken salad",
                 result_title="Chicken Salad Updated",
                 result_description="Updated description",
                 total_calories="260 kcal",
@@ -301,9 +330,110 @@ class FoodLogRepositoryTests(unittest.TestCase):
 
         self.assertEqual(total, 1)
         self.assertEqual(first_save["id"], second_save["id"])
-        self.assertEqual(second_save["meal_description"], "chicken salad with avocado")
+        self.assertEqual(second_save["meal_description"], "chicken salad")
         self.assertEqual(second_save["result_title"], "Chicken Salad Updated")
         self.assertEqual(second_save["total_calories"], "260 kcal")
+        self.assertEqual(second_save["session_id"], self.second_session_id)
+        self.assertEqual(second_save["source_message_id"], second_source_message_id)
+
+    def test_init_db_backfills_and_dedupes_normalized_query(self) -> None:
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO food_logs (
+                    user_id,
+                    session_id,
+                    source_message_id,
+                    meal_description,
+                    normalized_query,
+                    logged_at,
+                    result_title,
+                    result_description,
+                    total_calories,
+                    ingredients_json,
+                    source_type,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self.user_id,
+                    self.session_id,
+                    None,
+                    " Chicken   Salad ",
+                    "",
+                    "2026-03-14 09:00:00",
+                    "Chicken Salad",
+                    "First description",
+                    "240 kcal",
+                    "[]",
+                    "estimate_api",
+                    "2026-03-14 09:00:00",
+                    "2026-03-14 09:00:00",
+                ),
+            )
+            cursor.execute(
+                """
+                INSERT INTO food_logs (
+                    user_id,
+                    session_id,
+                    source_message_id,
+                    meal_description,
+                    normalized_query,
+                    logged_at,
+                    result_title,
+                    result_description,
+                    total_calories,
+                    ingredients_json,
+                    source_type,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self.user_id,
+                    self.second_session_id,
+                    None,
+                    "chicken salad",
+                    "",
+                    "2026-03-14 10:00:00",
+                    "Chicken Salad Newer",
+                    "Updated description",
+                    "260 kcal",
+                    "[]",
+                    "estimate_api",
+                    "2026-03-14 10:00:00",
+                    "2026-03-14 10:00:00",
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        init_db()
+
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, meal_description, normalized_query, result_title
+                FROM food_logs
+                WHERE user_id = ?
+                ORDER BY id ASC
+                """,
+                (self.user_id,),
+            )
+            rows = cursor.fetchall()
+        finally:
+            conn.close()
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["meal_description"], "chicken salad")
+        self.assertEqual(rows[0]["normalized_query"], "chicken salad")
+        self.assertEqual(rows[0]["result_title"], "Chicken Salad Newer")
 
 
 if __name__ == "__main__":

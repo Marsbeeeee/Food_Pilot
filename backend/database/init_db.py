@@ -1,6 +1,7 @@
 from datetime import datetime, UTC
 
 from backend.database.connection import get_db_connection
+from backend.text import normalize_food_log_query
 
 
 def init_db():
@@ -325,6 +326,7 @@ def _ensure_food_logs_table(cursor) -> None:
             session_id INTEGER REFERENCES chat_sessions(id) ON DELETE SET NULL,
             source_message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
             meal_description TEXT NOT NULL,
+            normalized_query TEXT NOT NULL DEFAULT '',
             logged_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             result_title TEXT NOT NULL,
             result_confidence TEXT,
@@ -363,6 +365,13 @@ def _ensure_food_logs_table(cursor) -> None:
             ADD COLUMN assistant_suggestion TEXT
             """
         )
+    if "normalized_query" not in food_log_columns:
+        cursor.execute(
+            """
+            ALTER TABLE food_logs
+            ADD COLUMN normalized_query TEXT
+            """
+        )
     if "updated_at" not in food_log_columns:
         cursor.execute(
             """
@@ -370,6 +379,15 @@ def _ensure_food_logs_table(cursor) -> None:
             ADD COLUMN updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             """
         )
+
+    cursor.execute(
+        """
+        DROP INDEX IF EXISTS idx_food_logs_user_normalized_query_unique
+        """
+    )
+    _migrate_legacy_food_log_entries(cursor)
+    _backfill_food_log_normalized_queries(cursor)
+    _dedupe_food_logs_by_normalized_query(cursor)
 
     cursor.execute(
         """
@@ -397,9 +415,21 @@ def _ensure_food_logs_table(cursor) -> None:
     )
     cursor.execute(
         """
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_food_logs_source_message_id_unique
+        DROP INDEX IF EXISTS idx_food_logs_source_message_id_unique
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_food_logs_source_message_id
         ON food_logs(source_message_id)
         WHERE source_message_id IS NOT NULL;
+        """
+    )
+    cursor.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_food_logs_user_normalized_query_unique
+        ON food_logs(user_id, normalized_query)
+        WHERE normalized_query IS NOT NULL AND normalized_query != '';
         """
     )
     cursor.execute(
@@ -415,8 +445,6 @@ def _ensure_food_logs_table(cursor) -> None:
         END;
         """
     )
-
-    _migrate_legacy_food_log_entries(cursor)
 
 
 def _create_messages_table(cursor, table_name: str = "messages") -> None:
@@ -694,6 +722,53 @@ def _migrate_legacy_food_log_entries(cursor) -> None:
         )
         """
     )
+
+
+def _backfill_food_log_normalized_queries(cursor) -> None:
+    rows = cursor.execute(
+        """
+        SELECT id, meal_description
+        FROM food_logs
+        """
+    ).fetchall()
+    for row in rows:
+        cursor.execute(
+            """
+            UPDATE food_logs
+            SET normalized_query = ?
+            WHERE id = ?
+            """,
+            (normalize_food_log_query(str(row["meal_description"])), row["id"]),
+        )
+
+
+def _dedupe_food_logs_by_normalized_query(cursor) -> None:
+    rows = cursor.execute(
+        """
+        SELECT id, user_id, normalized_query
+        FROM food_logs
+        ORDER BY user_id ASC, updated_at DESC, id DESC
+        """
+    ).fetchall()
+
+    seen: set[tuple[int, str]] = set()
+    duplicate_ids: list[int] = []
+    for row in rows:
+        normalized_query = row["normalized_query"]
+        if not isinstance(normalized_query, str) or not normalized_query:
+            continue
+
+        key = (int(row["user_id"]), normalized_query)
+        if key in seen:
+            duplicate_ids.append(int(row["id"]))
+            continue
+        seen.add(key)
+
+    if duplicate_ids:
+        cursor.executemany(
+            "DELETE FROM food_logs WHERE id = ?",
+            [(food_log_id,) for food_log_id in duplicate_ids],
+        )
 
 
 if __name__ == '__main__':
