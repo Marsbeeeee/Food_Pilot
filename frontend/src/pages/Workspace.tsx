@@ -21,6 +21,7 @@ interface WorkspaceProps {
   setActiveSessionId: (id: string) => void;
   profileId?: number;
   refreshFoodLog: () => Promise<void>;
+  onDeleteFoodLog: (entryId: string) => Promise<void>;
   unlinkDeletedChatFromFoodLog: (sessionId: string) => Promise<void>;
 }
 
@@ -32,6 +33,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   setActiveSessionId,
   profileId,
   refreshFoodLog,
+  onDeleteFoodLog,
   unlinkDeletedChatFromFoodLog,
 }) => {
   const [inputValue, setInputValue] = useState('');
@@ -42,7 +44,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [isLoadingSessionId, setIsLoadingSessionId] = useState<string | null>(null);
   const [savingFoodLogMessageIds, setSavingFoodLogMessageIds] = useState<string[]>([]);
-  const [savedFoodLogMessageIds, setSavedFoodLogMessageIds] = useState<string[]>([]);
+  const [savedFoodLogMessageIds, setSavedFoodLogMessageIds] = useState<Record<string, string>>({});
+  const [deletingFoodLogMessageIds, setDeletingFoodLogMessageIds] = useState<string[]>([]);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -57,10 +60,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
   const activeSession = sessions.find((session) => session.id === activeSessionId)
     || (sessions.length > 0 ? sessions[0] : null);
-  const persistedSavedFoodLogMessageIds = new Set(
+  const persistedSavedFoodLogEntriesByMessageId = new Map(
     foodLog
-      .map((entry) => entry.sourceMessageId)
-      .filter((value): value is string => Boolean(value)),
+      .filter((entry): entry is FoodLogEntry & { sourceMessageId: string } => Boolean(entry.sourceMessageId))
+      .map((entry) => [entry.sourceMessageId, entry]),
   );
 
   useEffect(() => {
@@ -289,7 +292,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     ));
 
     try {
-      await saveFoodLogEntry({
+      const savedEntry = await saveFoodLogEntry({
         sourceType: 'chat_message',
         mealDescription,
         resultTitle: message.title,
@@ -301,14 +304,40 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         sourceMessageId: Number(message.id),
         assistantSuggestion: message.content,
       });
-      setSavedFoodLogMessageIds((current) => (
-        current.includes(message.id as string) ? current : [...current, message.id as string]
-      ));
+      setSavedFoodLogMessageIds((current) => ({
+        ...current,
+        [message.id as string]: savedEntry.id,
+      }));
       await refreshFoodLog();
     } catch (error) {
       handleFoodLogError(error, 'Unable to save this analysis to Food Log right now.');
     } finally {
       setSavingFoodLogMessageIds((current) => current.filter((item) => item !== message.id));
+    }
+  };
+
+  const handleUndoFoodLogSave = async (messageId: string) => {
+    const persistedEntry = persistedSavedFoodLogEntriesByMessageId.get(messageId);
+    const entryId = persistedEntry?.id ?? savedFoodLogMessageIds[messageId];
+    if (!entryId) {
+      return;
+    }
+
+    setDeletingFoodLogMessageIds((current) => (
+      current.includes(messageId) ? current : [...current, messageId]
+    ));
+
+    try {
+      await onDeleteFoodLog(entryId);
+      setSavedFoodLogMessageIds((current) => {
+        const next = { ...current };
+        delete next[messageId];
+        return next;
+      });
+    } catch (error) {
+      handleFoodLogError(error, 'Unable to undo this saved Food Log entry right now.');
+    } finally {
+      setDeletingFoodLogMessageIds((current) => current.filter((item) => item !== messageId));
     }
   };
 
@@ -447,11 +476,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 const isSavedToFoodLog = Boolean(
                   message.id
                   && (
-                    savedFoodLogMessageIds.includes(message.id)
-                    || persistedSavedFoodLogMessageIds.has(message.id)
+                    savedFoodLogMessageIds[message.id]
+                    || persistedSavedFoodLogEntriesByMessageId.has(message.id)
                   )
                 );
                 const isSavingToFoodLog = Boolean(message.id && savingFoodLogMessageIds.includes(message.id));
+                const isDeletingSavedFoodLog = Boolean(
+                  message.id && deletingFoodLogMessageIds.includes(message.id),
+                );
 
                 return (
                   <div key={message.id ?? index} className={`flex items-start gap-5 ${message.role === 'user' ? 'justify-end' : ''}`}>
@@ -500,33 +532,51 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             </table>
                           </div>
                           <div className="flex flex-col items-end gap-2 border-t border-[#4A453E]/5 bg-white px-8 py-5">
-                            <p className="max-w-sm text-right text-[11px] leading-5 text-[#4A453E]/40">
-                              Food Log keeps each saved analysis as its own record. Saving here
-                              will not overwrite older entries just because the meal text matches.
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => mealDescription && void handleSaveFoodLogEntry(activeSession.id, message, mealDescription)}
-                              disabled={!mealDescription || isSavedToFoodLog || isSavingToFoodLog}
-                              className={`inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-bold transition-all ${
-                                isSavedToFoodLog
-                                  ? 'cursor-default border border-[#81C784]/20 bg-[#81C784]/10 text-[#4E9E63]'
-                                  : isSavingToFoodLog
-                                    ? 'cursor-wait border border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/50'
-                                    : 'border border-[#FF8A65]/15 bg-[#FF8A65] text-white shadow-lg shadow-[#FF8A65]/15 hover:bg-[#FF8A65]/90'
-                              }`}
-                            >
-                              <span className="material-symbols-outlined text-[18px]">
-                                {isSavedToFoodLog ? 'bookmark_added' : 'bookmark_add'}
-                              </span>
-                              <span>
-                                {isSavedToFoodLog
-                                  ? 'Saved to Food Log'
-                                  : isSavingToFoodLog
-                                    ? 'Saving...'
-                                    : 'Save to Food Log'}
-                              </span>
-                            </button>
+                            {isSavedToFoodLog ? (
+                              <>
+                                <div className="flex items-center gap-2 rounded-full border border-[#81C784]/20 bg-[#81C784]/10 px-4 py-2 text-sm font-bold text-[#4E9E63]">
+                                  <span className="material-symbols-outlined text-[18px]">bookmark_added</span>
+                                  <span>Saved to Food Log</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-[11px] font-semibold">
+                                  <button
+                                    type="button"
+                                    onClick={() => message.id && void handleUndoFoodLogSave(message.id)}
+                                    disabled={isDeletingSavedFoodLog}
+                                    className={`rounded-full border px-3 py-1.5 transition-all ${
+                                      isDeletingSavedFoodLog
+                                        ? 'cursor-wait border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/40'
+                                        : 'border-red-200 bg-red-50 text-red-500 hover:bg-red-100'
+                                    }`}
+                                  >
+                                    {isDeletingSavedFoodLog ? 'Undoing...' : 'Undo save'}
+                                  </button>
+                                  <p className="max-w-xs text-right leading-5 text-[#4A453E]/40">
+                                    This removes the saved entry with soft delete, so chat links and audit data stay recoverable.
+                                  </p>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <p className="max-w-sm text-right text-[11px] leading-5 text-[#4A453E]/40">
+                                  Food Log keeps each saved analysis as its own record. Saving here
+                                  will not overwrite older entries just because the meal text matches.
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => mealDescription && void handleSaveFoodLogEntry(activeSession.id, message, mealDescription)}
+                                  disabled={!mealDescription || isSavingToFoodLog}
+                                  className={`inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-bold transition-all ${
+                                    isSavingToFoodLog
+                                      ? 'cursor-wait border border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/50'
+                                      : 'border border-[#FF8A65]/15 bg-[#FF8A65] text-white shadow-lg shadow-[#FF8A65]/15 hover:bg-[#FF8A65]/90'
+                                  }`}
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">bookmark_add</span>
+                                  <span>{isSavingToFoodLog ? 'Saving...' : 'Save to Food Log'}</span>
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       ) : (

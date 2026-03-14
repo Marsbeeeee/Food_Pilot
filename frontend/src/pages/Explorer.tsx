@@ -6,6 +6,7 @@ interface ExplorerProps {
   logEntries: FoodLogEntry[];
   onNavigateToSession: (sessionId: string) => void;
   onDeleteFoodLog: (entryId: string) => Promise<void>;
+  onRestoreFoodLog: (entryId: string) => Promise<void>;
   onUpdateFoodLog: (entryId: string, payload: FoodLogPatchInput) => Promise<void>;
 }
 
@@ -20,6 +21,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
   logEntries,
   onNavigateToSession,
   onDeleteFoodLog,
+  onRestoreFoodLog,
   onUpdateFoodLog,
 }) => {
   const orderedEntries = sortFoodLogEntries(logEntries);
@@ -27,6 +29,8 @@ export const Explorer: React.FC<ExplorerProps> = ({
     orderedEntries[0] ?? null,
   );
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const [undoableDeletedEntry, setUndoableDeletedEntry] = useState<FoodLogEntry | null>(null);
+  const [restoringEntryId, setRestoringEntryId] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editDraft, setEditDraft] = useState<FoodLogEditDraft | null>(null);
@@ -65,6 +69,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
     setDeletingEntryId(selectedEntry.id);
     try {
       await onDeleteFoodLog(selectedEntry.id);
+      setUndoableDeletedEntry(selectedEntry);
     } catch (error) {
       const message = error instanceof Error
         ? error.message
@@ -72,6 +77,25 @@ export const Explorer: React.FC<ExplorerProps> = ({
       window.alert(message);
     } finally {
       setDeletingEntryId((current) => (current === selectedEntry.id ? null : current));
+    }
+  };
+
+  const handleUndoDelete = async () => {
+    if (!undoableDeletedEntry || restoringEntryId) {
+      return;
+    }
+
+    setRestoringEntryId(undoableDeletedEntry.id);
+    try {
+      await onRestoreFoodLog(undoableDeletedEntry.id);
+      setUndoableDeletedEntry(null);
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : 'Unable to restore this saved favorite right now.';
+      window.alert(message);
+    } finally {
+      setRestoringEntryId(null);
     }
   };
 
@@ -562,6 +586,43 @@ export const Explorer: React.FC<ExplorerProps> = ({
                 className="rounded-[14px] bg-[#FF8A65] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#FF8A65]/20 transition-colors hover:bg-[#FF8A65]/90 disabled:cursor-wait disabled:opacity-80"
               >
                 {isSavingEdit ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {undoableDeletedEntry && (
+        <div className="pointer-events-none fixed bottom-6 left-1/2 z-[110] w-full max-w-xl -translate-x-1/2 px-6">
+          <div className="pointer-events-auto flex items-center justify-between gap-4 rounded-[24px] border border-[#4A453E]/10 bg-white px-5 py-4 shadow-[0_20px_60px_rgba(74,69,62,0.15)]">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-[#4A453E]">
+                Removed from Food Log
+              </p>
+              <p className="mt-1 text-xs leading-5 text-[#4A453E]/55">
+                {undoableDeletedEntry.name} was soft-deleted. Chat links and audit metadata are still recoverable.
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setUndoableDeletedEntry(null)}
+                disabled={Boolean(restoringEntryId)}
+                className="rounded-full border border-[#4A453E]/10 px-3 py-2 text-xs font-bold text-[#4A453E]/55 transition-colors hover:bg-[#F7F3E9] disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                Dismiss
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleUndoDelete()}
+                disabled={Boolean(restoringEntryId)}
+                className={`rounded-full px-3 py-2 text-xs font-bold text-white transition-colors ${
+                  restoringEntryId
+                    ? 'cursor-wait bg-[#4A453E]/25'
+                    : 'bg-[#FF8A65] hover:bg-[#FF8A65]/90'
+                }`}
+              >
+                {restoringEntryId ? 'Restoring...' : 'Undo Delete'}
               </button>
             </div>
           </div>
