@@ -456,6 +456,12 @@ def _ensure_food_logs_table(cursor) -> None:
     )
     cursor.execute(
         """
+        CREATE INDEX IF NOT EXISTS idx_food_logs_user_updated_at
+        ON food_logs(user_id, updated_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_food_logs_session_id
         ON food_logs(session_id);
         """

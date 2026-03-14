@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { AuthApiError, clearSession, deleteCurrentAccount, restoreSession } from '../api/auth';
 import { buildFoodLogNavigationState } from './foodLogNavigation';
 import { getChatSession, listChatSessions } from '../api/chat';
-import { deleteFoodLogEntry, listFoodLogs } from '../api/foodLog';
+import { deleteFoodLogEntry, listFoodLogs, updateFoodLogEntry } from '../api/foodLog';
 import { clearStoredProfile, loadStoredProfile, ProfileApiError, toProfileForm } from '../api/profile';
 import { Header } from '../components/Header';
 import { AuthPage } from '../pages/Auth';
@@ -17,6 +17,7 @@ import {
   AuthStatus,
   ChatSession,
   FoodLogEntry,
+  FoodLogPatchInput,
   UserProfileForm,
 } from '../types/types';
 
@@ -190,6 +191,11 @@ const App: React.FC = () => {
     setFoodLog((current) => current.filter((entry) => entry.id !== entryId));
   };
 
+  const handleUpdateFoodLog = async (entryId: string, payload: FoodLogPatchInput) => {
+    await updateFoodLogEntry(entryId, payload);
+    await refreshFoodLog();
+  };
+
   const handleChatSessionDeleted = async (sessionId: string) => {
     setFoodLog((current) => current.map((entry) => (
       entry.sessionId === sessionId
@@ -301,6 +307,7 @@ const App: React.FC = () => {
             logEntries={foodLog}
             onNavigateToSession={handleNavigateToSession}
             onDeleteFoodLog={handleDeleteFoodLog}
+            onUpdateFoodLog={handleUpdateFoodLog}
           />
         );
       case AppView.PROFILE:

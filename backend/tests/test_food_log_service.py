@@ -281,6 +281,7 @@ class FoodLogServiceTests(unittest.TestCase):
                 "idx_food_logs_logged_at",
                 "idx_food_logs_user_logged_at",
                 "idx_food_logs_user_meal_occurred_at",
+                "idx_food_logs_user_updated_at",
                 "idx_food_logs_source_message_id",
                 "idx_food_logs_user_idempotency_key_unique",
             }.issubset(index_names)

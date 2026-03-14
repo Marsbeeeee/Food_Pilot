@@ -36,7 +36,7 @@ FOOD_LOG_SELECT_COLUMNS = """
 FOOD_LOG_ACTIVE_FILTER = (
     f"status = '{ACTIVE_FOOD_LOG_STATUS}' AND deleted_at IS NULL"
 )
-FOOD_LOG_DEFAULT_ORDER_BY = "meal_occurred_at DESC, updated_at DESC, id DESC"
+FOOD_LOG_DEFAULT_ORDER_BY = "updated_at DESC, created_at DESC, id DESC"
 
 
 def create_food_log(

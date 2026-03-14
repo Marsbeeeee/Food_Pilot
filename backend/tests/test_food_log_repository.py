@@ -170,7 +170,7 @@ class FoodLogRepositoryTests(unittest.TestCase):
         self.assertEqual([entry["result_title"] for entry in paged_logs], ["Meal two", "Meal one"])
         self.assertEqual([entry["result_title"] for entry in recent_logs], ["Meal three", "Meal two"])
 
-    def test_list_food_logs_order_by_meal_occurred_at(self) -> None:
+    def test_list_food_logs_order_by_recent_update(self) -> None:
         conn = get_db_connection()
         try:
             oldest = create_food_log(
@@ -230,11 +230,11 @@ class FoodLogRepositoryTests(unittest.TestCase):
 
         self.assertEqual(
             [entry["result_title"] for entry in all_logs],
-            ["Meal three", "Meal two", "Meal one"],
+            ["Meal one", "Meal three", "Meal two"],
         )
         self.assertEqual(
             [entry["result_title"] for entry in session_logs],
-            ["Meal three", "Meal one"],
+            ["Meal one", "Meal three"],
         )
 
     def test_list_food_logs_date_filters_use_meal_occurred_at(self) -> None:

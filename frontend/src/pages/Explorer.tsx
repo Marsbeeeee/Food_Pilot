@@ -1,36 +1,52 @@
 import React, { useEffect, useState } from 'react';
 
-import { FoodLogEntry } from '../types/types';
+import { FoodLogEntry, FoodLogPatchInput, IngredientResult } from '../types/types';
 
 interface ExplorerProps {
   logEntries: FoodLogEntry[];
   onNavigateToSession: (sessionId: string) => void;
   onDeleteFoodLog: (entryId: string) => Promise<void>;
+  onUpdateFoodLog: (entryId: string, payload: FoodLogPatchInput) => Promise<void>;
+}
+
+interface FoodLogEditDraft {
+  name: string;
+  description: string;
+  calories: string;
+  ingredients: IngredientResult[];
 }
 
 export const Explorer: React.FC<ExplorerProps> = ({
   logEntries,
   onNavigateToSession,
   onDeleteFoodLog,
+  onUpdateFoodLog,
 }) => {
+  const orderedEntries = sortFoodLogEntries(logEntries);
   const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(
-    logEntries.length > 0 ? logEntries[0] : null,
+    orderedEntries[0] ?? null,
   );
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
-  const collectionStats = buildCollectionStats(logEntries);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editDraft, setEditDraft] = useState<FoodLogEditDraft | null>(null);
+  const collectionStats = buildCollectionStats(orderedEntries);
+  const selectedEntrySavedMoment = selectedEntry
+    ? formatSavedMoment(selectedEntry.savedAt)
+    : null;
 
   useEffect(() => {
-    if (logEntries.length === 0) {
+    if (orderedEntries.length === 0) {
       setSelectedEntry(null);
       return;
     }
 
     setSelectedEntry((current) => {
       if (!current) {
-        return logEntries[0];
+        return orderedEntries[0];
       }
 
-      return logEntries.find((entry) => entry.id === current.id) ?? logEntries[0];
+      return orderedEntries.find((entry) => entry.id === current.id) ?? orderedEntries[0];
     });
   }, [logEntries]);
 
@@ -40,7 +56,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
     }
 
     const shouldDelete = window.confirm(
-      'Remove this saved analysis from Food Log? It will disappear from the default list, but you can save it again from a new analysis later.',
+      'Remove this saved favorite from Food Log? It will disappear from your collection, but you can save it again from a new analysis later.',
     );
     if (!shouldDelete) {
       return;
@@ -52,10 +68,107 @@ export const Explorer: React.FC<ExplorerProps> = ({
     } catch (error) {
       const message = error instanceof Error
         ? error.message
-        : 'Unable to remove this saved analysis from Food Log right now.';
+        : 'Unable to remove this saved favorite right now.';
       window.alert(message);
     } finally {
       setDeletingEntryId((current) => (current === selectedEntry.id ? null : current));
+    }
+  };
+
+  const handleOpenEditModal = () => {
+    if (!selectedEntry) {
+      return;
+    }
+
+    setEditDraft(buildEditDraft(selectedEntry));
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    if (isSavingEdit) {
+      return;
+    }
+
+    setIsEditModalOpen(false);
+    setEditDraft(null);
+  };
+
+  const handleEditFieldChange = (
+    field: keyof Omit<FoodLogEditDraft, 'ingredients'>,
+    value: string,
+  ) => {
+    setEditDraft((current) => (current ? { ...current, [field]: value } : current));
+  };
+
+  const handleIngredientChange = (
+    ingredientIndex: number,
+    field: keyof IngredientResult,
+    value: string,
+  ) => {
+    setEditDraft((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        ingredients: current.ingredients.map((ingredient, currentIndex) => (
+          currentIndex === ingredientIndex
+            ? { ...ingredient, [field]: value }
+            : ingredient
+        )),
+      };
+    });
+  };
+
+  const handleAddIngredient = () => {
+    setEditDraft((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        ingredients: [
+          ...current.ingredients,
+          { name: '', portion: '', energy: '' },
+        ],
+      };
+    });
+  };
+
+  const handleRemoveIngredient = (ingredientIndex: number) => {
+    setEditDraft((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        ingredients: current.ingredients.filter(
+          (_ingredient, currentIndex) => currentIndex !== ingredientIndex,
+        ),
+      };
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedEntry || !editDraft || isSavingEdit) {
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      await onUpdateFoodLog(selectedEntry.id, buildFoodLogPatchPayload(editDraft));
+      setIsEditModalOpen(false);
+      setEditDraft(null);
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : 'Unable to update this saved favorite right now.';
+      window.alert(message);
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -68,26 +181,25 @@ export const Explorer: React.FC<ExplorerProps> = ({
               Food Log
             </span>
             <h1 className="font-serif-brand text-4xl font-bold text-[#4A453E] md:text-5xl">
-              My Food Log
+              Saved Favorites
             </h1>
             <p className="max-w-2xl text-sm leading-7 text-[#4A453E]/60 md:text-base">
-              Food Log is your saved collection of meal analyses. It only includes items you
-              explicitly save, not your complete eating history. Meal timestamps now reflect when
-              the meal happened, while save metadata stays attached to each record for audit and
-              idempotency.
+              Food Log is your saved collection of meal analyses. Think of it as a favorites shelf
+              for analyses you want to keep and refine over time, not a full eating diary. The
+              collection is organized around when each favorite was last saved or edited.
             </p>
           </div>
 
           <div className="mb-12 grid grid-cols-1 gap-4 md:grid-cols-3">
             <SummaryCard
-              label="Saved Analyses"
-              value={String(logEntries.length)}
+              label="Saved Favorites"
+              value={String(orderedEntries.length)}
               unit="items"
               accent
             />
             <SummaryCard
-              label="Saved This Week"
-              value={String(collectionStats.savedThisWeek)}
+              label="Updated This Week"
+              value={String(collectionStats.updatedThisWeek)}
               unit="items"
             />
             <SummaryCard
@@ -102,16 +214,17 @@ export const Explorer: React.FC<ExplorerProps> = ({
               <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
                 Saved Collection
               </h2>
-              {logEntries.length > 0 && (
+              {orderedEntries.length > 0 && (
                 <span className="text-[11px] font-semibold text-[#4A453E]/35">
-                  Sorted by meal time, newest first
+                  Sorted by latest save or edit
                 </span>
               )}
             </div>
 
-            {logEntries.length > 0 ? (
-              logEntries.map((entry) => {
+            {orderedEntries.length > 0 ? (
+              orderedEntries.map((entry) => {
                 const isActive = selectedEntry?.id === entry.id;
+                const savedMoment = formatSavedMoment(entry.savedAt);
 
                 return (
                   <button
@@ -135,7 +248,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
                     <div className="min-w-0 flex-1 md:px-6">
                       <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-[#4A453E]/30">
-                        Meal {entry.date} / {entry.time}
+                        Updated {savedMoment.date} / {savedMoment.time}
                       </span>
                       <h4 className="truncate text-lg font-bold text-[#4A453E]">{entry.name}</h4>
                       <p className="mt-1 truncate text-xs text-[#4A453E]/50">{entry.description}</p>
@@ -171,7 +284,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                 </div>
                 <p className="text-base font-bold text-[#4A453E]/45">Nothing in Food Log yet.</p>
                 <p className="mt-2 text-sm text-[#4A453E]/35">
-                  Run an analysis first, then click Save. Only saved favorites will appear in Food Log.
+                  Save an analysis first. Food Log keeps only the results you choose to keep.
                 </p>
               </div>
             )}
@@ -185,10 +298,10 @@ export const Explorer: React.FC<ExplorerProps> = ({
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#FF8A65]">
-                  Saved Analysis
+                  Saved Favorite
                 </span>
                 <p className="mt-2 text-[11px] font-semibold text-[#4A453E]/35">
-                  Meal logged for {selectedEntry.date} / {selectedEntry.time}
+                  Last updated {selectedEntrySavedMoment?.date} / {selectedEntrySavedMoment?.time}
                 </p>
               </div>
               <button
@@ -256,8 +369,8 @@ export const Explorer: React.FC<ExplorerProps> = ({
                 </div>
               ) : (
                 <div className="rounded-[24px] border border-dashed border-[#4A453E]/10 bg-white/50 px-5 py-4 text-sm text-[#4A453E]/55">
-                  Macro nutrients were not recorded for this saved analysis. Food Log currently stores
-                  the calorie estimate and ingredient-level breakdown only.
+                  Macro nutrients were not recorded for this saved favorite. Food Log currently
+                  stores the calorie estimate and ingredient-level breakdown only.
                 </div>
               )}
             </div>
@@ -265,9 +378,17 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
           <div className="flex flex-col gap-3 border-t border-[#4A453E]/05 bg-white p-6 md:p-8">
             <div className="rounded-[20px] border border-[#4A453E]/8 bg-[#FFFDF5] px-4 py-3 text-sm leading-6 text-[#4A453E]/55">
-              Food Log keeps edits, deletes, and re-saves as explicit record state. Re-saving a new
-              analysis no longer overwrites older entries by meal text alone.
+              Food Log treats saved analyses like favorites. Editing this card refines the saved
+              version in place instead of creating a duplicate record.
             </div>
+            <button
+              type="button"
+              onClick={handleOpenEditModal}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-[#FF8A65]/15 bg-[#FF8A65] text-sm font-bold text-white shadow-lg shadow-[#FF8A65]/20 transition-all hover:bg-[#FF8A65]/90"
+            >
+              <span className="material-symbols-outlined text-lg">edit</span>
+              Edit Saved Favorite
+            </button>
             <button
               type="button"
               onClick={() => void handleDeleteSelectedEntry()}
@@ -279,7 +400,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
               }`}
             >
               <span className="material-symbols-outlined text-lg">delete</span>
-              {deletingEntryId === selectedEntry.id ? 'Removing...' : 'Remove from Food Log'}
+              {deletingEntryId === selectedEntry.id ? 'Removing...' : 'Remove Favorite'}
             </button>
             <button
               type="button"
@@ -292,10 +413,159 @@ export const Explorer: React.FC<ExplorerProps> = ({
               }`}
             >
               <span className="material-symbols-outlined text-lg">forum</span>
-              {selectedEntry.sessionId ? 'Open Related Chat' : 'Related Chat Deleted'}
+              {selectedEntry.sessionId ? 'Open Source Chat' : 'Source Chat Deleted'}
             </button>
           </div>
         </aside>
+      )}
+
+      {isEditModalOpen && editDraft && selectedEntry && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 px-6 py-8"
+          onClick={handleCloseEditModal}
+        >
+          <div
+            className="custom-scrollbar max-h-full w-full max-w-3xl overflow-y-auto rounded-[28px] border border-[#4A453E]/10 bg-[#FFFDF5] p-6 shadow-[0_28px_70px_rgba(74,69,62,0.18)] md:p-8"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-bold text-[#4A453E]">Edit Saved Favorite</h3>
+                <p className="mt-1 text-sm text-[#4A453E]/55">
+                  Update the saved card without creating a new Food Log entry.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseEditModal}
+                disabled={isSavingEdit}
+                className="rounded-full p-1 text-[#4A453E]/20 transition-colors hover:bg-[#4A453E]/5 hover:text-[#4A453E]"
+              >
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <label className="flex flex-col gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/40">
+                  Meal Name
+                </span>
+                <input
+                  type="text"
+                  value={editDraft.name}
+                  onChange={(event) => handleEditFieldChange('name', event.target.value)}
+                  autoFocus
+                  className="rounded-[18px] border border-[#4A453E]/10 bg-white px-4 py-3 text-sm font-medium text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
+                />
+              </label>
+              <label className="flex flex-col gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/40">
+                  Total Calories
+                </span>
+                <input
+                  type="text"
+                  value={editDraft.calories}
+                  onChange={(event) => handleEditFieldChange('calories', event.target.value)}
+                  placeholder="260 kcal"
+                  className="rounded-[18px] border border-[#4A453E]/10 bg-white px-4 py-3 text-sm font-medium text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
+                />
+              </label>
+            </div>
+
+            <label className="mt-5 flex flex-col gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/40">
+                Description
+              </span>
+              <textarea
+                value={editDraft.description}
+                onChange={(event) => handleEditFieldChange('description', event.target.value)}
+                rows={4}
+                className="custom-scrollbar rounded-[18px] border border-[#4A453E]/10 bg-white px-4 py-3 text-sm leading-6 text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
+              />
+            </label>
+
+            <div className="mt-6 rounded-[24px] border border-[#4A453E]/8 bg-white/70 p-5">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-sm font-bold text-[#4A453E]">Ingredient Breakdown</h4>
+                  <p className="mt-1 text-xs text-[#4A453E]/45">
+                    Update each ingredient line or add your own corrected breakdown.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddIngredient}
+                  className="inline-flex h-10 items-center gap-2 rounded-full border border-[#4A453E]/10 bg-[#FFFDF5] px-4 text-sm font-bold text-[#4A453E]/75 transition-colors hover:border-[#FF8A65]/20 hover:text-[#FF8A65]"
+                >
+                  <span className="material-symbols-outlined text-[18px]">add</span>
+                  Add Ingredient
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {editDraft.ingredients.map((ingredient, index) => (
+                  <div
+                    key={`edit-ingredient-${index}`}
+                    className="grid grid-cols-1 gap-3 rounded-[20px] border border-[#4A453E]/8 bg-[#FFFDF5] p-4 md:grid-cols-[1.3fr_1fr_1fr_auto]"
+                  >
+                    <input
+                      type="text"
+                      value={ingredient.name}
+                      onChange={(event) => handleIngredientChange(index, 'name', event.target.value)}
+                      placeholder="Ingredient"
+                      className="rounded-[14px] border border-[#4A453E]/10 bg-white px-3 py-2.5 text-sm text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
+                    />
+                    <input
+                      type="text"
+                      value={ingredient.portion}
+                      onChange={(event) => handleIngredientChange(index, 'portion', event.target.value)}
+                      placeholder="Portion"
+                      className="rounded-[14px] border border-[#4A453E]/10 bg-white px-3 py-2.5 text-sm text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
+                    />
+                    <input
+                      type="text"
+                      value={ingredient.energy}
+                      onChange={(event) => handleIngredientChange(index, 'energy', event.target.value)}
+                      placeholder="Energy"
+                      className="rounded-[14px] border border-[#4A453E]/10 bg-white px-3 py-2.5 text-sm text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveIngredient(index)}
+                      className="inline-flex h-11 items-center justify-center rounded-[14px] border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-500 transition-colors hover:bg-red-100"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                {editDraft.ingredients.length === 0 && (
+                  <div className="rounded-[20px] border border-dashed border-[#4A453E]/10 bg-[#FFFDF5] px-4 py-6 text-center text-sm text-[#4A453E]/45">
+                    Add at least one ingredient before saving.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleCloseEditModal}
+                disabled={isSavingEdit}
+                className="rounded-[14px] border border-[#4A453E]/10 bg-white px-4 py-2.5 text-sm font-semibold text-[#4A453E]/55 transition-colors hover:bg-[#F7F3E9] disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSaveEdit()}
+                disabled={isSavingEdit}
+                className="rounded-[14px] bg-[#FF8A65] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#FF8A65]/20 transition-colors hover:bg-[#FF8A65]/90 disabled:cursor-wait disabled:opacity-80"
+              >
+                {isSavingEdit ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -404,7 +674,7 @@ const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({ compact = false }) 
         <>
           <p className="mt-3 text-sm font-semibold text-[#4A453E]/55">No photo available</p>
           <p className="mt-1 text-xs text-[#4A453E]/35">
-            This saved analysis was stored without an image.
+            This saved favorite was stored without an image.
           </p>
         </>
       )}
@@ -412,12 +682,53 @@ const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({ compact = false }) 
   </div>
 );
 
+function buildEditDraft(entry: FoodLogEntry): FoodLogEditDraft {
+  return {
+    name: entry.name,
+    description: entry.description,
+    calories: entry.calories,
+    ingredients: entry.breakdown.map((item) => ({ ...item })),
+  };
+}
+
+function buildFoodLogPatchPayload(draft: FoodLogEditDraft): FoodLogPatchInput {
+  const ingredients = draft.ingredients.map((ingredient, index) => ({
+    name: normalizeRequiredText(ingredient.name, `Ingredient ${index + 1} name`),
+    portion: normalizeRequiredText(ingredient.portion, `Ingredient ${index + 1} portion`),
+    energy: normalizeEnergyText(ingredient.energy, `Ingredient ${index + 1} energy`),
+  }));
+
+  if (ingredients.length === 0) {
+    throw new Error('Add at least one ingredient before saving.');
+  }
+
+  return {
+    resultTitle: normalizeRequiredText(draft.name, 'Meal name'),
+    resultDescription: normalizeRequiredText(draft.description, 'Description'),
+    totalCalories: normalizeEnergyText(draft.calories, 'Total calories'),
+    ingredients,
+  };
+}
+
+function normalizeRequiredText(value: string, fieldLabel: string): string {
+  const normalized = value.trim().replace(/\s+/g, ' ');
+  if (!normalized) {
+    throw new Error(`${fieldLabel} cannot be empty.`);
+  }
+  return normalized;
+}
+
+function normalizeEnergyText(value: string, fieldLabel: string): string {
+  const normalized = normalizeRequiredText(value, fieldLabel);
+  return /\bkcal\b/i.test(normalized) ? normalized : `${normalized} kcal`;
+}
+
 function hasMacroData(entry: FoodLogEntry): boolean {
   return Boolean(entry.protein || entry.carbs || entry.fat);
 }
 
 function buildCollectionStats(logEntries: FoodLogEntry[]): {
-  savedThisWeek: number;
+  updatedThisWeek: number;
   chatLinked: number;
 } {
   const now = new Date();
@@ -425,7 +736,7 @@ function buildCollectionStats(logEntries: FoodLogEntry[]): {
   windowStart.setHours(0, 0, 0, 0);
   windowStart.setDate(windowStart.getDate() - 6);
 
-  let savedThisWeek = 0;
+  let updatedThisWeek = 0;
   let chatLinked = 0;
 
   logEntries.forEach((entry) => {
@@ -435,13 +746,44 @@ function buildCollectionStats(logEntries: FoodLogEntry[]): {
 
     const savedAt = parseSavedAt(entry.savedAt);
     if (savedAt && savedAt >= windowStart) {
-      savedThisWeek += 1;
+      updatedThisWeek += 1;
     }
   });
 
   return {
-    savedThisWeek,
+    updatedThisWeek,
     chatLinked,
+  };
+}
+
+function sortFoodLogEntries(logEntries: FoodLogEntry[]): FoodLogEntry[] {
+  return [...logEntries].sort((left, right) => (
+    resolveSortTimestamp(right).getTime() - resolveSortTimestamp(left).getTime()
+  ));
+}
+
+function resolveSortTimestamp(entry: FoodLogEntry): Date {
+  return parseSavedAt(entry.savedAt) ?? new Date(0);
+}
+
+function formatSavedMoment(value: string | undefined): { date: string; time: string } {
+  const timestamp = parseSavedAt(value);
+  if (!timestamp) {
+    return {
+      date: '--',
+      time: '--:--',
+    };
+  }
+
+  return {
+    date: timestamp.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    }),
+    time: timestamp.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
   };
 }
 
