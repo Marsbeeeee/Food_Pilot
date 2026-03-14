@@ -133,3 +133,16 @@ export interface FoodLogListParams {
   dateTo?: string;
   meal?: string;
 }
+
+export interface FoodLogSaveInput {
+  sourceType: 'estimate_api' | 'chat_message';
+  mealDescription: string;
+  resultTitle: string;
+  resultConfidence?: string;
+  resultDescription: string;
+  totalCalories: string;
+  ingredients: IngredientResult[];
+  sessionId?: string | number;
+  sourceMessageId?: string | number;
+  assistantSuggestion?: string;
+}

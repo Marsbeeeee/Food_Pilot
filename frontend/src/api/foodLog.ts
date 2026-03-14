@@ -1,5 +1,5 @@
 import { clearSession, getStoredToken } from './auth';
-import { FoodLogEntry, FoodLogListParams } from '../types/types';
+import { FoodLogEntry, FoodLogListParams, FoodLogSaveInput } from '../types/types';
 
 const FOOD_LOG_BASE_URL = 'http://localhost:8000/food-logs';
 
@@ -16,6 +16,13 @@ export class FoodLogApiError extends Error {
 export async function listFoodLogs(params?: FoodLogListParams): Promise<FoodLogEntry[]> {
   const query = buildQueryString(params);
   return requestJson<FoodLogEntry[]>(query ? `?${query}` : '');
+}
+
+export async function saveFoodLogEntry(payload: FoodLogSaveInput): Promise<FoodLogEntry> {
+  return requestJson<FoodLogEntry>('', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 async function requestJson<T = unknown>(endpoint: string, init?: RequestInit): Promise<T> {

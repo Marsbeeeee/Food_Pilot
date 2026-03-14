@@ -10,6 +10,7 @@ import {
   renameChatSession,
   sendChatMessage,
 } from '../api/chat';
+import { FoodLogApiError, saveFoodLogEntry } from '../api/foodLog';
 import { ChatSession, Message } from '../types/types';
 
 interface WorkspaceProps {
@@ -36,6 +37,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const [renamingTitle, setRenamingTitle] = useState('');
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [isLoadingSessionId, setIsLoadingSessionId] = useState<string | null>(null);
+  const [savingFoodLogMessageIds, setSavingFoodLogMessageIds] = useState<string[]>([]);
+  const [savedFoodLogMessageIds, setSavedFoodLogMessageIds] = useState<string[]>([]);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -255,6 +258,43 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     }
   };
 
+  const handleSaveFoodLogEntry = async (
+    sessionId: string,
+    message: Message,
+    mealDescription: string,
+  ) => {
+    if (!message.id || !message.title || !message.description || !message.total || !message.items?.length) {
+      return;
+    }
+
+    setSavingFoodLogMessageIds((current) => (
+      current.includes(message.id as string) ? current : [...current, message.id as string]
+    ));
+
+    try {
+      await saveFoodLogEntry({
+        sourceType: 'chat_message',
+        mealDescription,
+        resultTitle: message.title,
+        resultConfidence: message.confidence,
+        resultDescription: message.description,
+        totalCalories: message.total,
+        ingredients: message.items,
+        sessionId: Number(sessionId),
+        sourceMessageId: Number(message.id),
+        assistantSuggestion: message.content,
+      });
+      setSavedFoodLogMessageIds((current) => (
+        current.includes(message.id as string) ? current : [...current, message.id as string]
+      ));
+      await refreshFoodLog();
+    } catch (error) {
+      handleFoodLogError(error, 'Unable to save this analysis to Food Log right now.');
+    } finally {
+      setSavingFoodLogMessageIds((current) => current.filter((item) => item !== message.id));
+    }
+  };
+
   return (
     <div className="relative flex h-full min-h-0 flex-1 overflow-hidden">
       <aside className="flex min-h-0 w-72 shrink-0 flex-col border-r border-[#4A453E]/5 bg-[#FFFDF5]">
@@ -383,64 +423,99 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             </div>
           ) : (
             activeSession.messages.map((message, index) => (
-              <div key={message.id ?? index} className={`flex items-start gap-5 ${message.role === 'user' ? 'justify-end' : ''}`}>
-                {message.role === 'assistant' && (
-                  <div className="mt-1 flex size-10 shrink-0 items-center justify-center rounded-2xl border border-[#4A453E]/10 bg-white shadow-sm">
-                    <span className="material-symbols-outlined text-[22px] text-[#FF8A65]">auto_awesome</span>
-                  </div>
-                )}
+              (() => {
+                const mealDescription = message.isResult
+                  ? resolveMealDescription(activeSession.messages, index, message)
+                  : null;
+                const isSavedToFoodLog = Boolean(message.id && savedFoodLogMessageIds.includes(message.id));
+                const isSavingToFoodLog = Boolean(message.id && savingFoodLogMessageIds.includes(message.id));
 
-                <div className={`flex max-w-[95%] flex-col gap-3 ${message.role === 'user' ? 'items-end max-w-[80%]' : 'items-start'}`}>
-                  {message.isResult ? (
-                    <div className="w-full overflow-hidden rounded-[32px] border border-[#4A453E]/5 bg-white shadow-sm">
-                      <div className="border-b border-[#4A453E]/5 p-8">
-                        <div className="mb-4 flex items-center justify-between">
-                          <h3 className="font-serif-brand text-2xl font-bold italic text-[#4A453E]">{message.title}</h3>
-                          <span className="rounded-full border border-[#81C784]/10 bg-[#81C784]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#81C784]">
-                            {message.confidence}
-                          </span>
+                return (
+                  <div key={message.id ?? index} className={`flex items-start gap-5 ${message.role === 'user' ? 'justify-end' : ''}`}>
+                    {message.role === 'assistant' && (
+                      <div className="mt-1 flex size-10 shrink-0 items-center justify-center rounded-2xl border border-[#4A453E]/10 bg-white shadow-sm">
+                        <span className="material-symbols-outlined text-[22px] text-[#FF8A65]">auto_awesome</span>
+                      </div>
+                    )}
+
+                    <div className={`flex max-w-[95%] flex-col gap-3 ${message.role === 'user' ? 'items-end max-w-[80%]' : 'items-start'}`}>
+                      {message.isResult ? (
+                        <div className="w-full overflow-hidden rounded-[32px] border border-[#4A453E]/5 bg-white shadow-sm">
+                          <div className="border-b border-[#4A453E]/5 p-8">
+                            <div className="mb-4 flex items-center justify-between">
+                              <h3 className="font-serif-brand text-2xl font-bold italic text-[#4A453E]">{message.title}</h3>
+                              <span className="rounded-full border border-[#81C784]/10 bg-[#81C784]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#81C784]">
+                                {message.confidence}
+                              </span>
+                            </div>
+                            <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">{message.description}</p>
+                          </div>
+                          <div className="p-0">
+                            <table className="w-full text-left">
+                              <thead className="bg-[#F7F3E9]/30 text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/40">
+                                <tr>
+                                  <th className="px-8 py-4">Ingredient</th>
+                                  <th className="px-8 py-4">Portion</th>
+                                  <th className="px-8 py-4 text-right">Estimated Energy</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-[#4A453E]/5 text-[14px]">
+                                {message.items?.map((item, itemIndex) => (
+                                  <tr key={itemIndex} className="transition-colors hover:bg-[#F7F3E9]/10">
+                                    <td className="px-8 py-4 font-bold text-[#4A453E]">{item.name}</td>
+                                    <td className="px-8 py-4 font-medium text-[#4A453E]/50">{item.portion}</td>
+                                    <td className="px-8 py-4 text-right font-bold text-[#4A453E]">{item.energy}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot className="border-t border-[#4A453E]/10 bg-[#FFFDF5] font-bold">
+                                <tr>
+                                  <td className="px-8 py-6 text-lg text-[#4A453E]" colSpan={2}>Estimated Total</td>
+                                  <td className="px-8 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{message.total}</td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                          <div className="flex justify-end border-t border-[#4A453E]/5 bg-white px-8 py-5">
+                            <button
+                              type="button"
+                              onClick={() => mealDescription && void handleSaveFoodLogEntry(activeSession.id, message, mealDescription)}
+                              disabled={!mealDescription || isSavedToFoodLog || isSavingToFoodLog}
+                              className={`inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-bold transition-all ${
+                                isSavedToFoodLog
+                                  ? 'cursor-default border border-[#81C784]/20 bg-[#81C784]/10 text-[#4E9E63]'
+                                  : isSavingToFoodLog
+                                    ? 'cursor-wait border border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/50'
+                                    : 'border border-[#FF8A65]/15 bg-[#FF8A65] text-white shadow-lg shadow-[#FF8A65]/15 hover:bg-[#FF8A65]/90'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[18px]">
+                                {isSavedToFoodLog ? 'bookmark_added' : 'bookmark_add'}
+                              </span>
+                              <span>
+                                {isSavedToFoodLog
+                                  ? 'Saved to Food Log'
+                                  : isSavingToFoodLog
+                                    ? 'Saving...'
+                                    : 'Save to Food Log'}
+                              </span>
+                            </button>
+                          </div>
                         </div>
-                        <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">{message.description}</p>
-                      </div>
-                      <div className="p-0">
-                        <table className="w-full text-left">
-                          <thead className="bg-[#F7F3E9]/30 text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/40">
-                            <tr>
-                              <th className="px-8 py-4">Ingredient</th>
-                              <th className="px-8 py-4">Portion</th>
-                              <th className="px-8 py-4 text-right">Estimated Energy</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-[#4A453E]/5 text-[14px]">
-                            {message.items?.map((item, itemIndex) => (
-                              <tr key={itemIndex} className="transition-colors hover:bg-[#F7F3E9]/10">
-                                <td className="px-8 py-4 font-bold text-[#4A453E]">{item.name}</td>
-                                <td className="px-8 py-4 font-medium text-[#4A453E]/50">{item.portion}</td>
-                                <td className="px-8 py-4 text-right font-bold text-[#4A453E]">{item.energy}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                          <tfoot className="border-t border-[#4A453E]/10 bg-[#FFFDF5] font-bold">
-                            <tr>
-                              <td className="px-8 py-6 text-lg text-[#4A453E]" colSpan={2}>Estimated Total</td>
-                              <td className="px-8 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{message.total}</td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
+                      ) : (
+                        <div className={`rounded-[24px] px-6 py-4 text-[15px] leading-relaxed shadow-sm border ${
+                          message.role === 'user'
+                            ? 'bg-[#F7F3E9] text-[#4A453E] border-[#4A453E]/5 rounded-tr-[4px]'
+                            : 'bg-white text-[#4A453E] border-[#4A453E]/8 rounded-tl-[4px]'
+                        }`}>
+                          {message.content}
+                        </div>
+                      )}
+                      <span className="px-1 text-[9px] font-bold uppercase tracking-widest text-[#4A453E]/20">{message.time || 'Just now'}</span>
                     </div>
-                  ) : (
-                    <div className={`rounded-[24px] px-6 py-4 text-[15px] leading-relaxed shadow-sm border ${
-                      message.role === 'user'
-                        ? 'bg-[#F7F3E9] text-[#4A453E] border-[#4A453E]/5 rounded-tr-[4px]'
-                        : 'bg-white text-[#4A453E] border-[#4A453E]/8 rounded-tl-[4px]'
-                    }`}>
-                      {message.content}
-                    </div>
-                  )}
-                  <span className="px-1 text-[9px] font-bold uppercase tracking-widest text-[#4A453E]/20">{message.time || 'Just now'}</span>
-                </div>
-              </div>
+                  </div>
+                );
+              })()
             ))
           )}
           {isTyping && (
@@ -540,6 +615,16 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 function handleChatError(error: unknown, fallbackMessage: string): void {
   console.error('Chat Error:', error);
   const message = error instanceof ChatApiError
+    ? error.message
+    : error instanceof Error
+      ? error.message
+      : fallbackMessage;
+  window.alert(message || fallbackMessage);
+}
+
+function handleFoodLogError(error: unknown, fallbackMessage: string): void {
+  console.error('Food Log Error:', error);
+  const message = error instanceof FoodLogApiError
     ? error.message
     : error instanceof Error
       ? error.message
@@ -655,6 +740,25 @@ function formatOptimisticTime(): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function resolveMealDescription(
+  messages: Message[],
+  resultIndex: number,
+  resultMessage: Message,
+): string | null {
+  for (let index = resultIndex - 1; index >= 0; index -= 1) {
+    const candidate = messages[index];
+    if (candidate.role === 'user' && candidate.content?.trim()) {
+      return candidate.content.trim();
+    }
+  }
+
+  if (resultMessage.title?.trim()) {
+    return resultMessage.title.trim();
+  }
+
+  return null;
 }
 
 function getSessionStatusLabel(

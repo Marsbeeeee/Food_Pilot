@@ -10,6 +10,7 @@ from backend.repositories.food_log_repository import (
     list_food_logs_by_session,
     list_food_logs_by_user,
     list_food_logs_by_user_recent,
+    save_food_log,
 )
 
 
@@ -232,6 +233,77 @@ class FoodLogRepositoryTests(unittest.TestCase):
             [entry["result_title"] for entry in session_logs],
             ["Meal one", "Meal three"],
         )
+
+    def test_save_food_log_overwrites_existing_chat_message_entry(self) -> None:
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO messages (
+                    session_id,
+                    user_id,
+                    role,
+                    message_type,
+                    content,
+                    result_title,
+                    result_confidence,
+                    result_description,
+                    result_items_json,
+                    result_total
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self.session_id,
+                    self.user_id,
+                    "assistant",
+                    "estimate_result",
+                    "Assistant suggestion",
+                    "Chicken Salad",
+                    "high",
+                    "First description",
+                    '[{"name":"Chicken","portion":"150g","energy":"240 kcal"}]',
+                    "240 kcal",
+                ),
+            )
+            source_message_id = cursor.lastrowid
+            conn.commit()
+
+            first_save = save_food_log(
+                conn,
+                self.user_id,
+                source_type="chat_message",
+                session_id=self.session_id,
+                source_message_id=source_message_id,
+                meal_description="chicken salad",
+                result_title="Chicken Salad",
+                result_description="First description",
+                total_calories="240 kcal",
+                ingredients=[],
+            )
+            second_save = save_food_log(
+                conn,
+                self.user_id,
+                source_type="chat_message",
+                session_id=self.session_id,
+                source_message_id=source_message_id,
+                meal_description="chicken salad with avocado",
+                result_title="Chicken Salad Updated",
+                result_description="Updated description",
+                total_calories="260 kcal",
+                ingredients=[],
+            )
+
+            cursor.execute("SELECT COUNT(*) AS total FROM food_logs WHERE user_id = ?", (self.user_id,))
+            total = cursor.fetchone()["total"]
+        finally:
+            conn.close()
+
+        self.assertEqual(total, 1)
+        self.assertEqual(first_save["id"], second_save["id"])
+        self.assertEqual(second_save["meal_description"], "chicken salad with avocado")
+        self.assertEqual(second_save["result_title"], "Chicken Salad Updated")
+        self.assertEqual(second_save["total_calories"], "260 kcal")
 
 
 if __name__ == "__main__":

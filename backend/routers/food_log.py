@@ -1,15 +1,16 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.dependencies.auth import get_current_user
 from backend.schemas.food_log import (
     FoodLogEntryOut,
     FoodLogListQuery,
+    FoodLogSaveRequest,
     serialize_food_log_entry,
 )
 from backend.schemas.user import UserOut
-from backend.services.food_log_service import list_food_logs_by_user
+from backend.services.food_log_service import list_food_logs_by_user, save_food_log
 
 
 router = APIRouter(prefix="/food-logs", tags=["food-logs"])
@@ -29,3 +30,30 @@ def list_food_log_entries(
         limit=filters.limit,
     )
     return [serialize_food_log_entry(entry) for entry in entries]
+
+
+@router.post("", response_model=FoodLogEntryOut, response_model_exclude_none=True)
+def save_food_log_entry(
+    request: FoodLogSaveRequest,
+    current_user: UserOut = Depends(get_current_user),
+) -> FoodLogEntryOut:
+    try:
+        entry = save_food_log(
+            current_user.id,
+            request.source_type,
+            meal_description=request.meal_description,
+            result_title=request.result_title,
+            result_description=request.result_description,
+            total_calories=request.total_calories,
+            ingredients=[item.model_dump() for item in request.ingredients],
+            session_id=request.session_id,
+            source_message_id=request.source_message_id,
+            result_confidence=request.result_confidence,
+            assistant_suggestion=request.assistant_suggestion,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return serialize_food_log_entry(entry)

@@ -88,6 +88,84 @@ def create_food_log(
     return food_log
 
 
+def save_food_log(
+    conn: sqlite3.Connection,
+    user_id: int,
+    *,
+    source_type: str,
+    meal_description: str,
+    result_title: str,
+    result_description: str,
+    total_calories: str,
+    ingredients: str | Sequence[dict[str, object]],
+    session_id: int | None = None,
+    source_message_id: int | None = None,
+    result_confidence: str | None = None,
+    assistant_suggestion: str | None = None,
+    logged_at: str | None = None,
+    created_at: str | None = None,
+    auto_commit: bool = True,
+) -> dict[str, object]:
+    existing_id = _get_food_log_id_by_source_message_id(conn, user_id, source_message_id)
+    if existing_id is None:
+        return create_food_log(
+            conn,
+            user_id,
+            source_type=source_type,
+            meal_description=meal_description,
+            result_title=result_title,
+            result_description=result_description,
+            total_calories=total_calories,
+            ingredients=ingredients,
+            session_id=session_id,
+            source_message_id=source_message_id,
+            result_confidence=result_confidence,
+            assistant_suggestion=assistant_suggestion,
+            logged_at=logged_at,
+            created_at=created_at,
+            auto_commit=auto_commit,
+        )
+
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE food_logs
+        SET
+            session_id = ?,
+            meal_description = ?,
+            logged_at = COALESCE(?, CURRENT_TIMESTAMP),
+            result_title = ?,
+            result_confidence = ?,
+            result_description = ?,
+            total_calories = ?,
+            ingredients_json = ?,
+            source_type = ?,
+            assistant_suggestion = ?
+        WHERE id = ? AND user_id = ?
+        """,
+        (
+            session_id,
+            meal_description,
+            logged_at,
+            result_title,
+            result_confidence,
+            result_description,
+            total_calories,
+            _serialize_ingredients(ingredients),
+            source_type,
+            assistant_suggestion,
+            existing_id,
+            user_id,
+        ),
+    )
+    if auto_commit:
+        conn.commit()
+    food_log = get_food_log_by_id(conn, existing_id, user_id)
+    if food_log is None:
+        raise LookupError("food log not found after save")
+    return food_log
+
+
 def get_food_log_by_id(
     conn: sqlite3.Connection,
     food_log_id: int,
@@ -216,3 +294,26 @@ def _escape_like_value(value: str) -> str:
         .replace("%", "\\%")
         .replace("_", "\\_")
     )
+
+
+def _get_food_log_id_by_source_message_id(
+    conn: sqlite3.Connection,
+    user_id: int,
+    source_message_id: int | None,
+) -> int | None:
+    if source_message_id is None:
+        return None
+
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT id
+        FROM food_logs
+        WHERE user_id = ? AND source_message_id = ?
+        """,
+        (user_id, source_message_id),
+    )
+    row = cursor.fetchone()
+    if row is None:
+        return None
+    return int(row["id"])

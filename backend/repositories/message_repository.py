@@ -66,7 +66,10 @@ def create_message(
     )
     if auto_commit:
         conn.commit()
-    return _get_message_by_id(conn, cursor.lastrowid, user_id)
+    message = get_message_by_id(conn, cursor.lastrowid, user_id)
+    if message is None:
+        raise LookupError("message not found after insert")
+    return message
 
 
 def list_messages_by_session(
@@ -123,11 +126,11 @@ def delete_messages_by_session(
     return cursor.rowcount
 
 
-def _get_message_by_id(
+def get_message_by_id(
     conn: sqlite3.Connection,
     message_id: int,
     user_id: int,
-) -> dict[str, object]:
+) -> dict[str, object] | None:
     cursor = conn.cursor()
     cursor.execute(
         """
@@ -153,9 +156,8 @@ def _get_message_by_id(
     )
     row = cursor.fetchone()
     if row is None:
-        raise LookupError("message not found after insert")
+        return None
     return dict(row)
-
 
 def _get_table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
     cursor = conn.cursor()

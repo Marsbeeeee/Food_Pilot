@@ -96,6 +96,77 @@ class FoodLogListQuery(BaseModel):
         return value
 
 
+class FoodLogSaveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    source_type: str = Field(
+        validation_alias=AliasChoices("source_type", "sourceType"),
+        serialization_alias="sourceType",
+    )
+    meal_description: str = Field(
+        validation_alias=AliasChoices("meal_description", "mealDescription"),
+        serialization_alias="mealDescription",
+    )
+    result_title: str = Field(
+        validation_alias=AliasChoices("result_title", "resultTitle"),
+        serialization_alias="resultTitle",
+    )
+    result_confidence: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("result_confidence", "resultConfidence"),
+        serialization_alias="resultConfidence",
+    )
+    result_description: str = Field(
+        validation_alias=AliasChoices("result_description", "resultDescription"),
+        serialization_alias="resultDescription",
+    )
+    total_calories: str = Field(
+        validation_alias=AliasChoices("total_calories", "totalCalories", "total"),
+        serialization_alias="totalCalories",
+    )
+    ingredients: list[EstimateItem]
+    session_id: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("session_id", "sessionId"),
+        serialization_alias="sessionId",
+    )
+    source_message_id: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("source_message_id", "sourceMessageId"),
+        serialization_alias="sourceMessageId",
+    )
+    assistant_suggestion: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("assistant_suggestion", "assistantSuggestion"),
+        serialization_alias="assistantSuggestion",
+    )
+
+    @field_validator(
+        "source_type",
+        "meal_description",
+        "result_title",
+        "result_description",
+        "total_calories",
+        "assistant_suggestion",
+    )
+    @classmethod
+    def validate_text_fields(cls, value: str | None, info) -> str | None:
+        if value is None:
+            return None
+
+        normalized = " ".join(value.strip().split())
+        if normalized:
+            return normalized
+        raise ValueError(f"{info.field_name} cannot be empty")
+
+    @field_validator("session_id", "source_message_id")
+    @classmethod
+    def validate_positive_ids(cls, value: int | None) -> int | None:
+        if value is not None and value <= 0:
+            raise ValueError("identifier must be greater than 0")
+        return value
+
+
 def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
     timestamp = _resolve_timestamp(entry)
 
