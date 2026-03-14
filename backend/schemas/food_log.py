@@ -37,6 +37,10 @@ class FoodLogEntryOut(BaseModel):
     protein: str | None = None
     carbs: str | None = None
     fat: str | None = None
+    saved_at: str = Field(
+        validation_alias=AliasChoices("saved_at", "savedAt"),
+        serialization_alias="savedAt",
+    )
     session_id: str | None = Field(
         default=None,
         validation_alias=AliasChoices("session_id", "sessionId"),
@@ -168,7 +172,8 @@ class FoodLogSaveRequest(BaseModel):
 
 
 def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
-    timestamp = _resolve_saved_timestamp(entry)
+    saved_at = _resolve_saved_at_value(entry)
+    timestamp = _parse_saved_timestamp(saved_at)
 
     return FoodLogEntryOut.model_validate(
         {
@@ -179,6 +184,7 @@ def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
             "date": _format_entry_date(timestamp),
             "time": _format_entry_time(timestamp),
             "breakdown": parse_food_log_items(entry["ingredients_json"]),
+            "saved_at": saved_at,
             "session_id": (
                 str(entry["session_id"])
                 if entry.get("session_id") is not None
@@ -198,22 +204,23 @@ def parse_food_log_items(value: object) -> list[EstimateItem]:
     return [EstimateItem.model_validate(item) for item in parsed]
 
 
-def _resolve_saved_timestamp(entry: dict[str, object]) -> datetime:
+def _resolve_saved_at_value(entry: dict[str, object]) -> str:
     candidates = (
         entry.get("updated_at"),
         entry.get("created_at"),
         entry.get("logged_at"),
     )
     for value in candidates:
-        if not isinstance(value, str) or not value.strip():
-            continue
+        if isinstance(value, str) and value.strip():
+            return value
+    return "1970-01-01 00:00:00"
 
-        try:
-            return datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            continue
 
-    return datetime(1970, 1, 1, 0, 0, 0)
+def _parse_saved_timestamp(value: str) -> datetime:
+    try:
+        return datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return datetime(1970, 1, 1, 0, 0, 0)
 
 
 def _format_entry_date(timestamp: datetime) -> str:

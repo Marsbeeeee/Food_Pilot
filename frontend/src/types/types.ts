@@ -118,6 +118,7 @@ export interface FoodLogEntry {
   calories: string;
   date: string;
   time: string;
+  savedAt: string;
   breakdown: IngredientResult[];
   image?: string;
   protein?: string;

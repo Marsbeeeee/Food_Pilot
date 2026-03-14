@@ -17,6 +17,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
     logEntries.length > 0 ? logEntries[0] : null,
   );
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const collectionStats = buildCollectionStats(logEntries);
 
   useEffect(() => {
     if (logEntries.length === 0) {
@@ -77,12 +78,22 @@ export const Explorer: React.FC<ExplorerProps> = ({
             </p>
           </div>
 
-          <div className="mb-12 grid grid-cols-1 gap-4 md:max-w-sm">
+          <div className="mb-12 grid grid-cols-1 gap-4 md:grid-cols-3">
             <SummaryCard
               label="Saved Analyses"
               value={String(logEntries.length)}
               unit="items"
               accent
+            />
+            <SummaryCard
+              label="Saved This Week"
+              value={String(collectionStats.savedThisWeek)}
+              unit="items"
+            />
+            <SummaryCard
+              label="Chat-Linked"
+              value={String(collectionStats.chatLinked)}
+              unit="items"
             />
           </div>
 
@@ -93,7 +104,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
               </h2>
               {logEntries.length > 0 && (
                 <span className="text-[11px] font-semibold text-[#4A453E]/35">
-                  Most recently saved or re-saved items are shown first
+                  Sorted by last save time, newest first
                 </span>
               )}
             </div>
@@ -404,4 +415,43 @@ const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({ compact = false }) 
 
 function hasMacroData(entry: FoodLogEntry): boolean {
   return Boolean(entry.protein || entry.carbs || entry.fat);
+}
+
+function buildCollectionStats(logEntries: FoodLogEntry[]): {
+  savedThisWeek: number;
+  chatLinked: number;
+} {
+  const now = new Date();
+  const windowStart = new Date(now);
+  windowStart.setHours(0, 0, 0, 0);
+  windowStart.setDate(windowStart.getDate() - 6);
+
+  let savedThisWeek = 0;
+  let chatLinked = 0;
+
+  logEntries.forEach((entry) => {
+    if (entry.sessionId) {
+      chatLinked += 1;
+    }
+
+    const savedAt = parseSavedAt(entry.savedAt);
+    if (savedAt && savedAt >= windowStart) {
+      savedThisWeek += 1;
+    }
+  });
+
+  return {
+    savedThisWeek,
+    chatLinked,
+  };
+}
+
+function parseSavedAt(value: string | undefined): Date | null {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.replace(' ', 'T');
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
