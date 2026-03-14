@@ -193,6 +193,7 @@ def rename_session(
 def delete_session(user_id: int, session_id: int) -> bool:
     conn = get_db_connection()
     try:
+        # Chat sessions are deleted permanently rather than soft-deleted.
         return delete_session_record(conn, session_id, user_id)
     finally:
         conn.close()

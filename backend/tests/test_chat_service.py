@@ -343,6 +343,8 @@ class ChatServiceTests(unittest.TestCase):
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) AS total FROM chat_sessions WHERE id = ?", (session_id,))
+            session_total = cursor.fetchone()["total"]
             cursor.execute("SELECT COUNT(*) AS total FROM messages WHERE session_id = ?", (session_id,))
             message_total = cursor.fetchone()["total"]
         finally:
@@ -350,6 +352,7 @@ class ChatServiceTests(unittest.TestCase):
 
         self.assertTrue(deleted)
         self.assertIsNone(missing_detail)
+        self.assertEqual(session_total, 0)
         self.assertEqual(message_total, 0)
 
     def test_missing_or_foreign_session_returns_none(self) -> None:

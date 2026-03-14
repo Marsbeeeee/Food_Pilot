@@ -98,6 +98,9 @@ def delete_session(
     user_id: int,
 ) -> bool:
     cursor = conn.cursor()
+    # Chat session deletion is intentionally a hard delete. Removing a session
+    # should permanently delete the row and let ON DELETE CASCADE clean up
+    # dependent messages.
     cursor.execute(
         """
         DELETE FROM chat_sessions

@@ -182,9 +182,17 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
   const handleDeleteSession = async (sessionId: string) => {
     const shouldDelete = window.confirm(
-      'Delete this chat? Saved Food Log entries will remain, but they will no longer be able to open this chat.',
+      'Delete this chat permanently? This action cannot be undone. Saved Food Log entries will remain, but they will no longer be able to open this chat.',
     );
     if (!shouldDelete) {
+      setIsMenuOpen(false);
+      return;
+    }
+
+    const confirmedIrreversibleDelete = window.confirm(
+      'Confirm permanent deletion. This chat will be deleted permanently and cannot be recovered.',
+    );
+    if (!confirmedIrreversibleDelete) {
       setIsMenuOpen(false);
       return;
     }
