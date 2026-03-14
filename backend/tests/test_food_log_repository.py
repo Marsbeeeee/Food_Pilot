@@ -6,6 +6,7 @@ from backend.database.connection import get_db_connection
 from backend.database.init_db import init_db
 from backend.repositories.food_log_repository import (
     create_food_log,
+    delete_food_log,
     get_food_log_by_id,
     list_food_logs_by_session,
     list_food_logs_by_user,
@@ -368,6 +369,42 @@ class FoodLogRepositoryTests(unittest.TestCase):
         finally:
             conn.close()
 
+        self.assertEqual(listed, [])
+        self.assertIsNone(fetched)
+
+    def test_delete_food_log_soft_deletes_entry_and_hides_it(self) -> None:
+        conn = get_db_connection()
+        try:
+            created = create_food_log(
+                conn,
+                self.user_id,
+                source_type="estimate_api",
+                meal_description="salmon bowl",
+                result_title="Salmon Bowl",
+                result_description="Description",
+                total_calories="520 kcal",
+                ingredients=[],
+                created_at="2026-03-14 09:00:00",
+            )
+
+            deleted = delete_food_log(conn, int(created["id"]), self.user_id)
+            deleted_again = delete_food_log(conn, int(created["id"]), self.user_id)
+            row = conn.execute(
+                """
+                SELECT deleted_at
+                FROM food_logs
+                WHERE id = ?
+                """,
+                (int(created["id"]),),
+            ).fetchone()
+            listed = list_food_logs_by_user(conn, self.user_id)
+            fetched = get_food_log_by_id(conn, int(created["id"]), self.user_id)
+        finally:
+            conn.close()
+
+        self.assertTrue(deleted)
+        self.assertFalse(deleted_again)
+        self.assertIsNotNone(row["deleted_at"])
         self.assertEqual(listed, [])
         self.assertIsNone(fetched)
 

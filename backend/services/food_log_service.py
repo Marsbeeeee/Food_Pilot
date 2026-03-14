@@ -5,6 +5,7 @@ from backend.database.connection import get_db_connection
 from backend.repositories.message_repository import get_message_by_id as get_message_by_id_record
 from backend.repositories.food_log_repository import (
     create_food_log as create_food_log_record,
+    delete_food_log as delete_food_log_record,
     get_food_log_by_id as get_food_log_by_id_record,
     list_food_logs_by_session as list_food_logs_by_session_record,
     list_food_logs_by_user as list_food_logs_by_user_record,
@@ -171,6 +172,34 @@ def get_food_log_by_id(user_id: int, food_log_id: int) -> dict[str, object] | No
         return get_food_log_by_id_record(conn, food_log_id, user_id)
     finally:
         conn.close()
+
+
+def delete_food_log(
+    user_id: int,
+    food_log_id: int,
+    *,
+    conn: sqlite3.Connection | None = None,
+    auto_commit: bool = True,
+) -> bool:
+    owns_connection = conn is None
+    active_conn = conn or get_db_connection()
+
+    try:
+        # Food Log deletion is soft-delete only. Default listing APIs keep
+        # deleted favorites hidden while preserving the row for future restore.
+        return delete_food_log_record(
+            active_conn,
+            food_log_id,
+            user_id,
+            auto_commit=auto_commit,
+        )
+    except Exception:
+        if owns_connection:
+            active_conn.rollback()
+        raise
+    finally:
+        if owns_connection:
+            active_conn.close()
 
 
 def list_food_logs_by_user(

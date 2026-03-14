@@ -5,12 +5,18 @@ import { FoodLogEntry } from '../types/types';
 interface ExplorerProps {
   logEntries: FoodLogEntry[];
   onNavigateToSession: (sessionId: string) => void;
+  onDeleteFoodLog: (entryId: string) => Promise<void>;
 }
 
-export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSession }) => {
+export const Explorer: React.FC<ExplorerProps> = ({
+  logEntries,
+  onNavigateToSession,
+  onDeleteFoodLog,
+}) => {
   const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(
     logEntries.length > 0 ? logEntries[0] : null,
   );
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   useEffect(() => {
     if (logEntries.length === 0) {
@@ -26,6 +32,31 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
       return logEntries.find((entry) => entry.id === current.id) ?? logEntries[0];
     });
   }, [logEntries]);
+
+  const handleDeleteSelectedEntry = async () => {
+    if (!selectedEntry || deletingEntryId) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      'Remove this saved analysis from Food Log? It will disappear from the default list, but you can save it again from a new analysis later.',
+    );
+    if (!shouldDelete) {
+      return;
+    }
+
+    setDeletingEntryId(selectedEntry.id);
+    try {
+      await onDeleteFoodLog(selectedEntry.id);
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : 'Unable to remove this saved analysis from Food Log right now.';
+      window.alert(message);
+    } finally {
+      setDeletingEntryId((current) => (current === selectedEntry.id ? null : current));
+    }
+  };
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-[#FFFDF5] lg:flex-row">
@@ -226,6 +257,19 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
               Food Log does not provide a standalone edit flow. If you want to change this saved
               analysis, reopen the chat or run a new analysis, then save again to overwrite it.
             </div>
+            <button
+              type="button"
+              onClick={() => void handleDeleteSelectedEntry()}
+              disabled={deletingEntryId === selectedEntry.id}
+              className={`flex h-12 w-full items-center justify-center gap-2 rounded-full border text-sm font-bold transition-all ${
+                deletingEntryId === selectedEntry.id
+                  ? 'cursor-wait border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/45'
+                  : 'border-red-200 bg-red-50 text-red-500 hover:bg-red-100'
+              }`}
+            >
+              <span className="material-symbols-outlined text-lg">delete</span>
+              {deletingEntryId === selectedEntry.id ? 'Removing...' : 'Remove from Food Log'}
+            </button>
             <button
               type="button"
               onClick={() => selectedEntry.sessionId && onNavigateToSession(selectedEntry.sessionId)}

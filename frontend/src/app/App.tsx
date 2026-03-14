@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { AuthApiError, clearSession, deleteCurrentAccount, restoreSession } from '../api/auth';
 import { buildFoodLogNavigationState } from './foodLogNavigation';
 import { getChatSession, listChatSessions } from '../api/chat';
-import { listFoodLogs } from '../api/foodLog';
+import { deleteFoodLogEntry, listFoodLogs } from '../api/foodLog';
 import { clearStoredProfile, loadStoredProfile, ProfileApiError, toProfileForm } from '../api/profile';
 import { Header } from '../components/Header';
 import { AuthPage } from '../pages/Auth';
@@ -185,6 +185,11 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDeleteFoodLog = async (entryId: string) => {
+    await deleteFoodLogEntry(entryId);
+    setFoodLog((current) => current.filter((entry) => entry.id !== entryId));
+  };
+
   const handleLogout = () => {
     clearSession();
     clearStoredProfile();
@@ -284,6 +289,7 @@ const App: React.FC = () => {
           <Explorer
             logEntries={foodLog}
             onNavigateToSession={handleNavigateToSession}
+            onDeleteFoodLog={handleDeleteFoodLog}
           />
         );
       case AppView.PROFILE:

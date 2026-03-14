@@ -25,6 +25,12 @@ export async function saveFoodLogEntry(payload: FoodLogSaveInput): Promise<FoodL
   });
 }
 
+export async function deleteFoodLogEntry(entryId: string): Promise<void> {
+  await requestJson(`/${entryId}`, {
+    method: 'DELETE',
+  });
+}
+
 async function requestJson<T = unknown>(endpoint: string, init?: RequestInit): Promise<T> {
   const token = requireAuthToken();
   const response = await fetch(`${FOOD_LOG_BASE_URL}${endpoint}`, {
@@ -38,6 +44,10 @@ async function requestJson<T = unknown>(endpoint: string, init?: RequestInit): P
 
   if (response.status === 401) {
     clearSession();
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   const data = await parseJson(response);
@@ -68,6 +78,10 @@ function getErrorMessage(payload: unknown, status: number): string {
 
   if (status === 401) {
     return 'Please sign in again.';
+  }
+
+  if (status === 404) {
+    return 'Saved Food Log entry not found.';
   }
 
   return 'Food log is temporarily unavailable. Please try again later.';

@@ -290,6 +290,27 @@ def list_food_logs_by_user_recent(
     )
 
 
+def delete_food_log(
+    conn: sqlite3.Connection,
+    food_log_id: int,
+    user_id: int,
+    *,
+    auto_commit: bool = True,
+) -> bool:
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE food_logs
+        SET deleted_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+        """,
+        (food_log_id, user_id),
+    )
+    if auto_commit:
+        conn.commit()
+    return cursor.rowcount > 0
+
+
 def _serialize_ingredients(value: str | Sequence[dict[str, object]]) -> str:
     if isinstance(value, str):
         return value
