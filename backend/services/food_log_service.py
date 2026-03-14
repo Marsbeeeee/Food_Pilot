@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import date
 
 from backend.database.connection import get_db_connection
 from backend.repositories.food_log_repository import (
@@ -113,12 +114,25 @@ def get_food_log_by_id(user_id: int, food_log_id: int) -> dict[str, object] | No
 def list_food_logs_by_user(
     user_id: int,
     *,
+    session_id: int | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    meal: str | None = None,
     limit: int | None = None,
     offset: int = 0,
 ) -> list[dict[str, object]]:
     conn = get_db_connection()
     try:
-        return list_food_logs_by_user_record(conn, user_id, limit=limit, offset=offset)
+        return list_food_logs_by_user_record(
+            conn,
+            user_id,
+            session_id=session_id,
+            date_from=date_from,
+            date_to=date_to,
+            meal=meal,
+            limit=limit,
+            offset=offset,
+        )
     finally:
         conn.close()
 

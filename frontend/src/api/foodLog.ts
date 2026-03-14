@@ -3,6 +3,14 @@ import { FoodLogEntry } from '../types/types';
 
 const FOOD_LOG_BASE_URL = 'http://localhost:8000/food-logs';
 
+export interface FoodLogListParams {
+  sessionId?: string | number;
+  limit?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  meal?: string;
+}
+
 export class FoodLogApiError extends Error {
   status: number;
 
@@ -13,8 +21,9 @@ export class FoodLogApiError extends Error {
   }
 }
 
-export async function listFoodLogEntries(): Promise<FoodLogEntry[]> {
-  return requestJson<FoodLogEntry[]>('');
+export async function listFoodLogEntries(params?: FoodLogListParams): Promise<FoodLogEntry[]> {
+  const query = buildQueryString(params);
+  return requestJson<FoodLogEntry[]>(query ? `?${query}` : '');
 }
 
 async function requestJson<T = unknown>(endpoint: string, init?: RequestInit): Promise<T> {
@@ -71,4 +80,28 @@ function requireAuthToken(): string {
     throw new FoodLogApiError('Please sign in again.', 401);
   }
   return token;
+}
+
+function buildQueryString(params?: FoodLogListParams): string {
+  if (!params) {
+    return '';
+  }
+
+  const searchParams = new URLSearchParams();
+  if (params.sessionId !== undefined && params.sessionId !== null && params.sessionId !== '') {
+    searchParams.set('sessionId', String(params.sessionId));
+  }
+  if (params.limit !== undefined) {
+    searchParams.set('limit', String(params.limit));
+  }
+  if (params.dateFrom) {
+    searchParams.set('dateFrom', params.dateFrom);
+  }
+  if (params.dateTo) {
+    searchParams.set('dateTo', params.dateTo);
+  }
+  if (params.meal) {
+    searchParams.set('meal', params.meal);
+  }
+  return searchParams.toString();
 }

@@ -1,6 +1,7 @@
 import json
 import sqlite3
 from collections.abc import Sequence
+from datetime import date, timedelta
 
 
 FOOD_LOG_SELECT_COLUMNS = """
@@ -108,20 +109,51 @@ def list_food_logs_by_user(
     conn: sqlite3.Connection,
     user_id: int,
     *,
+    session_id: int | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    meal: str | None = None,
     limit: int | None = None,
     offset: int = 0,
 ) -> list[dict[str, object]]:
     cursor = conn.cursor()
-    cursor.execute(
-        f"""
+    query = f"""
         SELECT
             {FOOD_LOG_SELECT_COLUMNS}
         FROM food_logs
         WHERE user_id = ?
+    """
+    parameters: list[object] = [user_id]
+
+    if session_id is not None:
+        query += " AND session_id = ?"
+        parameters.append(session_id)
+
+    if date_from is not None:
+        query += " AND logged_at >= ?"
+        parameters.append(f"{date_from.isoformat()} 00:00:00")
+
+    if date_to is not None:
+        query += " AND logged_at < ?"
+        parameters.append(f"{(date_to + timedelta(days=1)).isoformat()} 00:00:00")
+
+    if meal:
+        query += (
+            " AND (meal_description LIKE ? ESCAPE '\\' "
+            "OR result_title LIKE ? ESCAPE '\\')"
+        )
+        keyword = f"%{_escape_like_value(meal)}%"
+        parameters.extend([keyword, keyword])
+
+    query += """
         ORDER BY logged_at DESC, id DESC
         LIMIT COALESCE(?, -1) OFFSET ?
-        """,
-        (user_id, limit, offset),
+    """
+    parameters.extend([limit, offset])
+
+    cursor.execute(
+        query,
+        tuple(parameters),
     )
     return [_row_to_food_log(row) for row in cursor.fetchall()]
 
@@ -174,3 +206,11 @@ def _row_to_food_log(row: sqlite3.Row | None) -> dict[str, object] | None:
     if row is None:
         return None
     return dict(row)
+
+
+def _escape_like_value(value: str) -> str:
+    return (
+        value.replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
+    )

@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from backend.database.init_db import init_db
 from backend.routers.food_log import list_food_log_entries
+from backend.schemas.food_log import FoodLogListQuery
 from backend.schemas.user import UserCreate
 from backend.services.chat_service import create_empty_session
 from backend.services.food_log_service import create_food_log
@@ -35,6 +36,16 @@ class FoodLogApiTests(unittest.TestCase):
         )
         self.user = user
         self.user_id = user.id
+        other_user = create_user(
+            UserCreate.model_validate(
+                {
+                    "email": "other@example.com",
+                    "passwordHash": "hashed-password",
+                    "displayName": "Other",
+                }
+            )
+        )
+        self.other_user_id = other_user.id
 
     def tearDown(self) -> None:
         self.db_patch.stop()
@@ -79,7 +90,10 @@ class FoodLogApiTests(unittest.TestCase):
             created_at="2026-03-14 09:30:00",
         )
 
-        entries = list_food_log_entries(current_user=self.user)
+        entries = list_food_log_entries(
+            filters=FoodLogListQuery(),
+            current_user=self.user,
+        )
         payload = [entry.model_dump(by_alias=True, exclude_none=True) for entry in entries]
 
         self.assertEqual(len(payload), 2)
@@ -115,6 +129,113 @@ class FoodLogApiTests(unittest.TestCase):
         self.assertEqual(linked_entry["date"], "Mar 14")
         self.assertEqual(linked_entry["time"], "08:15 AM")
         self.assertEqual(linked_entry["sessionId"], str(session["id"]))
+
+    def test_get_food_logs_supports_session_limit_date_and_meal_filters(self) -> None:
+        lunch_session = create_empty_session(self.user_id)
+        dinner_session = create_empty_session(self.user_id)
+
+        create_food_log(
+            self.user_id,
+            "chat_message",
+            meal_description="chicken salad with avocado",
+            result_title="Chicken Salad",
+            result_description="Lunch salad.",
+            total_calories="240 kcal",
+            ingredients=[
+                {
+                    "name": "Chicken",
+                    "portion": "150g",
+                    "energy": "240 kcal",
+                }
+            ],
+            session_id=int(lunch_session["id"]),
+            logged_at="2026-03-13 12:00:00",
+            created_at="2026-03-13 12:00:00",
+        )
+        create_food_log(
+            self.user_id,
+            "chat_message",
+            meal_description="salmon rice bowl",
+            result_title="Salmon Bowl",
+            result_description="Dinner bowl.",
+            total_calories="520 kcal",
+            ingredients=[
+                {
+                    "name": "Salmon",
+                    "portion": "180g",
+                    "energy": "520 kcal",
+                }
+            ],
+            session_id=int(dinner_session["id"]),
+            logged_at="2026-03-14 18:30:00",
+            created_at="2026-03-14 18:30:00",
+        )
+        create_food_log(
+            self.user_id,
+            "estimate_api",
+            meal_description="oatmeal breakfast",
+            result_title="Oatmeal Bowl",
+            result_description="Breakfast oats.",
+            total_calories="320 kcal",
+            ingredients=[
+                {
+                    "name": "Oats",
+                    "portion": "1 bowl",
+                    "energy": "320 kcal",
+                }
+            ],
+            logged_at="2026-03-15 08:00:00",
+            created_at="2026-03-15 08:00:00",
+        )
+        create_food_log(
+            self.other_user_id,
+            "estimate_api",
+            meal_description="salad owned by another user",
+            result_title="Other User Salad",
+            result_description="Should not be visible.",
+            total_calories="410 kcal",
+            ingredients=[
+                {
+                    "name": "Lettuce",
+                    "portion": "1 bowl",
+                    "energy": "410 kcal",
+                }
+            ],
+            logged_at="2026-03-15 09:00:00",
+            created_at="2026-03-15 09:00:00",
+        )
+
+        lunch_entries = list_food_log_entries(
+            filters=FoodLogListQuery.model_validate(
+                {
+                    "sessionId": int(lunch_session["id"]),
+                }
+            ),
+            current_user=self.user,
+        )
+        self.assertEqual([entry.name for entry in lunch_entries], ["Chicken Salad"])
+
+        ranged_entries = list_food_log_entries(
+            filters=FoodLogListQuery.model_validate(
+                {
+                    "dateFrom": "2026-03-14",
+                    "dateTo": "2026-03-15",
+                    "limit": 2,
+                }
+            ),
+            current_user=self.user,
+        )
+        self.assertEqual([entry.name for entry in ranged_entries], ["Oatmeal Bowl", "Salmon Bowl"])
+
+        meal_entries = list_food_log_entries(
+            filters=FoodLogListQuery.model_validate(
+                {
+                    "meal": "salad",
+                }
+            ),
+            current_user=self.user,
+        )
+        self.assertEqual([entry.name for entry in meal_entries], ["Chicken Salad"])
 
 
 if __name__ == "__main__":
