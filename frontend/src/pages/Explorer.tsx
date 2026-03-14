@@ -169,10 +169,9 @@ export const Explorer: React.FC<ExplorerProps> = ({
                     history_toggle_off
                   </span>
                 </div>
-                <p className="text-base font-bold text-[#4A453E]/45">No saved analyses yet.</p>
+                <p className="text-base font-bold text-[#4A453E]/45">Nothing in Food Log yet.</p>
                 <p className="mt-2 text-sm text-[#4A453E]/35">
-                  Food Log only contains meal analyses you explicitly save. Unsaved chat and estimate
-                  results will not appear here.
+                  Run an analysis first, then click Save. Only saved favorites will appear in Food Log.
                 </p>
               </div>
             )}
