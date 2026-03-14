@@ -39,16 +39,16 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
               My Food Log
             </h1>
             <p className="max-w-2xl text-sm leading-7 text-[#4A453E]/60 md:text-base">
-              Review your saved calorie estimates and ingredient breakdowns, then jump back into the
-              related chat when a session link is available.
+              Food Log is your saved collection of meal analyses. It only includes items you
+              explicitly save, not your complete eating history.
             </p>
           </div>
 
           <div className="mb-12 grid grid-cols-1 gap-4 md:max-w-sm">
             <SummaryCard
-              label="Saved Entries"
+              label="Saved Analyses"
               value={String(logEntries.length)}
-              unit="logs"
+              unit="items"
               accent
             />
           </div>
@@ -56,11 +56,11 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between px-1">
               <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-                Recent Records
+                Saved Collection
               </h2>
               {logEntries.length > 0 && (
                 <span className="text-[11px] font-semibold text-[#4A453E]/35">
-                  Newest entries are shown first
+                  Most recently saved items are shown first
                 </span>
               )}
             </div>
@@ -125,10 +125,10 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
                     history_toggle_off
                   </span>
                 </div>
-                <p className="text-base font-bold text-[#4A453E]/45">No food log entries yet.</p>
+                <p className="text-base font-bold text-[#4A453E]/45">No saved analyses yet.</p>
                 <p className="mt-2 text-sm text-[#4A453E]/35">
-                  Food Log is a saved collection. Analysis results will not appear here until you
-                  explicitly save them.
+                  Food Log only contains meal analyses you explicitly save. Unsaved chat and estimate
+                  results will not appear here.
                 </p>
               </div>
             )}
@@ -142,7 +142,7 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#FF8A65]">
-                  Analysis Detail
+                  Saved Analysis
                 </span>
                 <p className="mt-2 text-[11px] font-semibold text-[#4A453E]/35">
                   {selectedEntry.date} / {selectedEntry.time}
@@ -213,8 +213,8 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
                 </div>
               ) : (
                 <div className="rounded-[24px] border border-dashed border-[#4A453E]/10 bg-white/50 px-5 py-4 text-sm text-[#4A453E]/55">
-                  Macro nutrients were not recorded for this entry. The log currently stores the calorie estimate
-                  and ingredient-level breakdown only.
+                  Macro nutrients were not recorded for this saved analysis. Food Log currently stores
+                  the calorie estimate and ingredient-level breakdown only.
                 </div>
               )}
             </div>
@@ -344,7 +344,7 @@ const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({ compact = false }) 
         <>
           <p className="mt-3 text-sm font-semibold text-[#4A453E]/55">No photo available</p>
           <p className="mt-1 text-xs text-[#4A453E]/35">
-            This food log entry was saved without an image.
+            This saved analysis was stored without an image.
           </p>
         </>
       )}

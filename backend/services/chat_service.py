@@ -300,6 +300,8 @@ def _create_estimate_result_message_with_conn(
     *,
     estimate,
 ) -> dict[str, object]:
+    # Chat analysis results stay in the conversation only. Food Log is an explicit
+    # save action and must not be created automatically from successful analysis.
     assistant_message = create_message_record(
         conn,
         session_id,

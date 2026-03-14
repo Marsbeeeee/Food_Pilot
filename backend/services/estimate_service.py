@@ -36,6 +36,8 @@ def create_estimate_response(
             ),
         )
 
+    # `/estimate` returns the analysis result only. Persisting to Food Log must be
+    # triggered separately by an explicit user save action.
     return 200, EstimateResponse(success=True, data=result, error=None)
 
 

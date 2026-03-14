@@ -71,6 +71,8 @@ def create_food_log_from_estimate(
     created_at: str | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> dict[str, object]:
+    # Food Log writes are save-only. Successful chat analysis and `/estimate`
+    # responses must not call this automatically.
     owns_connection = conn is None
     active_conn = conn or get_db_connection()
     try:

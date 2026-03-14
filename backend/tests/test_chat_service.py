@@ -294,6 +294,16 @@ class ChatServiceTests(unittest.TestCase):
         self.assertEqual(len(exchange["session"]["messages"]), 2)
         self.assertEqual(exchange["assistant_message"]["message_type"], "estimate_result")
 
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) AS total FROM food_logs WHERE user_id = ?", (self.user_id,))
+            food_log_total = cursor.fetchone()["total"]
+        finally:
+            conn.close()
+
+        self.assertEqual(food_log_total, 0)
+
     def test_rename_and_list_sessions_are_user_scoped(self) -> None:
         first = create_empty_session(self.user_id)
         second = create_empty_session(self.user_id)
