@@ -1,15 +1,7 @@
 import { clearSession, getStoredToken } from './auth';
-import { FoodLogEntry } from '../types/types';
+import { FoodLogEntry, FoodLogListParams } from '../types/types';
 
 const FOOD_LOG_BASE_URL = 'http://localhost:8000/food-logs';
-
-export interface FoodLogListParams {
-  sessionId?: string | number;
-  limit?: number;
-  dateFrom?: string;
-  dateTo?: string;
-  meal?: string;
-}
 
 export class FoodLogApiError extends Error {
   status: number;

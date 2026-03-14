@@ -125,3 +125,11 @@ export interface FoodLogEntry {
   fat: string;
   sessionId?: string;
 }
+
+export interface FoodLogListParams {
+  sessionId?: string | number;
+  limit?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  meal?: string;
+}
