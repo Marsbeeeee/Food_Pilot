@@ -178,6 +178,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   };
 
   const handleDeleteSession = async (sessionId: string) => {
+    const shouldDelete = window.confirm(
+      'Delete this chat? Saved Food Log entries will remain, but they will no longer be able to open this chat.',
+    );
+    if (!shouldDelete) {
+      setIsMenuOpen(false);
+      return;
+    }
+
     try {
       await deleteChatSession(sessionId);
       const remainingSessions = sessions.filter((session) => session.id !== sessionId);
@@ -266,11 +274,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               <div className="flex flex-col gap-1">
                 {sessions.map((session) => {
                   const lastResult = [...session.messages].reverse().find((message) => message.isResult);
-                  const sessionStatus = isLoadingSessionId === session.id
-                    ? 'Loading...'
-                    : session.messages.length > 0
-                      ? 'Saved'
-                      : 'Empty';
+                  const sessionStatus = getSessionStatusLabel(
+                    session,
+                    isLoadingSessionId === session.id,
+                  );
 
                   return (
                     <div
@@ -648,4 +655,19 @@ function formatOptimisticTime(): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function getSessionStatusLabel(
+  session: ChatSession,
+  isLoading: boolean,
+): string {
+  if (isLoading) {
+    return 'Loading...';
+  }
+
+  if (session.messages.length > 0) {
+    return 'Started';
+  }
+
+  return 'Empty';
 }
