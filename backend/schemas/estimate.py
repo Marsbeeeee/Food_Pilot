@@ -7,6 +7,11 @@ class EstimateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     query: str
+    client_request_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("client_request_id", "clientRequestId"),
+        serialization_alias="clientRequestId",
+    )
     profile_id: int | None = Field(
         default=None,
         validation_alias=AliasChoices("profile_id", "profileId"),
@@ -28,6 +33,18 @@ class EstimateRequest(BaseModel):
             raise ValueError("\u8bf7\u81f3\u5c11\u8f93\u5165 2 \u4e2a\u5b57\u7b26")
         if len(normalized) > 500:
             raise ValueError("\u8f93\u5165\u5185\u5bb9\u4e0d\u80fd\u8d85\u8fc7 500 \u4e2a\u5b57\u7b26")
+        return normalized
+
+    @field_validator("client_request_id")
+    @classmethod
+    def validate_client_request_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("client_request_id cannot be empty")
+        if len(normalized) > 128:
+            raise ValueError("client_request_id cannot exceed 128 characters")
         return normalized
 
     @field_validator("profile_id")
@@ -94,6 +111,11 @@ class EstimateResponse(BaseModel):
     success: bool
     data: EstimateResult | None = None
     error: EstimateError | None = None
+    client_request_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("client_request_id", "clientRequestId"),
+        serialization_alias="clientRequestId",
+    )
     food_log_id: str | None = Field(
         default=None,
         validation_alias=AliasChoices("food_log_id", "foodLogId"),

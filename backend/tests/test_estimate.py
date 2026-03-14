@@ -12,7 +12,10 @@ from backend.services.estimate_service import (
 
 class EstimateTests(unittest.TestCase):
     def test_success_response_has_expected_structure(self) -> None:
-        request_model = EstimateRequest(query="chicken salad")
+        request_model = EstimateRequest(
+            query="chicken salad",
+            clientRequestId="estimate-123",
+        )
         estimate_result = EstimateResult(
             title="Chicken Salad",
             description="Lean protein with vegetables.",
@@ -38,6 +41,7 @@ class EstimateTests(unittest.TestCase):
         self.assertTrue(response.success)
         self.assertIsNone(response.error)
         self.assertIsNotNone(response.data)
+        self.assertEqual(response.client_request_id, "estimate-123")
         self.assertIsNone(response.food_log_id)
         self.assertEqual(response.save_status, "not_saved")
         self.assertEqual(response.data.title, "Chicken Salad")
@@ -55,6 +59,7 @@ class EstimateTests(unittest.TestCase):
         self.assertEqual(response.status_code, 422)
         self.assertFalse(payload["success"])
         self.assertIsNone(payload["data"])
+        self.assertIsNone(payload["clientRequestId"])
         self.assertIsNone(payload["foodLogId"])
         self.assertEqual(payload["saveStatus"], "not_saved")
         self.assertEqual(payload["error"]["code"], "VALIDATION_ERROR")
@@ -64,7 +69,10 @@ class EstimateTests(unittest.TestCase):
         self.assertEqual(payload["error"]["fields"][0]["message"], "输入内容不能为空")
 
     def test_ai_error_returns_fallback_structure(self) -> None:
-        request_model = EstimateRequest(query="fried rice")
+        request_model = EstimateRequest(
+            query="fried rice",
+            clientRequestId="estimate-456",
+        )
 
         with patch(
             "backend.services.estimate_service.estimate_meal",
@@ -79,6 +87,7 @@ class EstimateTests(unittest.TestCase):
         self.assertFalse(response.success)
         self.assertIsNone(response.data)
         self.assertIsNotNone(response.error)
+        self.assertEqual(response.client_request_id, "estimate-456")
         self.assertIsNone(response.food_log_id)
         self.assertEqual(response.save_status, "not_saved")
         self.assertEqual(response.error.code, "AI_UPSTREAM_ERROR")

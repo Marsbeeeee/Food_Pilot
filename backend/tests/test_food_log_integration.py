@@ -3,8 +3,11 @@ import unittest
 from unittest.mock import patch
 
 from backend.database.init_db import init_db
-from backend.routers.food_log import list_food_log_entries
-from backend.schemas.food_log import FoodLogListQuery
+from backend.routers.food_log import (
+    list_food_log_entries,
+    save_food_log_from_estimate_entry,
+)
+from backend.schemas.food_log import FoodLogFromEstimateRequest, FoodLogListQuery
 from backend.schemas.estimate import EstimateRequest, EstimateResult
 from backend.schemas.user import UserCreate
 from backend.services.chat_service import create_session_and_reply
@@ -99,6 +102,7 @@ class FoodLogIntegrationTests(unittest.TestCase):
         self.assertEqual(exchange["assistant_message"]["message_type"], "estimate_result")
 
     def test_direct_estimate_does_not_appear_in_food_log_until_saved(self) -> None:
+        client_request_id = "estimate-oatmeal-123"
         with patch(
             "backend.services.estimate_service.estimate_meal",
             return_value=build_estimate_result(
@@ -109,7 +113,10 @@ class FoodLogIntegrationTests(unittest.TestCase):
             ),
         ):
             status_code, response = create_estimate_response(
-                EstimateRequest(query="oatmeal bowl"),
+                EstimateRequest(
+                    query="oatmeal bowl",
+                    clientRequestId=client_request_id,
+                ),
                 self.user.id,
             )
 
@@ -120,9 +127,40 @@ class FoodLogIntegrationTests(unittest.TestCase):
 
         self.assertEqual(status_code, 200)
         self.assertTrue(response.success)
+        self.assertEqual(response.client_request_id, client_request_id)
         self.assertIsNone(response.food_log_id)
         self.assertEqual(response.save_status, "not_saved")
         self.assertEqual(len(entries), 0)
+
+        first_save = save_food_log_from_estimate_entry(
+            request=FoodLogFromEstimateRequest.model_validate(
+                {
+                    "mealDescription": "oatmeal bowl",
+                    "clientRequestId": client_request_id,
+                    "estimate": response.data.model_dump(),
+                }
+            ),
+            current_user=self.user,
+        )
+        second_save = save_food_log_from_estimate_entry(
+            request=FoodLogFromEstimateRequest.model_validate(
+                {
+                    "mealDescription": "oatmeal bowl",
+                    "clientRequestId": client_request_id,
+                    "estimate": response.data.model_dump(),
+                }
+            ),
+            current_user=self.user,
+        )
+
+        saved_entries = list_food_log_entries(
+            filters=FoodLogListQuery(),
+            current_user=self.user,
+        )
+        self.assertEqual(first_save.food_log_id, second_save.food_log_id)
+        self.assertEqual(len(saved_entries), 1)
+        self.assertEqual(saved_entries[0].id, first_save.food_log_id)
+        self.assertEqual(saved_entries[0].idempotency_key, f"estimate_api:{client_request_id}")
 
     def test_automatic_analysis_results_do_not_create_food_log_entries_for_any_user(self) -> None:
         with patch(

@@ -247,15 +247,19 @@ class FoodLogFromEstimateRequest(BaseModel):
         serialization_alias="mealDescription",
     )
     estimate: EstimateResult
+    client_request_id: str = Field(
+        validation_alias=AliasChoices(
+            "client_request_id",
+            "clientRequestId",
+            "idempotency_key",
+            "idempotencyKey",
+        ),
+        serialization_alias="clientRequestId",
+    )
     meal_occurred_at: str | None = Field(
         default=None,
         validation_alias=AliasChoices("meal_occurred_at", "mealOccurredAt"),
         serialization_alias="mealOccurredAt",
-    )
-    idempotency_key: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices("idempotency_key", "idempotencyKey"),
-        serialization_alias="idempotencyKey",
     )
 
     @field_validator("meal_description")
@@ -266,23 +270,29 @@ class FoodLogFromEstimateRequest(BaseModel):
             return normalized
         raise ValueError("meal_description cannot be empty")
 
+    @field_validator("client_request_id")
+    @classmethod
+    def validate_client_request_id(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("client_request_id cannot be empty")
+        if len(normalized) > 128:
+            raise ValueError("client_request_id cannot exceed 128 characters")
+        return normalized
+
     @field_validator("meal_occurred_at")
     @classmethod
     def validate_from_estimate_meal_occurred_at(cls, value: str | None) -> str | None:
         return _normalize_timestamp_string(value)
 
-    @field_validator("idempotency_key")
-    @classmethod
-    def validate_from_estimate_idempotency_key(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip()
-        return normalized or None
-
 
 class FoodLogFromEstimateResponse(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
+    client_request_id: str = Field(
+        validation_alias=AliasChoices("client_request_id", "clientRequestId"),
+        serialization_alias="clientRequestId",
+    )
     food_log_id: str = Field(
         validation_alias=AliasChoices("food_log_id", "foodLogId"),
         serialization_alias="foodLogId",
@@ -334,9 +344,12 @@ def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
 
 def serialize_food_log_from_estimate_response(
     entry: dict[str, object],
+    *,
+    client_request_id: str,
 ) -> FoodLogFromEstimateResponse:
     food_log = serialize_food_log_entry(entry)
     return FoodLogFromEstimateResponse(
+        client_request_id=client_request_id,
         food_log_id=food_log.id,
         save_status="saved",
         food_log=food_log,

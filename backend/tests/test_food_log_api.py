@@ -252,27 +252,40 @@ class FoodLogApiTests(unittest.TestCase):
         self.assertEqual([entry.name for entry in meal_entries], ["Chicken Salad"])
 
     def test_save_food_log_from_estimate_returns_saved_metadata(self) -> None:
+        request = FoodLogFromEstimateRequest.model_validate(
+            {
+                "mealDescription": "oatmeal bowl",
+                "clientRequestId": "estimate-123",
+                "estimate": _build_estimate_result(
+                    title="Oatmeal Bowl",
+                    description="Oats with banana and milk.",
+                    total_calories="320 kcal",
+                    suggestion="Add nuts for more texture.",
+                ).model_dump(),
+                "mealOccurredAt": "2026-03-14 09:30:00",
+            }
+        )
+
         response = save_food_log_from_estimate_entry(
+            request=request,
+            current_user=self.user,
+        )
+        duplicate_response = save_food_log_from_estimate_entry(
             request=FoodLogFromEstimateRequest.model_validate(
-                {
-                    "mealDescription": "oatmeal bowl",
-                    "estimate": _build_estimate_result(
-                        title="Oatmeal Bowl",
-                        description="Oats with banana and milk.",
-                        total_calories="320 kcal",
-                        suggestion="Add nuts for more texture.",
-                    ).model_dump(),
-                    "mealOccurredAt": "2026-03-14 09:30:00",
-                }
+                request.model_dump(by_alias=True)
             ),
             current_user=self.user,
         )
 
         payload = response.model_dump(by_alias=True, exclude_none=True)
+        duplicate_payload = duplicate_response.model_dump(by_alias=True, exclude_none=True)
+        self.assertEqual(payload["clientRequestId"], "estimate-123")
         self.assertEqual(payload["saveStatus"], "saved")
         self.assertEqual(payload["foodLog"]["sourceType"], "estimate_api")
+        self.assertEqual(payload["foodLog"]["idempotencyKey"], "estimate_api:estimate-123")
         self.assertEqual(payload["foodLog"]["mealOccurredAt"], "2026-03-14 09:30:00")
         self.assertEqual(payload["foodLogId"], payload["foodLog"]["id"])
+        self.assertEqual(duplicate_payload["foodLogId"], payload["foodLogId"])
 
         entries = list_food_log_entries(
             filters=FoodLogListQuery(),

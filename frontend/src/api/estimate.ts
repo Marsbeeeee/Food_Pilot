@@ -13,6 +13,13 @@ export class EstimateApiError extends Error {
   }
 }
 
+export function createClientRequestId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `estimate-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export async function estimateMeal(payload: EstimateRequestInput): Promise<EstimateApiResponse> {
   return requestJson<EstimateApiResponse>('', {
     method: 'POST',

@@ -7,7 +7,12 @@ from backend.services.estimate_service import create_estimate_response
 
 class EstimateServiceProfileTests(unittest.TestCase):
     def test_create_estimate_response_forwards_profile_id_and_user_id(self) -> None:
-        request_model = EstimateRequest(query="chicken salad", profileId=12, sessionId=56)
+        request_model = EstimateRequest(
+            query="chicken salad",
+            clientRequestId="estimate-789",
+            profileId=12,
+            sessionId=56,
+        )
         estimate_result = EstimateResult(
             title="Chicken salad",
             description="Lean protein and vegetables.",
@@ -31,6 +36,7 @@ class EstimateServiceProfileTests(unittest.TestCase):
 
         self.assertEqual(status_code, 200)
         self.assertTrue(response.success)
+        self.assertEqual(response.client_request_id, "estimate-789")
         self.assertIsNone(response.food_log_id)
         self.assertEqual(response.save_status, "not_saved")
         estimate_meal_mock.assert_called_once_with("chicken salad", 12, 34)

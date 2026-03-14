@@ -56,12 +56,14 @@ export interface EstimateApiResponse {
   success: boolean;
   data: EstimateResult | null;
   error: ApiError | null;
+  clientRequestId: string | null;
   foodLogId: string | null;
   saveStatus: EstimateSaveStatus;
 }
 
 export interface EstimateRequestInput {
   query: string;
+  clientRequestId: string;
   profileId?: number;
   sessionId?: number;
 }
@@ -172,11 +174,12 @@ export interface FoodLogSaveInput {
 export interface FoodLogFromEstimateInput {
   mealDescription: string;
   estimate: EstimateResult;
+  clientRequestId: string;
   mealOccurredAt?: string;
-  idempotencyKey?: string;
 }
 
 export interface FoodLogFromEstimateResponse {
+  clientRequestId: string;
   foodLogId: string;
   saveStatus: 'saved';
   foodLog: FoodLogEntry;

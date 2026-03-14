@@ -14,6 +14,7 @@ from backend.schemas.food_log import (
 )
 from backend.schemas.user import UserOut
 from backend.services.food_log_service import (
+    build_estimate_api_idempotency_key,
     create_food_log_from_estimate,
     delete_food_log,
     list_food_logs_by_user,
@@ -88,14 +89,17 @@ def save_food_log_from_estimate_entry(
             request.estimate,
             source_type="estimate_api",
             meal_occurred_at=request.meal_occurred_at,
-            idempotency_key=request.idempotency_key,
+            idempotency_key=build_estimate_api_idempotency_key(request.client_request_id),
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    return serialize_food_log_from_estimate_response(entry)
+    return serialize_food_log_from_estimate_response(
+        entry,
+        client_request_id=request.client_request_id,
+    )
 
 
 @router.delete("/{food_log_id}", status_code=status.HTTP_204_NO_CONTENT)

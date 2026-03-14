@@ -196,6 +196,15 @@ def create_food_log_from_estimate(
             active_conn.close()
 
 
+def build_estimate_api_idempotency_key(client_request_id: str) -> str:
+    normalized = client_request_id.strip()
+    if not normalized:
+        raise ValueError("client_request_id cannot be empty")
+    if normalized.startswith("estimate_api:"):
+        return normalized
+    return f"estimate_api:{normalized}"
+
+
 def get_food_log_by_id(user_id: int, food_log_id: int) -> dict[str, object] | None:
     conn = get_db_connection()
     try:

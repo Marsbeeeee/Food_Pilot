@@ -24,6 +24,7 @@ def create_estimate_response(
                 message=exc.user_message,
                 retryable=exc.retryable,
             ),
+            client_request_id=request_model.client_request_id,
             food_log_id=None,
             save_status="not_saved",
         )
@@ -36,6 +37,7 @@ def create_estimate_response(
                 message="浼扮畻鏈嶅姟鏆傛椂涓嶅彲鐢紝璇风◢鍚庨噸璇曘€?",
                 retryable=True,
             ),
+            client_request_id=request_model.client_request_id,
             food_log_id=None,
             save_status="not_saved",
         )
@@ -46,6 +48,7 @@ def create_estimate_response(
         success=True,
         data=result,
         error=None,
+        client_request_id=request_model.client_request_id,
         food_log_id=None,
         save_status="not_saved",
     )
@@ -68,6 +71,7 @@ def create_estimate_validation_error_response(errors: list[dict]) -> JSONRespons
             fields=fields,
             retryable=False,
         ),
+        client_request_id=None,
         food_log_id=None,
         save_status="not_saved",
     )
