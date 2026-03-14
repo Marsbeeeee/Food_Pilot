@@ -120,6 +120,8 @@ class FoodLogIntegrationTests(unittest.TestCase):
 
         self.assertEqual(status_code, 200)
         self.assertTrue(response.success)
+        self.assertIsNone(response.food_log_id)
+        self.assertEqual(response.save_status, "not_saved")
         self.assertEqual(len(entries), 0)
 
     def test_automatic_analysis_results_do_not_create_food_log_entries_for_any_user(self) -> None:

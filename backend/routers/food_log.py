@@ -5,12 +5,16 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from backend.dependencies.auth import get_current_user
 from backend.schemas.food_log import (
     FoodLogEntryOut,
+    FoodLogFromEstimateRequest,
+    FoodLogFromEstimateResponse,
     FoodLogListQuery,
     FoodLogSaveRequest,
+    serialize_food_log_from_estimate_response,
     serialize_food_log_entry,
 )
 from backend.schemas.user import UserOut
 from backend.services.food_log_service import (
+    create_food_log_from_estimate,
     delete_food_log,
     list_food_logs_by_user,
     save_food_log,
@@ -66,6 +70,32 @@ def save_food_log_entry(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return serialize_food_log_entry(entry)
+
+
+@router.post(
+    "/from-estimate",
+    response_model=FoodLogFromEstimateResponse,
+    response_model_exclude_none=True,
+)
+def save_food_log_from_estimate_entry(
+    request: FoodLogFromEstimateRequest,
+    current_user: UserOut = Depends(get_current_user),
+) -> FoodLogFromEstimateResponse:
+    try:
+        entry = create_food_log_from_estimate(
+            current_user.id,
+            request.meal_description,
+            request.estimate,
+            source_type="estimate_api",
+            meal_occurred_at=request.meal_occurred_at,
+            idempotency_key=request.idempotency_key,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return serialize_food_log_from_estimate_response(entry)
 
 
 @router.delete("/{food_log_id}", status_code=status.HTTP_204_NO_CONTENT)

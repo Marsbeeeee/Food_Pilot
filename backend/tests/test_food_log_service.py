@@ -81,6 +81,8 @@ class FoodLogServiceTests(unittest.TestCase):
 
         self.assertEqual(status_code, 200)
         self.assertTrue(response.success)
+        self.assertIsNone(response.food_log_id)
+        self.assertEqual(response.save_status, "not_saved")
         entries = _list_food_log_entries()
         self.assertEqual(len(entries), 0)
 
@@ -99,6 +101,8 @@ class FoodLogServiceTests(unittest.TestCase):
 
         self.assertEqual(status_code, 200)
         self.assertTrue(response.success)
+        self.assertIsNone(response.food_log_id)
+        self.assertEqual(response.save_status, "not_saved")
         self.assertEqual(len(_list_food_log_entries()), 0)
 
     def test_estimate_api_does_not_require_owned_session_id_until_save(self) -> None:
@@ -116,6 +120,8 @@ class FoodLogServiceTests(unittest.TestCase):
 
         self.assertEqual(status_code, 200)
         self.assertTrue(response.success)
+        self.assertIsNone(response.food_log_id)
+        self.assertEqual(response.save_status, "not_saved")
         self.assertEqual(len(_list_food_log_entries()), 0)
 
     def test_init_db_does_not_backfill_existing_estimate_result_messages(self) -> None:

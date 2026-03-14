@@ -3,8 +3,12 @@ import unittest
 from unittest.mock import patch
 
 from backend.database.init_db import init_db
-from backend.routers.food_log import list_food_log_entries
-from backend.schemas.food_log import FoodLogListQuery
+from backend.routers.food_log import (
+    list_food_log_entries,
+    save_food_log_from_estimate_entry,
+)
+from backend.schemas.estimate import EstimateResult
+from backend.schemas.food_log import FoodLogFromEstimateRequest, FoodLogListQuery
 from backend.schemas.user import UserCreate
 from backend.services.chat_service import create_empty_session
 from backend.services.food_log_service import create_food_log
@@ -246,6 +250,58 @@ class FoodLogApiTests(unittest.TestCase):
             current_user=self.user,
         )
         self.assertEqual([entry.name for entry in meal_entries], ["Chicken Salad"])
+
+    def test_save_food_log_from_estimate_returns_saved_metadata(self) -> None:
+        response = save_food_log_from_estimate_entry(
+            request=FoodLogFromEstimateRequest.model_validate(
+                {
+                    "mealDescription": "oatmeal bowl",
+                    "estimate": _build_estimate_result(
+                        title="Oatmeal Bowl",
+                        description="Oats with banana and milk.",
+                        total_calories="320 kcal",
+                        suggestion="Add nuts for more texture.",
+                    ).model_dump(),
+                    "mealOccurredAt": "2026-03-14 09:30:00",
+                }
+            ),
+            current_user=self.user,
+        )
+
+        payload = response.model_dump(by_alias=True, exclude_none=True)
+        self.assertEqual(payload["saveStatus"], "saved")
+        self.assertEqual(payload["foodLog"]["sourceType"], "estimate_api")
+        self.assertEqual(payload["foodLog"]["mealOccurredAt"], "2026-03-14 09:30:00")
+        self.assertEqual(payload["foodLogId"], payload["foodLog"]["id"])
+
+        entries = list_food_log_entries(
+            filters=FoodLogListQuery(),
+            current_user=self.user,
+        )
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0].id, payload["foodLogId"])
+
+def _build_estimate_result(
+    *,
+    title: str,
+    description: str,
+    total_calories: str,
+    suggestion: str,
+) -> EstimateResult:
+    return EstimateResult(
+        title=title,
+        description=description,
+        confidence="high",
+        items=[
+            {
+                "name": title,
+                "portion": "1 serving",
+                "energy": total_calories,
+            }
+        ],
+        total_calories=total_calories,
+        suggestion=suggestion,
+    )
 
 
 if __name__ == "__main__":

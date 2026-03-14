@@ -38,6 +38,8 @@ export interface EstimateResult {
   suggestion: string;
 }
 
+export type EstimateSaveStatus = 'saved' | 'not_saved';
+
 export interface ApiErrorField {
   field: string;
   message: string;
@@ -54,6 +56,14 @@ export interface EstimateApiResponse {
   success: boolean;
   data: EstimateResult | null;
   error: ApiError | null;
+  foodLogId: string | null;
+  saveStatus: EstimateSaveStatus;
+}
+
+export interface EstimateRequestInput {
+  query: string;
+  profileId?: number;
+  sessionId?: number;
 }
 
 export interface UserProfile {
@@ -157,4 +167,17 @@ export interface FoodLogSaveInput {
   status?: 'active' | 'deleted';
   idempotencyKey?: string;
   isManual?: boolean;
+}
+
+export interface FoodLogFromEstimateInput {
+  mealDescription: string;
+  estimate: EstimateResult;
+  mealOccurredAt?: string;
+  idempotencyKey?: string;
+}
+
+export interface FoodLogFromEstimateResponse {
+  foodLogId: string;
+  saveStatus: 'saved';
+  foodLog: FoodLogEntry;
 }

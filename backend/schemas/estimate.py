@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
@@ -87,6 +89,18 @@ class EstimateError(BaseModel):
 
 
 class EstimateResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     success: bool
     data: EstimateResult | None = None
     error: EstimateError | None = None
+    food_log_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("food_log_id", "foodLogId"),
+        serialization_alias="foodLogId",
+    )
+    save_status: Literal["saved", "not_saved"] = Field(
+        default="not_saved",
+        validation_alias=AliasChoices("save_status", "saveStatus"),
+        serialization_alias="saveStatus",
+    )

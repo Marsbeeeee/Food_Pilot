@@ -1,10 +1,11 @@
 import json
 import re
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
-from backend.schemas.estimate import EstimateItem
+from backend.schemas.estimate import EstimateItem, EstimateResult
 
 
 MONTH_ABBREVIATIONS = (
@@ -238,6 +239,65 @@ class FoodLogSaveRequest(BaseModel):
         return normalized or None
 
 
+class FoodLogFromEstimateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    meal_description: str = Field(
+        validation_alias=AliasChoices("meal_description", "mealDescription"),
+        serialization_alias="mealDescription",
+    )
+    estimate: EstimateResult
+    meal_occurred_at: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("meal_occurred_at", "mealOccurredAt"),
+        serialization_alias="mealOccurredAt",
+    )
+    idempotency_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("idempotency_key", "idempotencyKey"),
+        serialization_alias="idempotencyKey",
+    )
+
+    @field_validator("meal_description")
+    @classmethod
+    def validate_meal_description(cls, value: str) -> str:
+        normalized = " ".join(value.strip().split())
+        if normalized:
+            return normalized
+        raise ValueError("meal_description cannot be empty")
+
+    @field_validator("meal_occurred_at")
+    @classmethod
+    def validate_from_estimate_meal_occurred_at(cls, value: str | None) -> str | None:
+        return _normalize_timestamp_string(value)
+
+    @field_validator("idempotency_key")
+    @classmethod
+    def validate_from_estimate_idempotency_key(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
+
+
+class FoodLogFromEstimateResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    food_log_id: str = Field(
+        validation_alias=AliasChoices("food_log_id", "foodLogId"),
+        serialization_alias="foodLogId",
+    )
+    save_status: Literal["saved"] = Field(
+        default="saved",
+        validation_alias=AliasChoices("save_status", "saveStatus"),
+        serialization_alias="saveStatus",
+    )
+    food_log: FoodLogEntryOut = Field(
+        validation_alias=AliasChoices("food_log", "foodLog"),
+        serialization_alias="foodLog",
+    )
+
+
 def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
     saved_at = _resolve_saved_at_value(entry)
     meal_occurred_at = _resolve_meal_occurred_at_value(entry, saved_at)
@@ -269,6 +329,17 @@ def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
                 else None
             ),
         }
+    )
+
+
+def serialize_food_log_from_estimate_response(
+    entry: dict[str, object],
+) -> FoodLogFromEstimateResponse:
+    food_log = serialize_food_log_entry(entry)
+    return FoodLogFromEstimateResponse(
+        food_log_id=food_log.id,
+        save_status="saved",
+        food_log=food_log,
     )
 
 

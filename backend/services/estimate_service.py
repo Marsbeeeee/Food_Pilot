@@ -24,6 +24,8 @@ def create_estimate_response(
                 message=exc.user_message,
                 retryable=exc.retryable,
             ),
+            food_log_id=None,
+            save_status="not_saved",
         )
     except Exception:
         return 500, EstimateResponse(
@@ -34,11 +36,19 @@ def create_estimate_response(
                 message="浼扮畻鏈嶅姟鏆傛椂涓嶅彲鐢紝璇风◢鍚庨噸璇曘€?",
                 retryable=True,
             ),
+            food_log_id=None,
+            save_status="not_saved",
         )
 
     # `/estimate` returns the analysis result only. Persisting to Food Log must be
     # triggered separately by an explicit user save action.
-    return 200, EstimateResponse(success=True, data=result, error=None)
+    return 200, EstimateResponse(
+        success=True,
+        data=result,
+        error=None,
+        food_log_id=None,
+        save_status="not_saved",
+    )
 
 
 def create_estimate_validation_error_response(errors: list[dict]) -> JSONResponse:
@@ -58,8 +68,10 @@ def create_estimate_validation_error_response(errors: list[dict]) -> JSONRespons
             fields=fields,
             retryable=False,
         ),
+        food_log_id=None,
+        save_status="not_saved",
     )
-    return JSONResponse(status_code=422, content=payload.model_dump())
+    return JSONResponse(status_code=422, content=payload.model_dump(by_alias=True))
 
 
 def _format_field_name(location: tuple[object, ...]) -> str:

@@ -12,20 +12,20 @@ from backend.services.estimate_service import (
 
 class EstimateTests(unittest.TestCase):
     def test_success_response_has_expected_structure(self) -> None:
-        request_model = EstimateRequest(query="鸡胸肉沙拉")
+        request_model = EstimateRequest(query="chicken salad")
         estimate_result = EstimateResult(
-            title="鸡胸肉沙拉",
-            description="高蛋白、低油脂。",
-            confidence="高",
+            title="Chicken Salad",
+            description="Lean protein with vegetables.",
+            confidence="High",
             items=[
                 {
-                    "name": "鸡胸肉",
+                    "name": "Chicken breast",
                     "portion": "150g",
                     "energy": "240 kcal",
                 }
             ],
             total_calories="240 kcal",
-            suggestion="可以补充一些碳水。",
+            suggestion="Add more greens for extra fiber.",
         )
 
         with patch(
@@ -38,9 +38,11 @@ class EstimateTests(unittest.TestCase):
         self.assertTrue(response.success)
         self.assertIsNone(response.error)
         self.assertIsNotNone(response.data)
-        self.assertEqual(response.data.title, "鸡胸肉沙拉")
+        self.assertIsNone(response.food_log_id)
+        self.assertEqual(response.save_status, "not_saved")
+        self.assertEqual(response.data.title, "Chicken Salad")
         self.assertEqual(response.data.total_calories, "240 kcal")
-        self.assertEqual(response.data.items[0].name, "鸡胸肉")
+        self.assertEqual(response.data.items[0].name, "Chicken breast")
 
     def test_validation_error_response_has_unified_structure(self) -> None:
         with self.assertRaises(Exception) as context:
@@ -53,6 +55,8 @@ class EstimateTests(unittest.TestCase):
         self.assertEqual(response.status_code, 422)
         self.assertFalse(payload["success"])
         self.assertIsNone(payload["data"])
+        self.assertIsNone(payload["foodLogId"])
+        self.assertEqual(payload["saveStatus"], "not_saved")
         self.assertEqual(payload["error"]["code"], "VALIDATION_ERROR")
         self.assertEqual(payload["error"]["message"], "请求参数校验失败。")
         self.assertFalse(payload["error"]["retryable"])
@@ -60,7 +64,7 @@ class EstimateTests(unittest.TestCase):
         self.assertEqual(payload["error"]["fields"][0]["message"], "输入内容不能为空")
 
     def test_ai_error_returns_fallback_structure(self) -> None:
-        request_model = EstimateRequest(query="蛋炒饭")
+        request_model = EstimateRequest(query="fried rice")
 
         with patch(
             "backend.services.estimate_service.estimate_meal",
@@ -75,6 +79,8 @@ class EstimateTests(unittest.TestCase):
         self.assertFalse(response.success)
         self.assertIsNone(response.data)
         self.assertIsNotNone(response.error)
+        self.assertIsNone(response.food_log_id)
+        self.assertEqual(response.save_status, "not_saved")
         self.assertEqual(response.error.code, "AI_UPSTREAM_ERROR")
         self.assertEqual(response.error.message, "AI 服务暂时不可用，请稍后重试。")
         self.assertTrue(response.error.retryable)

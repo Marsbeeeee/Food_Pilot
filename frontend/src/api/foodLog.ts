@@ -1,5 +1,11 @@
 import { clearSession, getStoredToken } from './auth';
-import { FoodLogEntry, FoodLogListParams, FoodLogSaveInput } from '../types/types';
+import {
+  FoodLogEntry,
+  FoodLogFromEstimateInput,
+  FoodLogFromEstimateResponse,
+  FoodLogListParams,
+  FoodLogSaveInput,
+} from '../types/types';
 
 const FOOD_LOG_BASE_URL = 'http://localhost:8000/food-logs';
 
@@ -20,6 +26,15 @@ export async function listFoodLogs(params?: FoodLogListParams): Promise<FoodLogE
 
 export async function saveFoodLogEntry(payload: FoodLogSaveInput): Promise<FoodLogEntry> {
   return requestJson<FoodLogEntry>('', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function saveFoodLogFromEstimate(
+  payload: FoodLogFromEstimateInput,
+): Promise<FoodLogFromEstimateResponse> {
+  return requestJson<FoodLogFromEstimateResponse>('/from-estimate', {
     method: 'POST',
     body: JSON.stringify(payload),
   });

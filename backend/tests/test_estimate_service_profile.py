@@ -31,6 +31,8 @@ class EstimateServiceProfileTests(unittest.TestCase):
 
         self.assertEqual(status_code, 200)
         self.assertTrue(response.success)
+        self.assertIsNone(response.food_log_id)
+        self.assertEqual(response.save_status, "not_saved")
         estimate_meal_mock.assert_called_once_with("chicken salad", 12, 34)
 
 
