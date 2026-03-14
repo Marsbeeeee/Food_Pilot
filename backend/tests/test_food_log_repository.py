@@ -309,6 +309,7 @@ class FoodLogRepositoryTests(unittest.TestCase):
                 result_description="First description",
                 total_calories="240 kcal",
                 ingredients=[],
+                created_at="2000-01-01 09:00:00",
             )
             second_save = save_food_log(
                 conn,
@@ -330,11 +331,107 @@ class FoodLogRepositoryTests(unittest.TestCase):
 
         self.assertEqual(total, 1)
         self.assertEqual(first_save["id"], second_save["id"])
+        self.assertEqual(second_save["created_at"], "2000-01-01 09:00:00")
+        self.assertNotEqual(second_save["updated_at"], "2000-01-01 09:00:00")
         self.assertEqual(second_save["meal_description"], "chicken salad")
         self.assertEqual(second_save["result_title"], "Chicken Salad Updated")
         self.assertEqual(second_save["total_calories"], "260 kcal")
         self.assertEqual(second_save["session_id"], self.second_session_id)
         self.assertEqual(second_save["source_message_id"], second_source_message_id)
+
+    def test_list_food_logs_excludes_soft_deleted_entries(self) -> None:
+        conn = get_db_connection()
+        try:
+            created = create_food_log(
+                conn,
+                self.user_id,
+                source_type="estimate_api",
+                meal_description="chicken salad",
+                result_title="Chicken Salad",
+                result_description="Description",
+                total_calories="240 kcal",
+                ingredients=[],
+                created_at="2026-03-14 09:00:00",
+            )
+            conn.execute(
+                """
+                UPDATE food_logs
+                SET deleted_at = ?
+                WHERE id = ?
+                """,
+                ("2026-03-15 09:00:00", int(created["id"])),
+            )
+            conn.commit()
+
+            listed = list_food_logs_by_user(conn, self.user_id)
+            fetched = get_food_log_by_id(conn, int(created["id"]), self.user_id)
+        finally:
+            conn.close()
+
+        self.assertEqual(listed, [])
+        self.assertIsNone(fetched)
+
+    def test_save_food_log_restores_soft_deleted_entry_and_preserves_created_at(self) -> None:
+        conn = get_db_connection()
+        try:
+            created = create_food_log(
+                conn,
+                self.user_id,
+                source_type="estimate_api",
+                meal_description=" Chicken   Salad ",
+                result_title="Chicken Salad",
+                result_description="First description",
+                total_calories="240 kcal",
+                ingredients=[],
+                created_at="2026-03-14 09:00:00",
+            )
+            conn.execute(
+                """
+                UPDATE food_logs
+                SET deleted_at = ?
+                WHERE id = ?
+                """,
+                ("2026-03-15 09:00:00", int(created["id"])),
+            )
+            conn.commit()
+
+            restored = save_food_log(
+                conn,
+                self.user_id,
+                source_type="estimate_api",
+                meal_description="chicken salad",
+                result_title="Chicken Salad Updated",
+                result_description="Updated description",
+                total_calories="260 kcal",
+                ingredients=[],
+            )
+            row = conn.execute(
+                """
+                SELECT created_at, updated_at, deleted_at, result_title, total_calories
+                FROM food_logs
+                WHERE id = ?
+                """,
+                (int(created["id"]),),
+            ).fetchone()
+            total = conn.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM food_logs
+                WHERE user_id = ?
+                """,
+                (self.user_id,),
+            ).fetchone()["total"]
+        finally:
+            conn.close()
+
+        self.assertEqual(restored["id"], created["id"])
+        self.assertEqual(restored["result_title"], "Chicken Salad Updated")
+        self.assertEqual(restored["total_calories"], "260 kcal")
+        self.assertEqual(total, 1)
+        self.assertEqual(row["created_at"], "2026-03-14 09:00:00")
+        self.assertNotEqual(row["updated_at"], "2026-03-14 09:00:00")
+        self.assertIsNone(row["deleted_at"])
+        self.assertEqual(row["result_title"], "Chicken Salad Updated")
 
     def test_init_db_backfills_and_dedupes_normalized_query(self) -> None:
         conn = get_db_connection()
@@ -434,6 +531,107 @@ class FoodLogRepositoryTests(unittest.TestCase):
         self.assertEqual(rows[0]["meal_description"], "chicken salad")
         self.assertEqual(rows[0]["normalized_query"], "chicken salad")
         self.assertEqual(rows[0]["result_title"], "Chicken Salad Newer")
+
+    def test_init_db_dedupe_prefers_active_row_over_soft_deleted_duplicate(self) -> None:
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO food_logs (
+                    user_id,
+                    session_id,
+                    source_message_id,
+                    meal_description,
+                    normalized_query,
+                    logged_at,
+                    result_title,
+                    result_description,
+                    total_calories,
+                    ingredients_json,
+                    source_type,
+                    created_at,
+                    updated_at,
+                    deleted_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self.user_id,
+                    self.session_id,
+                    None,
+                    "Chicken Salad",
+                    "",
+                    "2026-03-14 09:00:00",
+                    "Active favorite",
+                    "Should remain after dedupe.",
+                    "240 kcal",
+                    "[]",
+                    "estimate_api",
+                    "2026-03-14 09:00:00",
+                    "2026-03-14 09:00:00",
+                    None,
+                ),
+            )
+            cursor.execute(
+                """
+                INSERT INTO food_logs (
+                    user_id,
+                    session_id,
+                    source_message_id,
+                    meal_description,
+                    normalized_query,
+                    logged_at,
+                    result_title,
+                    result_description,
+                    total_calories,
+                    ingredients_json,
+                    source_type,
+                    created_at,
+                    updated_at,
+                    deleted_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self.user_id,
+                    self.second_session_id,
+                    None,
+                    " chicken   salad ",
+                    "",
+                    "2026-03-14 10:00:00",
+                    "Soft deleted newer row",
+                    "Should be discarded during dedupe.",
+                    "260 kcal",
+                    "[]",
+                    "estimate_api",
+                    "2026-03-14 10:00:00",
+                    "2026-03-14 10:00:00",
+                    "2026-03-14 11:00:00",
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        init_db()
+
+        conn = get_db_connection()
+        try:
+            row = conn.execute(
+                """
+                SELECT meal_description, normalized_query, result_title, deleted_at
+                FROM food_logs
+                WHERE user_id = ?
+                """,
+                (self.user_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+
+        self.assertIsNotNone(row)
+        self.assertEqual(row["meal_description"], "Chicken Salad")
+        self.assertEqual(row["normalized_query"], "chicken salad")
+        self.assertEqual(row["result_title"], "Active favorite")
+        self.assertIsNone(row["deleted_at"])
 
 
 if __name__ == "__main__":

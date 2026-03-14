@@ -337,6 +337,7 @@ def _ensure_food_logs_table(cursor) -> None:
             assistant_suggestion TEXT,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            deleted_at TEXT,
             CHECK (source_type IN ('estimate_api', 'chat_message')),
             CHECK (source_message_id IS NULL OR session_id IS NOT NULL),
             CHECK (length(trim(meal_description)) > 0),
@@ -377,6 +378,13 @@ def _ensure_food_logs_table(cursor) -> None:
             """
             ALTER TABLE food_logs
             ADD COLUMN updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            """
+        )
+    if "deleted_at" not in food_log_columns:
+        cursor.execute(
+            """
+            ALTER TABLE food_logs
+            ADD COLUMN deleted_at TEXT
             """
         )
 
@@ -745,9 +753,13 @@ def _backfill_food_log_normalized_queries(cursor) -> None:
 def _dedupe_food_logs_by_normalized_query(cursor) -> None:
     rows = cursor.execute(
         """
-        SELECT id, user_id, normalized_query
+        SELECT id, user_id, normalized_query, deleted_at
         FROM food_logs
-        ORDER BY user_id ASC, updated_at DESC, id DESC
+        ORDER BY
+            user_id ASC,
+            CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END ASC,
+            updated_at DESC,
+            id DESC
         """
     ).fetchall()
 

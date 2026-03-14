@@ -22,7 +22,8 @@ FOOD_LOG_SELECT_COLUMNS = """
     source_type,
     assistant_suggestion,
     created_at,
-    updated_at
+    updated_at,
+    deleted_at
 """
 
 FOOD_LOG_DEFAULT_ORDER_BY = "updated_at DESC, id DESC"
@@ -114,6 +115,8 @@ def save_food_log(
 ) -> dict[str, object]:
     normalized_query = normalize_food_log_query(meal_description)
     # Food Log overwrite semantics are keyed by user_id + normalized_query.
+    # Re-saving restores a soft-deleted favorite in place and preserves
+    # the original created_at by updating the existing row instead of inserting.
     existing_id = _get_food_log_id_by_normalized_query(conn, user_id, normalized_query)
     if existing_id is None:
         return create_food_log(
@@ -143,14 +146,14 @@ def save_food_log(
             source_message_id = ?,
             meal_description = ?,
             normalized_query = ?,
-            logged_at = COALESCE(?, CURRENT_TIMESTAMP),
             result_title = ?,
             result_confidence = ?,
             result_description = ?,
             total_calories = ?,
             ingredients_json = ?,
             source_type = ?,
-            assistant_suggestion = ?
+            assistant_suggestion = ?,
+            deleted_at = NULL
         WHERE id = ? AND user_id = ?
         """,
         (
@@ -158,7 +161,6 @@ def save_food_log(
             source_message_id,
             meal_description,
             normalized_query,
-            logged_at,
             result_title,
             result_confidence,
             result_description,
@@ -189,7 +191,7 @@ def get_food_log_by_id(
         SELECT
             {FOOD_LOG_SELECT_COLUMNS}
         FROM food_logs
-        WHERE id = ? AND user_id = ?
+        WHERE id = ? AND user_id = ? AND deleted_at IS NULL
         """,
         (food_log_id, user_id),
     )
@@ -213,7 +215,7 @@ def list_food_logs_by_user(
         SELECT
             {FOOD_LOG_SELECT_COLUMNS}
         FROM food_logs
-        WHERE user_id = ?
+        WHERE user_id = ? AND deleted_at IS NULL
     """
     parameters: list[object] = [user_id]
 
@@ -264,7 +266,7 @@ def list_food_logs_by_session(
         SELECT
             {FOOD_LOG_SELECT_COLUMNS}
         FROM food_logs
-        WHERE user_id = ? AND session_id = ?
+        WHERE user_id = ? AND session_id = ? AND deleted_at IS NULL
         ORDER BY {FOOD_LOG_DEFAULT_ORDER_BY}
         LIMIT COALESCE(?, -1) OFFSET ?
         """,
@@ -319,6 +321,11 @@ def _get_food_log_id_by_normalized_query(
         SELECT id
         FROM food_logs
         WHERE user_id = ? AND normalized_query = ?
+        ORDER BY
+            CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END ASC,
+            updated_at DESC,
+            id DESC
+        LIMIT 1
         """,
         (user_id, normalized_query),
     )
