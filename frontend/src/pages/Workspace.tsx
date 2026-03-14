@@ -45,6 +45,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const [isLoadingSessionId, setIsLoadingSessionId] = useState<string | null>(null);
   const [savingFoodLogMessageIds, setSavingFoodLogMessageIds] = useState<string[]>([]);
   const [savedFoodLogMessageIds, setSavedFoodLogMessageIds] = useState<Record<string, string>>({});
+  const [failedFoodLogSaves, setFailedFoodLogSaves] = useState<Record<string, string>>({});
   const [deletingFoodLogMessageIds, setDeletingFoodLogMessageIds] = useState<string[]>([]);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -290,6 +291,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     setSavingFoodLogMessageIds((current) => (
       current.includes(message.id as string) ? current : [...current, message.id as string]
     ));
+    setFailedFoodLogSaves((current) => {
+      const next = { ...current };
+      delete next[message.id as string];
+      return next;
+    });
 
     try {
       const savedEntry = await saveFoodLogEntry({
@@ -308,9 +314,20 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         ...current,
         [message.id as string]: savedEntry.id,
       }));
+      setFailedFoodLogSaves((current) => {
+        const next = { ...current };
+        delete next[message.id as string];
+        return next;
+      });
       await refreshFoodLog();
     } catch (error) {
-      handleFoodLogError(error, 'Unable to save this analysis to Food Log right now.');
+      setFailedFoodLogSaves((current) => ({
+        ...current,
+        [message.id as string]: resolveFoodLogErrorMessage(
+          error,
+          'Unable to save this analysis to Food Log right now.',
+        ),
+      }));
     } finally {
       setSavingFoodLogMessageIds((current) => current.filter((item) => item !== message.id));
     }
@@ -330,6 +347,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     try {
       await onDeleteFoodLog(entryId);
       setSavedFoodLogMessageIds((current) => {
+        const next = { ...current };
+        delete next[messageId];
+        return next;
+      });
+      setFailedFoodLogSaves((current) => {
         const next = { ...current };
         delete next[messageId];
         return next;
@@ -473,17 +495,34 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 const mealDescription = message.isResult
                   ? resolveMealDescription(activeSession.messages, index, message)
                   : null;
-                const isSavedToFoodLog = Boolean(
-                  message.id
-                  && (
+                const savedFoodLogEntryId = message.id
+                  ? (
                     savedFoodLogMessageIds[message.id]
-                    || persistedSavedFoodLogEntriesByMessageId.has(message.id)
+                    || persistedSavedFoodLogEntriesByMessageId.get(message.id)?.id
+                    || null
                   )
-                );
+                  : null;
+                const saveFailureMessage = message.id
+                  ? failedFoodLogSaves[message.id]
+                  : undefined;
+                const isSavedToFoodLog = Boolean(savedFoodLogEntryId);
                 const isSavingToFoodLog = Boolean(message.id && savingFoodLogMessageIds.includes(message.id));
+                const isSaveFailedToFoodLog = Boolean(
+                  message.id
+                  && failedFoodLogSaves[message.id]
+                  && !isSavingToFoodLog
+                  && !isSavedToFoodLog,
+                );
                 const isDeletingSavedFoodLog = Boolean(
                   message.id && deletingFoodLogMessageIds.includes(message.id),
                 );
+                const saveState = isSavedToFoodLog
+                  ? 'saved'
+                  : isSavingToFoodLog
+                    ? 'saving'
+                    : isSaveFailedToFoodLog
+                      ? 'failed'
+                      : 'not_saved';
 
                 return (
                   <div key={message.id ?? index} className={`flex items-start gap-5 ${message.role === 'user' ? 'justify-end' : ''}`}>
@@ -532,13 +571,38 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             </table>
                           </div>
                           <div className="flex flex-col items-end gap-2 border-t border-[#4A453E]/5 bg-white px-8 py-5">
-                            {isSavedToFoodLog ? (
-                              <>
-                                <div className="flex items-center gap-2 rounded-full border border-[#81C784]/20 bg-[#81C784]/10 px-4 py-2 text-sm font-bold text-[#4E9E63]">
-                                  <span className="material-symbols-outlined text-[18px]">bookmark_added</span>
-                                  <span>Saved to Food Log</span>
-                                </div>
-                                <div className="flex items-center gap-3 text-[11px] font-semibold">
+                            <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                              <div className={`inline-flex items-center gap-2 self-end rounded-full border px-4 py-2 text-sm font-bold md:self-auto ${
+                                saveState === 'saved'
+                                  ? 'border-[#81C784]/20 bg-[#81C784]/10 text-[#4E9E63]'
+                                  : saveState === 'saving'
+                                    ? 'border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/55'
+                                    : saveState === 'failed'
+                                      ? 'border-red-200 bg-red-50 text-red-500'
+                                      : 'border-[#4A453E]/10 bg-[#FFFDF5] text-[#4A453E]/60'
+                              }`}>
+                                <span className="material-symbols-outlined text-[18px]">
+                                  {saveState === 'saved'
+                                    ? 'bookmark_added'
+                                    : saveState === 'saving'
+                                      ? 'hourglass_top'
+                                      : saveState === 'failed'
+                                        ? 'error'
+                                        : 'bookmark_add'}
+                                </span>
+                                <span>
+                                  {saveState === 'saved'
+                                    ? 'Saved'
+                                    : saveState === 'saving'
+                                      ? 'Saving'
+                                      : saveState === 'failed'
+                                        ? 'Save failed'
+                                        : 'Not saved'}
+                                </span>
+                              </div>
+
+                              <div className="flex flex-wrap items-center justify-end gap-2 text-[11px] font-semibold">
+                                {isSavedToFoodLog ? (
                                   <button
                                     type="button"
                                     onClick={() => message.id && void handleUndoFoodLogSave(message.id)}
@@ -551,32 +615,42 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                   >
                                     {isDeletingSavedFoodLog ? 'Undoing...' : 'Undo save'}
                                   </button>
-                                  <p className="max-w-xs text-right leading-5 text-[#4A453E]/40">
-                                    This removes the saved entry with soft delete, so chat links and audit data stay recoverable.
-                                  </p>
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <p className="max-w-sm text-right text-[11px] leading-5 text-[#4A453E]/40">
-                                  Food Log keeps each saved analysis as its own record. Saving here
-                                  will not overwrite older entries just because the meal text matches.
-                                </p>
-                                <button
-                                  type="button"
-                                  onClick={() => mealDescription && void handleSaveFoodLogEntry(activeSession.id, message, mealDescription)}
-                                  disabled={!mealDescription || isSavingToFoodLog}
-                                  className={`inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-bold transition-all ${
-                                    isSavingToFoodLog
-                                      ? 'cursor-wait border border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/50'
-                                      : 'border border-[#FF8A65]/15 bg-[#FF8A65] text-white shadow-lg shadow-[#FF8A65]/15 hover:bg-[#FF8A65]/90'
-                                  }`}
-                                >
-                                  <span className="material-symbols-outlined text-[18px]">bookmark_add</span>
-                                  <span>{isSavingToFoodLog ? 'Saving...' : 'Save to Food Log'}</span>
-                                </button>
-                              </>
-                            )}
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => mealDescription && void handleSaveFoodLogEntry(activeSession.id, message, mealDescription)}
+                                    disabled={!mealDescription || isSavingToFoodLog}
+                                    className={`inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-bold transition-all ${
+                                      isSavingToFoodLog
+                                        ? 'cursor-wait border border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/50'
+                                        : saveState === 'failed'
+                                          ? 'border border-red-200 bg-red-50 text-red-500 hover:bg-red-100'
+                                          : 'border border-[#FF8A65]/15 bg-[#FF8A65] text-white shadow-lg shadow-[#FF8A65]/15 hover:bg-[#FF8A65]/90'
+                                    }`}
+                                  >
+                                    <span className="material-symbols-outlined text-[18px]">
+                                      {saveState === 'failed' ? 'refresh' : 'bookmark_add'}
+                                    </span>
+                                    <span>
+                                      {isSavingToFoodLog
+                                        ? 'Saving...'
+                                        : saveState === 'failed'
+                                          ? 'Retry save'
+                                          : 'Save to Food Log'}
+                                    </span>
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <p className="w-full text-right text-[11px] leading-5 text-[#4A453E]/40">
+                              {saveState === 'saved'
+                                ? 'This analysis is already in Food Log. You can undo the save without losing the source chat.'
+                                : saveState === 'saving'
+                                  ? 'Food Log is saving this analysis now.'
+                                  : saveState === 'failed'
+                                    ? (saveFailureMessage ?? 'Food Log could not save this analysis. Try again.')
+                                    : 'Food Log keeps each saved analysis as its own record. Saving here will not overwrite older entries just because the meal text matches.'}
+                            </p>
                           </div>
                         </div>
                       ) : (
@@ -701,12 +775,16 @@ function handleChatError(error: unknown, fallbackMessage: string): void {
 
 function handleFoodLogError(error: unknown, fallbackMessage: string): void {
   console.error('Food Log Error:', error);
-  const message = error instanceof FoodLogApiError
+  const message = resolveFoodLogErrorMessage(error, fallbackMessage);
+  window.alert(message || fallbackMessage);
+}
+
+function resolveFoodLogErrorMessage(error: unknown, fallbackMessage: string): string {
+  return error instanceof FoodLogApiError
     ? error.message
     : error instanceof Error
       ? error.message
       : fallbackMessage;
-  window.alert(message || fallbackMessage);
 }
 
 function buildOptimisticUserMessage(id: string, content: string): Message {
