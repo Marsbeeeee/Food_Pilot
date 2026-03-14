@@ -41,8 +41,6 @@ def save_food_log_entry(
     request: FoodLogSaveRequest,
     current_user: UserOut = Depends(get_current_user),
 ) -> FoodLogEntryOut:
-    # Food Log exposes save-only writes. Updating a saved item must happen by
-    # saving a fresh analysis, which then overwrites the matching favorite.
     try:
         entry = save_food_log(
             current_user.id,
@@ -52,10 +50,15 @@ def save_food_log_entry(
             result_description=request.result_description,
             total_calories=request.total_calories,
             ingredients=[item.model_dump() for item in request.ingredients],
+            food_log_id=request.food_log_id,
             session_id=request.session_id,
             source_message_id=request.source_message_id,
             result_confidence=request.result_confidence,
             assistant_suggestion=request.assistant_suggestion,
+            meal_occurred_at=request.meal_occurred_at,
+            status=request.status or "active",
+            idempotency_key=request.idempotency_key,
+            is_manual=request.is_manual,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

@@ -169,7 +169,7 @@ class FoodLogRepositoryTests(unittest.TestCase):
         self.assertEqual([entry["result_title"] for entry in paged_logs], ["Meal two", "Meal one"])
         self.assertEqual([entry["result_title"] for entry in recent_logs], ["Meal three", "Meal two"])
 
-    def test_list_food_logs_orders_by_last_update_time(self) -> None:
+    def test_list_food_logs_order_by_meal_occurred_at(self) -> None:
         conn = get_db_connection()
         try:
             oldest = create_food_log(
@@ -229,17 +229,17 @@ class FoodLogRepositoryTests(unittest.TestCase):
 
         self.assertEqual(
             [entry["result_title"] for entry in all_logs],
-            ["Meal one", "Meal three", "Meal two"],
+            ["Meal three", "Meal two", "Meal one"],
         )
         self.assertEqual(
             [entry["result_title"] for entry in session_logs],
-            ["Meal one", "Meal three"],
+            ["Meal three", "Meal one"],
         )
 
-    def test_list_food_logs_date_filters_use_last_save_time(self) -> None:
+    def test_list_food_logs_date_filters_use_meal_occurred_at(self) -> None:
         conn = get_db_connection()
         try:
-            resaved = create_food_log(
+            create_food_log(
                 conn,
                 self.user_id,
                 source_type="estimate_api",
@@ -248,6 +248,7 @@ class FoodLogRepositoryTests(unittest.TestCase):
                 result_description="Description one",
                 total_calories="100 kcal",
                 ingredients=[],
+                meal_occurred_at="2026-03-15 09:00:00",
                 logged_at="2000-01-01 08:00:00",
                 created_at="2000-01-01 08:00:00",
             )
@@ -260,19 +261,10 @@ class FoodLogRepositoryTests(unittest.TestCase):
                 result_description="Description two",
                 total_calories="200 kcal",
                 ingredients=[],
+                meal_occurred_at="2026-03-14 08:00:00",
                 logged_at="2000-01-02 08:00:00",
                 created_at="2000-01-02 08:00:00",
             )
-
-            conn.execute(
-                """
-                UPDATE food_logs
-                SET updated_at = ?
-                WHERE id = ?
-                """,
-                ("2026-03-15 09:00:00", int(resaved["id"])),
-            )
-            conn.commit()
 
             filtered_logs = list_food_logs_by_user(
                 conn,
@@ -285,7 +277,110 @@ class FoodLogRepositoryTests(unittest.TestCase):
 
         self.assertEqual([entry["result_title"] for entry in filtered_logs], ["Meal one"])
 
-    def test_save_food_log_overwrites_existing_chat_message_entry(self) -> None:
+    def test_save_food_log_is_idempotent_for_same_chat_message_source(self) -> None:
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO messages (
+                    session_id,
+                    user_id,
+                    role,
+                    message_type,
+                    content,
+                    result_title,
+                    result_confidence,
+                    result_description,
+                    result_items_json,
+                    result_total
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self.session_id,
+                    self.user_id,
+                    "assistant",
+                    "estimate_result",
+                    "Assistant suggestion",
+                    "Chicken Salad",
+                    "high",
+                    "First description",
+                    '[{"name":"Chicken","portion":"150g","energy":"240 kcal"}]',
+                    "240 kcal",
+                ),
+            )
+            first_source_message_id = cursor.lastrowid
+            cursor.execute(
+                """
+                INSERT INTO messages (
+                    session_id,
+                    user_id,
+                    role,
+                    message_type,
+                    content,
+                    result_title,
+                    result_confidence,
+                    result_description,
+                    result_items_json,
+                    result_total
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self.second_session_id,
+                    self.user_id,
+                    "assistant",
+                    "estimate_result",
+                    "Assistant suggestion updated",
+                    "Chicken Salad",
+                    "high",
+                    "Updated description",
+                    '[{"name":"Chicken","portion":"150g","energy":"260 kcal"}]',
+                    "260 kcal",
+                ),
+            )
+            conn.commit()
+
+            first_save = save_food_log(
+                conn,
+                self.user_id,
+                source_type="chat_message",
+                session_id=self.session_id,
+                source_message_id=first_source_message_id,
+                meal_description=" Chicken   Salad ",
+                result_title="Chicken Salad",
+                result_description="First description",
+                total_calories="240 kcal",
+                ingredients=[],
+                created_at="2000-01-01 09:00:00",
+            )
+            second_save = save_food_log(
+                conn,
+                self.user_id,
+                source_type="chat_message",
+                session_id=self.session_id,
+                source_message_id=first_source_message_id,
+                meal_description="chicken salad",
+                result_title="Chicken Salad Retry",
+                result_description="Should resolve to the existing row.",
+                total_calories="999 kcal",
+                ingredients=[],
+            )
+
+            cursor.execute("SELECT COUNT(*) AS total FROM food_logs WHERE user_id = ?", (self.user_id,))
+            total = cursor.fetchone()["total"]
+        finally:
+            conn.close()
+
+        self.assertEqual(total, 1)
+        self.assertEqual(first_save["id"], second_save["id"])
+        self.assertEqual(second_save["created_at"], "2000-01-01 09:00:00")
+        self.assertEqual(second_save["meal_description"], " Chicken   Salad ")
+        self.assertEqual(second_save["result_title"], "Chicken Salad")
+        self.assertEqual(second_save["total_calories"], "240 kcal")
+        self.assertEqual(second_save["session_id"], self.session_id)
+        self.assertEqual(second_save["source_message_id"], first_source_message_id)
+
+    def test_save_food_log_allows_duplicate_meals_for_distinct_chat_messages(self) -> None:
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
@@ -355,7 +450,7 @@ class FoodLogRepositoryTests(unittest.TestCase):
                 source_type="chat_message",
                 session_id=self.session_id,
                 source_message_id=first_source_message_id,
-                meal_description=" Chicken   Salad ",
+                meal_description="chicken salad",
                 result_title="Chicken Salad",
                 result_description="First description",
                 total_calories="240 kcal",
@@ -380,15 +475,9 @@ class FoodLogRepositoryTests(unittest.TestCase):
         finally:
             conn.close()
 
-        self.assertEqual(total, 1)
-        self.assertEqual(first_save["id"], second_save["id"])
-        self.assertEqual(second_save["created_at"], "2000-01-01 09:00:00")
-        self.assertNotEqual(second_save["updated_at"], "2000-01-01 09:00:00")
-        self.assertEqual(second_save["meal_description"], "chicken salad")
-        self.assertEqual(second_save["result_title"], "Chicken Salad Updated")
-        self.assertEqual(second_save["total_calories"], "260 kcal")
-        self.assertEqual(second_save["session_id"], self.second_session_id)
-        self.assertEqual(second_save["source_message_id"], second_source_message_id)
+        self.assertEqual(total, 2)
+        self.assertNotEqual(first_save["id"], second_save["id"])
+        self.assertEqual(first_save["normalized_query"], second_save["normalized_query"])
 
     def test_list_food_logs_excludes_soft_deleted_entries(self) -> None:
         conn = get_db_connection()
@@ -458,43 +547,38 @@ class FoodLogRepositoryTests(unittest.TestCase):
         self.assertEqual(listed, [])
         self.assertIsNone(fetched)
 
-    def test_save_food_log_restores_soft_deleted_entry_and_preserves_created_at(self) -> None:
+    def test_save_food_log_updates_existing_entry_by_food_log_id(self) -> None:
         conn = get_db_connection()
         try:
             created = create_food_log(
                 conn,
                 self.user_id,
-                source_type="estimate_api",
-                meal_description=" Chicken   Salad ",
-                result_title="Chicken Salad",
+                source_type="manual",
+                meal_description="Breakfast oats",
+                result_title="Breakfast oats",
                 result_description="First description",
                 total_calories="240 kcal",
                 ingredients=[],
+                meal_occurred_at="2026-03-14 07:30:00",
                 created_at="2026-03-14 09:00:00",
+                is_manual=True,
             )
-            conn.execute(
-                """
-                UPDATE food_logs
-                SET deleted_at = ?
-                WHERE id = ?
-                """,
-                ("2026-03-15 09:00:00", int(created["id"])),
-            )
-            conn.commit()
-
-            restored = save_food_log(
+            updated = save_food_log(
                 conn,
                 self.user_id,
-                source_type="estimate_api",
-                meal_description="chicken salad",
-                result_title="Chicken Salad Updated",
+                source_type="manual",
+                food_log_id=int(created["id"]),
+                meal_description="Breakfast oats with berries",
+                result_title="Breakfast oats updated",
                 result_description="Updated description",
                 total_calories="260 kcal",
                 ingredients=[],
+                meal_occurred_at="2026-03-13 08:15:00",
+                is_manual=True,
             )
             row = conn.execute(
                 """
-                SELECT created_at, updated_at, deleted_at, result_title, total_calories
+                SELECT created_at, updated_at, deleted_at, result_title, total_calories, meal_occurred_at, is_manual
                 FROM food_logs
                 WHERE id = ?
                 """,
@@ -511,19 +595,45 @@ class FoodLogRepositoryTests(unittest.TestCase):
         finally:
             conn.close()
 
-        self.assertEqual(restored["id"], created["id"])
-        self.assertEqual(restored["result_title"], "Chicken Salad Updated")
-        self.assertEqual(restored["total_calories"], "260 kcal")
+        self.assertEqual(updated["id"], created["id"])
+        self.assertEqual(updated["result_title"], "Breakfast oats updated")
+        self.assertEqual(updated["total_calories"], "260 kcal")
         self.assertEqual(total, 1)
         self.assertEqual(row["created_at"], "2026-03-14 09:00:00")
         self.assertNotEqual(row["updated_at"], "2026-03-14 09:00:00")
         self.assertIsNone(row["deleted_at"])
-        self.assertEqual(row["result_title"], "Chicken Salad Updated")
+        self.assertEqual(row["result_title"], "Breakfast oats updated")
+        self.assertEqual(row["meal_occurred_at"], "2026-03-13 08:15:00")
+        self.assertEqual(row["is_manual"], 1)
 
-    def test_init_db_backfills_and_dedupes_normalized_query(self) -> None:
+    def test_init_db_backfills_normalized_query_and_preserves_duplicates(self) -> None:
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
+            cursor.execute("DROP TABLE food_logs")
+            cursor.execute(
+                """
+                CREATE TABLE food_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    session_id INTEGER REFERENCES chat_sessions(id) ON DELETE SET NULL,
+                    source_message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
+                    meal_description TEXT NOT NULL,
+                    normalized_query TEXT NOT NULL DEFAULT '',
+                    logged_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    result_title TEXT NOT NULL,
+                    result_confidence TEXT,
+                    result_description TEXT NOT NULL,
+                    total_calories TEXT NOT NULL,
+                    ingredients_json TEXT NOT NULL,
+                    source_type TEXT NOT NULL,
+                    assistant_suggestion TEXT,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    deleted_at TEXT
+                )
+                """
+            )
             cursor.execute(
                 """
                 INSERT INTO food_logs (
@@ -603,7 +713,7 @@ class FoodLogRepositoryTests(unittest.TestCase):
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT id, meal_description, normalized_query, result_title
+                SELECT id, meal_description, normalized_query, result_title, meal_occurred_at
                 FROM food_logs
                 WHERE user_id = ?
                 ORDER BY id ASC
@@ -614,12 +724,13 @@ class FoodLogRepositoryTests(unittest.TestCase):
         finally:
             conn.close()
 
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["meal_description"], "chicken salad")
+        self.assertEqual(len(rows), 2)
         self.assertEqual(rows[0]["normalized_query"], "chicken salad")
-        self.assertEqual(rows[0]["result_title"], "Chicken Salad Newer")
+        self.assertEqual(rows[1]["normalized_query"], "chicken salad")
+        self.assertEqual(rows[0]["meal_occurred_at"], "2026-03-14 09:00:00")
+        self.assertEqual(rows[1]["meal_occurred_at"], "2026-03-14 10:00:00")
 
-    def test_init_db_dedupe_prefers_active_row_over_soft_deleted_duplicate(self) -> None:
+    def test_init_db_backfills_deleted_status_without_removing_duplicate_rows(self) -> None:
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
@@ -703,22 +814,25 @@ class FoodLogRepositoryTests(unittest.TestCase):
 
         conn = get_db_connection()
         try:
-            row = conn.execute(
+            rows = conn.execute(
                 """
-                SELECT meal_description, normalized_query, result_title, deleted_at
+                SELECT meal_description, normalized_query, result_title, deleted_at, status
                 FROM food_logs
                 WHERE user_id = ?
+                ORDER BY id ASC
                 """,
                 (self.user_id,),
-            ).fetchone()
+            ).fetchall()
         finally:
             conn.close()
 
-        self.assertIsNotNone(row)
-        self.assertEqual(row["meal_description"], "Chicken Salad")
-        self.assertEqual(row["normalized_query"], "chicken salad")
-        self.assertEqual(row["result_title"], "Active favorite")
-        self.assertIsNone(row["deleted_at"])
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["normalized_query"], "chicken salad")
+        self.assertEqual(rows[0]["status"], "active")
+        self.assertIsNone(rows[0]["deleted_at"])
+        self.assertEqual(rows[1]["normalized_query"], "chicken salad")
+        self.assertEqual(rows[1]["status"], "deleted")
+        self.assertIsNotNone(rows[1]["deleted_at"])
 
 
 if __name__ == "__main__":

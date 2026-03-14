@@ -119,12 +119,18 @@ export interface FoodLogEntry {
   date: string;
   time: string;
   savedAt: string;
+  mealOccurredAt: string;
+  status: 'active' | 'deleted';
+  sourceType: 'estimate_api' | 'chat_message' | 'manual';
+  isManual: boolean;
+  idempotencyKey?: string;
   breakdown: IngredientResult[];
   image?: string;
   protein?: string;
   carbs?: string;
   fat?: string;
   sessionId?: string;
+  sourceMessageId?: string;
 }
 
 export interface FoodLogListParams {
@@ -136,7 +142,8 @@ export interface FoodLogListParams {
 }
 
 export interface FoodLogSaveInput {
-  sourceType: 'estimate_api' | 'chat_message';
+  foodLogId?: string | number;
+  sourceType: 'estimate_api' | 'chat_message' | 'manual';
   mealDescription: string;
   resultTitle: string;
   resultConfidence?: string;
@@ -146,4 +153,8 @@ export interface FoodLogSaveInput {
   sessionId?: string | number;
   sourceMessageId?: string | number;
   assistantSuggestion?: string;
+  mealOccurredAt?: string;
+  status?: 'active' | 'deleted';
+  idempotencyKey?: string;
+  isManual?: boolean;
 }

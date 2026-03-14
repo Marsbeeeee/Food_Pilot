@@ -41,10 +41,33 @@ class FoodLogEntryOut(BaseModel):
         validation_alias=AliasChoices("saved_at", "savedAt"),
         serialization_alias="savedAt",
     )
+    meal_occurred_at: str = Field(
+        validation_alias=AliasChoices("meal_occurred_at", "mealOccurredAt"),
+        serialization_alias="mealOccurredAt",
+    )
+    status: str
+    source_type: str = Field(
+        validation_alias=AliasChoices("source_type", "sourceType"),
+        serialization_alias="sourceType",
+    )
+    is_manual: bool = Field(
+        validation_alias=AliasChoices("is_manual", "isManual"),
+        serialization_alias="isManual",
+    )
+    idempotency_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("idempotency_key", "idempotencyKey"),
+        serialization_alias="idempotencyKey",
+    )
     session_id: str | None = Field(
         default=None,
         validation_alias=AliasChoices("session_id", "sessionId"),
         serialization_alias="sessionId",
+    )
+    source_message_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("source_message_id", "sourceMessageId"),
+        serialization_alias="sourceMessageId",
     )
 
 
@@ -103,6 +126,11 @@ class FoodLogListQuery(BaseModel):
 class FoodLogSaveRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
+    food_log_id: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("food_log_id", "foodLogId"),
+        serialization_alias="foodLogId",
+    )
     source_type: str = Field(
         validation_alias=AliasChoices("source_type", "sourceType"),
         serialization_alias="sourceType",
@@ -144,6 +172,22 @@ class FoodLogSaveRequest(BaseModel):
         validation_alias=AliasChoices("assistant_suggestion", "assistantSuggestion"),
         serialization_alias="assistantSuggestion",
     )
+    meal_occurred_at: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("meal_occurred_at", "mealOccurredAt"),
+        serialization_alias="mealOccurredAt",
+    )
+    status: str | None = None
+    idempotency_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("idempotency_key", "idempotencyKey"),
+        serialization_alias="idempotencyKey",
+    )
+    is_manual: bool | None = Field(
+        default=None,
+        validation_alias=AliasChoices("is_manual", "isManual"),
+        serialization_alias="isManual",
+    )
 
     @field_validator(
         "source_type",
@@ -163,17 +207,41 @@ class FoodLogSaveRequest(BaseModel):
             return normalized
         raise ValueError(f"{info.field_name} cannot be empty")
 
-    @field_validator("session_id", "source_message_id")
+    @field_validator("food_log_id", "session_id", "source_message_id")
     @classmethod
     def validate_positive_ids(cls, value: int | None) -> int | None:
         if value is not None and value <= 0:
             raise ValueError("identifier must be greater than 0")
         return value
 
+    @field_validator("meal_occurred_at")
+    @classmethod
+    def validate_meal_occurred_at(cls, value: str | None) -> str | None:
+        return _normalize_timestamp_string(value)
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        if normalized not in {"active", "deleted"}:
+            raise ValueError("status must be active or deleted")
+        return normalized
+
+    @field_validator("idempotency_key")
+    @classmethod
+    def validate_idempotency_key(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
+
 
 def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
     saved_at = _resolve_saved_at_value(entry)
-    timestamp = _parse_saved_timestamp(saved_at)
+    meal_occurred_at = _resolve_meal_occurred_at_value(entry, saved_at)
+    timestamp = _parse_timestamp(meal_occurred_at)
 
     return FoodLogEntryOut.model_validate(
         {
@@ -185,9 +253,19 @@ def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
             "time": _format_entry_time(timestamp),
             "breakdown": parse_food_log_items(entry["ingredients_json"]),
             "saved_at": saved_at,
+            "meal_occurred_at": meal_occurred_at,
+            "status": entry["status"],
+            "source_type": entry["source_type"],
+            "is_manual": bool(entry["is_manual"]),
+            "idempotency_key": entry.get("idempotency_key"),
             "session_id": (
                 str(entry["session_id"])
                 if entry.get("session_id") is not None
+                else None
+            ),
+            "source_message_id": (
+                str(entry["source_message_id"])
+                if entry.get("source_message_id") is not None
                 else None
             ),
         }
@@ -216,11 +294,21 @@ def _resolve_saved_at_value(entry: dict[str, object]) -> str:
     return "1970-01-01 00:00:00"
 
 
-def _parse_saved_timestamp(value: str) -> datetime:
+def _resolve_meal_occurred_at_value(entry: dict[str, object], fallback: str) -> str:
+    value = entry.get("meal_occurred_at")
+    if isinstance(value, str) and value.strip():
+        return value
+    return fallback
+
+
+def _parse_timestamp(value: str) -> datetime:
     try:
         return datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
     except ValueError:
-        return datetime(1970, 1, 1, 0, 0, 0)
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return datetime(1970, 1, 1, 0, 0, 0)
 
 
 def _format_entry_date(timestamp: datetime) -> str:
@@ -241,3 +329,22 @@ def _normalize_calories(value: object) -> str:
     if match is None:
         return "0"
     return match.group(0)
+
+
+def _normalize_timestamp_string(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        return None
+    normalized_value = normalized.replace("T", " ")
+    try:
+        timestamp = datetime.strptime(normalized_value, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        try:
+            timestamp = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError(
+                "meal_occurred_at must be ISO datetime or YYYY-MM-DD HH:MM:SS"
+            ) from exc
+    return timestamp.strftime("%Y-%m-%d %H:%M:%S")

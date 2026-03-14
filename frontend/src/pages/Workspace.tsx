@@ -11,11 +11,12 @@ import {
   sendChatMessage,
 } from '../api/chat';
 import { FoodLogApiError, saveFoodLogEntry } from '../api/foodLog';
-import { ChatSession, Message } from '../types/types';
+import { ChatSession, FoodLogEntry, Message } from '../types/types';
 
 interface WorkspaceProps {
   sessions: ChatSession[];
   setSessions: React.Dispatch<React.SetStateAction<ChatSession[]>>;
+  foodLog: FoodLogEntry[];
   activeSessionId: string;
   setActiveSessionId: (id: string) => void;
   profileId?: number;
@@ -26,6 +27,7 @@ interface WorkspaceProps {
 export const Workspace: React.FC<WorkspaceProps> = ({
   sessions,
   setSessions,
+  foodLog,
   activeSessionId,
   setActiveSessionId,
   profileId,
@@ -55,6 +57,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
   const activeSession = sessions.find((session) => session.id === activeSessionId)
     || (sessions.length > 0 ? sessions[0] : null);
+  const persistedSavedFoodLogMessageIds = new Set(
+    foodLog
+      .map((entry) => entry.sourceMessageId)
+      .filter((value): value is string => Boolean(value)),
+  );
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -437,7 +444,13 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 const mealDescription = message.isResult
                   ? resolveMealDescription(activeSession.messages, index, message)
                   : null;
-                const isSavedToFoodLog = Boolean(message.id && savedFoodLogMessageIds.includes(message.id));
+                const isSavedToFoodLog = Boolean(
+                  message.id
+                  && (
+                    savedFoodLogMessageIds.includes(message.id)
+                    || persistedSavedFoodLogMessageIds.has(message.id)
+                  )
+                );
                 const isSavingToFoodLog = Boolean(message.id && savingFoodLogMessageIds.includes(message.id));
 
                 return (
@@ -488,8 +501,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                           </div>
                           <div className="flex flex-col items-end gap-2 border-t border-[#4A453E]/5 bg-white px-8 py-5">
                             <p className="max-w-sm text-right text-[11px] leading-5 text-[#4A453E]/40">
-                              Food Log has no direct edit. To change saved content, run a new
-                              analysis and save again to replace the existing favorite.
+                              Food Log keeps each saved analysis as its own record. Saving here
+                              will not overwrite older entries just because the meal text matches.
                             </p>
                             <button
                               type="button"

@@ -327,19 +327,27 @@ def _ensure_food_logs_table(cursor) -> None:
             source_message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
             meal_description TEXT NOT NULL,
             normalized_query TEXT NOT NULL DEFAULT '',
+            meal_occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             logged_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            status TEXT NOT NULL DEFAULT 'active',
             result_title TEXT NOT NULL,
             result_confidence TEXT,
             result_description TEXT NOT NULL,
             total_calories TEXT NOT NULL,
             ingredients_json TEXT NOT NULL,
             source_type TEXT NOT NULL,
+            is_manual INTEGER NOT NULL DEFAULT 0,
+            idempotency_key TEXT,
             assistant_suggestion TEXT,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             deleted_at TEXT,
-            CHECK (source_type IN ('estimate_api', 'chat_message')),
+            CHECK (source_type IN ('estimate_api', 'chat_message', 'manual')),
+            CHECK (status IN ('active', 'deleted')),
+            CHECK (is_manual IN (0, 1)),
+            CHECK (idempotency_key IS NULL OR length(trim(idempotency_key)) > 0),
             CHECK (source_message_id IS NULL OR session_id IS NOT NULL),
+            CHECK (source_type = 'chat_message' OR source_message_id IS NULL),
             CHECK (length(trim(meal_description)) > 0),
             CHECK (length(trim(result_title)) > 0),
             CHECK (result_confidence IS NULL OR length(trim(result_confidence)) > 0),
@@ -373,6 +381,20 @@ def _ensure_food_logs_table(cursor) -> None:
             ADD COLUMN normalized_query TEXT
             """
         )
+    if "meal_occurred_at" not in food_log_columns:
+        cursor.execute(
+            """
+            ALTER TABLE food_logs
+            ADD COLUMN meal_occurred_at TEXT
+            """
+        )
+    if "status" not in food_log_columns:
+        cursor.execute(
+            """
+            ALTER TABLE food_logs
+            ADD COLUMN status TEXT
+            """
+        )
     if "updated_at" not in food_log_columns:
         cursor.execute(
             """
@@ -387,6 +409,20 @@ def _ensure_food_logs_table(cursor) -> None:
             ADD COLUMN deleted_at TEXT
             """
         )
+    if "is_manual" not in food_log_columns:
+        cursor.execute(
+            """
+            ALTER TABLE food_logs
+            ADD COLUMN is_manual INTEGER
+            """
+        )
+    if "idempotency_key" not in food_log_columns:
+        cursor.execute(
+            """
+            ALTER TABLE food_logs
+            ADD COLUMN idempotency_key TEXT
+            """
+        )
 
     cursor.execute(
         """
@@ -395,7 +431,10 @@ def _ensure_food_logs_table(cursor) -> None:
     )
     _migrate_legacy_food_log_entries(cursor)
     _backfill_food_log_normalized_queries(cursor)
-    _dedupe_food_logs_by_normalized_query(cursor)
+    _backfill_food_log_meal_occurred_at(cursor)
+    _backfill_food_log_status(cursor)
+    _backfill_food_log_is_manual(cursor)
+    _backfill_food_log_idempotency_keys(cursor)
 
     cursor.execute(
         """
@@ -407,6 +446,12 @@ def _ensure_food_logs_table(cursor) -> None:
         """
         CREATE INDEX IF NOT EXISTS idx_food_logs_user_logged_at
         ON food_logs(user_id, logged_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_food_logs_user_meal_occurred_at
+        ON food_logs(user_id, meal_occurred_at DESC, id DESC);
         """
     )
     cursor.execute(
@@ -435,9 +480,9 @@ def _ensure_food_logs_table(cursor) -> None:
     )
     cursor.execute(
         """
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_food_logs_user_normalized_query_unique
-        ON food_logs(user_id, normalized_query)
-        WHERE normalized_query IS NOT NULL AND normalized_query != '';
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_food_logs_user_idempotency_key_unique
+        ON food_logs(user_id, idempotency_key)
+        WHERE idempotency_key IS NOT NULL AND trim(idempotency_key) != '';
         """
     )
     cursor.execute(
@@ -671,13 +716,17 @@ def _migrate_legacy_food_log_entries(cursor) -> None:
             session_id,
             source_message_id,
             meal_description,
+            meal_occurred_at,
             logged_at,
+            status,
             result_title,
             result_confidence,
             result_description,
             total_calories,
             ingredients_json,
             source_type,
+            is_manual,
+            idempotency_key,
             assistant_suggestion,
             created_at,
             updated_at
@@ -701,12 +750,19 @@ def _migrate_legacy_food_log_entries(cursor) -> None:
                 legacy.title
             ),
             COALESCE(legacy.created_at, CURRENT_TIMESTAMP),
+            COALESCE(legacy.created_at, CURRENT_TIMESTAMP),
+            'active',
             legacy.title,
             legacy.confidence,
             legacy.description,
             legacy.total,
             legacy.items_json,
             legacy.source_type,
+            CASE WHEN legacy.source_type = 'manual' THEN 1 ELSE 0 END,
+            CASE
+                WHEN legacy.message_id IS NOT NULL THEN 'chat_message:' || legacy.message_id
+                ELSE NULL
+            END,
             legacy.suggestion,
             COALESCE(legacy.created_at, CURRENT_TIMESTAMP),
             COALESCE(legacy.created_at, CURRENT_TIMESTAMP)
@@ -750,36 +806,87 @@ def _backfill_food_log_normalized_queries(cursor) -> None:
         )
 
 
-def _dedupe_food_logs_by_normalized_query(cursor) -> None:
+def _backfill_food_log_meal_occurred_at(cursor) -> None:
+    cursor.execute(
+        """
+        UPDATE food_logs
+        SET meal_occurred_at = COALESCE(
+            meal_occurred_at,
+            logged_at,
+            created_at,
+            updated_at,
+            CURRENT_TIMESTAMP
+        )
+        WHERE meal_occurred_at IS NULL OR trim(meal_occurred_at) = ''
+        """
+    )
+
+
+def _backfill_food_log_status(cursor) -> None:
+    cursor.execute(
+        """
+        UPDATE food_logs
+        SET status = CASE
+            WHEN deleted_at IS NOT NULL THEN 'deleted'
+            ELSE 'active'
+        END
+        WHERE status IS NULL OR trim(status) = ''
+        """
+    )
+    cursor.execute(
+        """
+        UPDATE food_logs
+        SET status = 'deleted'
+        WHERE deleted_at IS NOT NULL AND status != 'deleted'
+        """
+    )
+
+
+def _backfill_food_log_is_manual(cursor) -> None:
+    cursor.execute(
+        """
+        UPDATE food_logs
+        SET is_manual = CASE
+            WHEN source_type = 'manual' THEN 1
+            ELSE 0
+        END
+        WHERE is_manual IS NULL
+        """
+    )
+
+
+def _backfill_food_log_idempotency_keys(cursor) -> None:
     rows = cursor.execute(
         """
-        SELECT id, user_id, normalized_query, deleted_at
+        SELECT id, user_id, source_type, source_message_id, idempotency_key
         FROM food_logs
-        ORDER BY
-            user_id ASC,
-            CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END ASC,
-            updated_at DESC,
-            id DESC
         """
     ).fetchall()
-
-    seen: set[tuple[int, str]] = set()
-    duplicate_ids: list[int] = []
+    source_message_counts: dict[tuple[int, int], int] = {}
     for row in rows:
-        normalized_query = row["normalized_query"]
-        if not isinstance(normalized_query, str) or not normalized_query:
+        source_message_id = row["source_message_id"]
+        if source_message_id is None:
             continue
+        key = (int(row["user_id"]), int(source_message_id))
+        source_message_counts[key] = source_message_counts.get(key, 0) + 1
 
-        key = (int(row["user_id"]), normalized_query)
-        if key in seen:
-            duplicate_ids.append(int(row["id"]))
+    for row in rows:
+        current_key = row["idempotency_key"]
+        if isinstance(current_key, str) and current_key.strip():
             continue
-        seen.add(key)
-
-    if duplicate_ids:
-        cursor.executemany(
-            "DELETE FROM food_logs WHERE id = ?",
-            [(food_log_id,) for food_log_id in duplicate_ids],
+        if row["source_type"] != "chat_message" or row["source_message_id"] is None:
+            continue
+        source_message_id = int(row["source_message_id"])
+        key = (int(row["user_id"]), source_message_id)
+        if source_message_counts.get(key, 0) != 1:
+            continue
+        cursor.execute(
+            """
+            UPDATE food_logs
+            SET idempotency_key = ?
+            WHERE id = ?
+            """,
+            (f"chat_message:{source_message_id}", int(row["id"])),
         )
 
 

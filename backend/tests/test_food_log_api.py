@@ -109,6 +109,10 @@ class FoodLogApiTests(unittest.TestCase):
                 "date": "Mar 14",
                 "time": "09:30 AM",
                 "savedAt": "2026-03-14 09:30:00",
+                "mealOccurredAt": "2026-03-14 09:30:00",
+                "status": "active",
+                "sourceType": "estimate_api",
+                "isManual": False,
                 "breakdown": [
                     {
                         "name": "Oats",
@@ -130,7 +134,11 @@ class FoodLogApiTests(unittest.TestCase):
         self.assertEqual(linked_entry["date"], "Mar 14")
         self.assertEqual(linked_entry["time"], "08:15 AM")
         self.assertEqual(linked_entry["savedAt"], "2026-03-14 08:15:00")
+        self.assertEqual(linked_entry["mealOccurredAt"], "2026-03-14 08:15:00")
         self.assertEqual(linked_entry["sessionId"], str(session["id"]))
+        self.assertEqual(linked_entry["status"], "active")
+        self.assertEqual(linked_entry["sourceType"], "chat_message")
+        self.assertFalse(linked_entry["isManual"])
 
     def test_get_food_logs_supports_session_limit_date_and_meal_filters(self) -> None:
         lunch_session = create_empty_session(self.user_id)

@@ -274,8 +274,9 @@ class FoodLogServiceTests(unittest.TestCase):
                 "idx_food_logs_session_id",
                 "idx_food_logs_logged_at",
                 "idx_food_logs_user_logged_at",
+                "idx_food_logs_user_meal_occurred_at",
                 "idx_food_logs_source_message_id",
-                "idx_food_logs_user_normalized_query_unique",
+                "idx_food_logs_user_idempotency_key_unique",
             }.issubset(index_names)
         )
         self.assertEqual(
@@ -287,7 +288,7 @@ class FoodLogServiceTests(unittest.TestCase):
             },
         )
 
-    def test_user_normalized_query_unique_index_blocks_duplicate_food_logs(self) -> None:
+    def test_user_idempotency_key_unique_index_blocks_duplicate_food_logs(self) -> None:
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
@@ -336,15 +337,13 @@ class FoodLogServiceTests(unittest.TestCase):
                     source_message_id,
                     meal_description,
                     normalized_query,
-                    logged_at,
                     result_title,
                     result_description,
                     total_calories,
                     ingredients_json,
                     source_type,
-                    created_at,
-                    updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    idempotency_key
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     self.user_id,
@@ -352,14 +351,12 @@ class FoodLogServiceTests(unittest.TestCase):
                     message_id,
                     " Chicken   Salad ",
                     "chicken salad",
-                    "2026-03-14 09:00:00",
                     "Chicken salad",
                     "Protein-forward salad with avocado.",
                     "240 kcal",
                     '[{"name":"Chicken","portion":"150g","energy":"240 kcal"}]',
                     "chat_message",
-                    "2026-03-14 09:00:00",
-                    "2026-03-14 09:00:00",
+                    "chat_message:123",
                 ),
             )
             conn.commit()
@@ -373,15 +370,13 @@ class FoodLogServiceTests(unittest.TestCase):
                         source_message_id,
                         meal_description,
                         normalized_query,
-                        logged_at,
                         result_title,
                         result_description,
                         total_calories,
                         ingredients_json,
                         source_type,
-                        created_at,
-                        updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        idempotency_key
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         self.user_id,
@@ -389,14 +384,12 @@ class FoodLogServiceTests(unittest.TestCase):
                         message_id,
                         "chicken salad",
                         "chicken salad",
-                        "2026-03-14 09:01:00",
                         "Chicken salad duplicate",
                         "Duplicate entry should fail.",
                         "240 kcal",
                         '[{"name":"Chicken","portion":"150g","energy":"240 kcal"}]',
                         "chat_message",
-                        "2026-03-14 09:01:00",
-                        "2026-03-14 09:01:00",
+                        "chat_message:123",
                     ),
                 )
                 conn.commit()

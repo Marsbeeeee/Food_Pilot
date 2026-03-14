@@ -72,9 +72,9 @@ export const Explorer: React.FC<ExplorerProps> = ({
             </h1>
             <p className="max-w-2xl text-sm leading-7 text-[#4A453E]/60 md:text-base">
               Food Log is your saved collection of meal analyses. It only includes items you
-              explicitly save, not your complete eating history. It also does not support direct
-              edits. To change a saved item, run a new analysis and save it again. Timestamps on
-              this page refer to save time or last re-save time, not when you ate the meal.
+              explicitly save, not your complete eating history. Meal timestamps now reflect when
+              the meal happened, while save metadata stays attached to each record for audit and
+              idempotency.
             </p>
           </div>
 
@@ -104,7 +104,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
               </h2>
               {logEntries.length > 0 && (
                 <span className="text-[11px] font-semibold text-[#4A453E]/35">
-                  Sorted by last save time, newest first
+                  Sorted by meal time, newest first
                 </span>
               )}
             </div>
@@ -135,7 +135,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
                     <div className="min-w-0 flex-1 md:px-6">
                       <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-[#4A453E]/30">
-                        Saved {entry.date} / {entry.time}
+                        Meal {entry.date} / {entry.time}
                       </span>
                       <h4 className="truncate text-lg font-bold text-[#4A453E]">{entry.name}</h4>
                       <p className="mt-1 truncate text-xs text-[#4A453E]/50">{entry.description}</p>
@@ -188,7 +188,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                   Saved Analysis
                 </span>
                 <p className="mt-2 text-[11px] font-semibold text-[#4A453E]/35">
-                  Last saved {selectedEntry.date} / {selectedEntry.time}
+                  Meal logged for {selectedEntry.date} / {selectedEntry.time}
                 </p>
               </div>
               <button
@@ -265,8 +265,8 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
           <div className="flex flex-col gap-3 border-t border-[#4A453E]/05 bg-white p-6 md:p-8">
             <div className="rounded-[20px] border border-[#4A453E]/8 bg-[#FFFDF5] px-4 py-3 text-sm leading-6 text-[#4A453E]/55">
-              Food Log does not provide a standalone edit flow. If you want to change this saved
-              analysis, reopen the chat or run a new analysis, then save again to overwrite it.
+              Food Log keeps edits, deletes, and re-saves as explicit record state. Re-saving a new
+              analysis no longer overwrites older entries by meal text alone.
             </div>
             <button
               type="button"

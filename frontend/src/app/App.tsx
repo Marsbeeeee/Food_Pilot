@@ -287,6 +287,7 @@ const App: React.FC = () => {
           <Workspace
             sessions={sessions}
             setSessions={setSessions}
+            foodLog={foodLog}
             activeSessionId={activeSessionId}
             setActiveSessionId={setActiveSessionId}
             profileId={profile.id}
@@ -309,6 +310,7 @@ const App: React.FC = () => {
           <Workspace
             sessions={sessions}
             setSessions={setSessions}
+            foodLog={foodLog}
             activeSessionId={activeSessionId}
             setActiveSessionId={setActiveSessionId}
             profileId={profile.id}

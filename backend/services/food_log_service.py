@@ -27,8 +27,12 @@ def create_food_log(
     source_message_id: int | None = None,
     result_confidence: str | None = None,
     assistant_suggestion: str | None = None,
+    meal_occurred_at: str | None = None,
     logged_at: str | None = None,
     created_at: str | None = None,
+    status: str = "active",
+    idempotency_key: str | None = None,
+    is_manual: bool | None = None,
     conn: sqlite3.Connection | None = None,
     auto_commit: bool = True,
 ) -> dict[str, object]:
@@ -36,6 +40,14 @@ def create_food_log(
     active_conn = conn or get_db_connection()
 
     try:
+        _validate_food_log_source(
+            active_conn,
+            user_id,
+            source_type=source_type,
+            session_id=session_id,
+            source_message_id=source_message_id,
+            is_manual=is_manual,
+        )
         return create_food_log_record(
             active_conn,
             user_id,
@@ -49,8 +61,12 @@ def create_food_log(
             source_message_id=source_message_id,
             result_confidence=result_confidence,
             assistant_suggestion=assistant_suggestion,
+            meal_occurred_at=meal_occurred_at,
             logged_at=logged_at,
             created_at=created_at,
+            status=status,
+            idempotency_key=idempotency_key,
+            is_manual=is_manual,
             auto_commit=auto_commit,
         )
     except Exception:
@@ -71,12 +87,17 @@ def save_food_log(
     result_description: str,
     total_calories: str,
     ingredients: str | list[dict[str, object]],
+    food_log_id: int | None = None,
     session_id: int | None = None,
     source_message_id: int | None = None,
     result_confidence: str | None = None,
     assistant_suggestion: str | None = None,
+    meal_occurred_at: str | None = None,
     logged_at: str | None = None,
     created_at: str | None = None,
+    status: str = "active",
+    idempotency_key: str | None = None,
+    is_manual: bool | None = None,
     conn: sqlite3.Connection | None = None,
     auto_commit: bool = True,
 ) -> dict[str, object]:
@@ -84,15 +105,13 @@ def save_food_log(
     active_conn = conn or get_db_connection()
 
     try:
-        # Food Log is intentionally save-only. There is no standalone edit flow;
-        # users update saved content by generating a fresh analysis and saving it
-        # again so the duplicate key can overwrite the existing favorite.
         _validate_food_log_source(
             active_conn,
             user_id,
             source_type=source_type,
             session_id=session_id,
             source_message_id=source_message_id,
+            is_manual=is_manual,
         )
         return save_food_log_record(
             active_conn,
@@ -103,12 +122,17 @@ def save_food_log(
             result_description=result_description,
             total_calories=total_calories,
             ingredients=ingredients,
+            food_log_id=food_log_id,
             session_id=session_id,
             source_message_id=source_message_id,
             result_confidence=result_confidence,
             assistant_suggestion=assistant_suggestion,
+            meal_occurred_at=meal_occurred_at,
             logged_at=logged_at,
             created_at=created_at,
+            status=status,
+            idempotency_key=idempotency_key,
+            is_manual=is_manual,
             auto_commit=auto_commit,
         )
     except Exception:
@@ -128,12 +152,15 @@ def create_food_log_from_estimate(
     source_type: str,
     session_id: int | None = None,
     source_message_id: int | None = None,
+    meal_occurred_at: str | None = None,
     logged_at: str | None = None,
     created_at: str | None = None,
+    idempotency_key: str | None = None,
+    is_manual: bool | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> dict[str, object]:
-    # Food Log writes are save-only. Successful chat analysis and `/estimate`
-    # responses must not call this automatically.
+    # Successful chat analysis and `/estimate` responses must not create Food Log
+    # rows automatically. Persisting still requires an explicit save action.
     owns_connection = conn is None
     active_conn = conn or get_db_connection()
     try:
@@ -149,8 +176,11 @@ def create_food_log_from_estimate(
             source_message_id=source_message_id,
             result_confidence=getattr(estimate, "confidence", None),
             assistant_suggestion=getattr(estimate, "suggestion", None),
+            meal_occurred_at=meal_occurred_at,
             logged_at=logged_at,
             created_at=created_at,
+            idempotency_key=idempotency_key,
+            is_manual=is_manual,
             conn=active_conn,
             auto_commit=False,
         )
@@ -185,8 +215,8 @@ def delete_food_log(
     active_conn = conn or get_db_connection()
 
     try:
-        # Food Log deletion is soft-delete only. Default listing APIs keep
-        # deleted favorites hidden while preserving the row for future restore.
+        # Food Log deletion is soft-delete only so the row still carries
+        # lifecycle state for audit and idempotency.
         return delete_food_log_record(
             active_conn,
             food_log_id,
@@ -273,15 +303,22 @@ def _validate_food_log_source(
     source_type: str,
     session_id: int | None,
     source_message_id: int | None,
+    is_manual: bool | None,
 ) -> None:
-    if source_type not in {"estimate_api", "chat_message"}:
-        raise ValueError("source_type must be estimate_api or chat_message")
+    if source_type not in {"estimate_api", "chat_message", "manual"}:
+        raise ValueError("source_type must be estimate_api, chat_message, or manual")
 
     if source_type == "chat_message" and session_id is None:
         raise ValueError("session_id is required for chat_message saves")
 
     if source_type != "chat_message" and source_message_id is not None:
         raise ValueError("source_message_id is only supported for chat_message saves")
+
+    if source_type == "manual" and is_manual is False:
+        raise ValueError("manual saves must set is_manual to true when provided")
+
+    if source_type != "manual" and is_manual is True:
+        raise ValueError("is_manual can only be true for manual saves")
 
     if source_message_id is None:
         return
