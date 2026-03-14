@@ -190,6 +190,15 @@ const App: React.FC = () => {
     setFoodLog((current) => current.filter((entry) => entry.id !== entryId));
   };
 
+  const handleChatSessionDeleted = async (sessionId: string) => {
+    setFoodLog((current) => current.map((entry) => (
+      entry.sessionId === sessionId
+        ? { ...entry, sessionId: undefined }
+        : entry
+    )));
+    await refreshFoodLog();
+  };
+
   const handleLogout = () => {
     clearSession();
     clearStoredProfile();
@@ -282,6 +291,7 @@ const App: React.FC = () => {
             setActiveSessionId={setActiveSessionId}
             profileId={profile.id}
             refreshFoodLog={refreshFoodLog}
+            unlinkDeletedChatFromFoodLog={handleChatSessionDeleted}
           />
         );
       case AppView.EXPLORER:
@@ -303,6 +313,7 @@ const App: React.FC = () => {
             setActiveSessionId={setActiveSessionId}
             profileId={profile.id}
             refreshFoodLog={refreshFoodLog}
+            unlinkDeletedChatFromFoodLog={handleChatSessionDeleted}
           />
         );
     }

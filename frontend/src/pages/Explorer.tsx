@@ -281,7 +281,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
               }`}
             >
               <span className="material-symbols-outlined text-lg">forum</span>
-              Open Related Chat
+              {selectedEntry.sessionId ? 'Open Related Chat' : 'Related Chat Deleted'}
             </button>
           </div>
         </aside>

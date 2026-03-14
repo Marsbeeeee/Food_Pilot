@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from backend.database.connection import get_db_connection
 from backend.database.init_db import init_db
+from backend.services.food_log_service import save_food_log
 from backend.services.chat_service import (
     DEFAULT_SESSION_TITLE,
     DEFAULT_ASSISTANT_ERROR_MESSAGE,
@@ -354,6 +355,62 @@ class ChatServiceTests(unittest.TestCase):
         self.assertIsNone(missing_detail)
         self.assertEqual(session_total, 0)
         self.assertEqual(message_total, 0)
+
+    def test_delete_session_preserves_saved_food_log_but_clears_chat_link(self) -> None:
+        detail = create_session_with_first_user_message(self.user_id, "greek yogurt")
+        session_id = int(detail["id"])
+        assistant_result = append_assistant_message(
+            self.user_id,
+            session_id,
+            message_type="estimate_result",
+            content="Add berries for fiber.",
+            result_title="Greek yogurt",
+            result_confidence="high",
+            result_description="High-protein snack.",
+            result_items_json='[{"name":"Greek yogurt","portion":"1 cup","energy":"120 kcal"}]',
+            result_total="120 kcal",
+        )
+        saved_entry = save_food_log(
+            self.user_id,
+            "chat_message",
+            meal_description="greek yogurt",
+            result_title="Greek yogurt",
+            result_description="High-protein snack.",
+            total_calories="120 kcal",
+            ingredients=[
+                {
+                    "name": "Greek yogurt",
+                    "portion": "1 cup",
+                    "energy": "120 kcal",
+                }
+            ],
+            session_id=session_id,
+            source_message_id=int(assistant_result["id"]),
+            result_confidence="high",
+            assistant_suggestion="Add berries for fiber.",
+        )
+
+        deleted = delete_session(self.user_id, session_id)
+
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT session_id, source_message_id
+                FROM food_logs
+                WHERE id = ?
+                """,
+                (int(saved_entry["id"]),),
+            )
+            food_log_row = cursor.fetchone()
+        finally:
+            conn.close()
+
+        self.assertTrue(deleted)
+        self.assertIsNotNone(food_log_row)
+        self.assertIsNone(food_log_row["session_id"])
+        self.assertIsNone(food_log_row["source_message_id"])
 
     def test_missing_or_foreign_session_returns_none(self) -> None:
         self.assertIsNone(append_user_message(self.user_id, 9999, "missing"))

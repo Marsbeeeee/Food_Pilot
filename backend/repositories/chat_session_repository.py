@@ -103,6 +103,16 @@ def delete_session(
     # dependent messages.
     cursor.execute(
         """
+        UPDATE food_logs
+        SET
+            session_id = NULL,
+            source_message_id = NULL
+        WHERE user_id = ? AND session_id = ?
+        """,
+        (user_id, session_id),
+    )
+    cursor.execute(
+        """
         DELETE FROM chat_sessions
         WHERE id = ? AND user_id = ?
         """,

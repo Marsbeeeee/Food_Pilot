@@ -20,6 +20,7 @@ interface WorkspaceProps {
   setActiveSessionId: (id: string) => void;
   profileId?: number;
   refreshFoodLog: () => Promise<void>;
+  unlinkDeletedChatFromFoodLog: (sessionId: string) => Promise<void>;
 }
 
 export const Workspace: React.FC<WorkspaceProps> = ({
@@ -29,6 +30,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   setActiveSessionId,
   profileId,
   refreshFoodLog,
+  unlinkDeletedChatFromFoodLog,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -206,7 +208,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       } else if (sessionId === activeSessionId) {
         setActiveSessionId(remainingSessions[0].id);
       }
-      void refreshFoodLog();
+      await unlinkDeletedChatFromFoodLog(sessionId);
       setIsMenuOpen(false);
     } catch (error) {
       handleChatError(error, 'Unable to delete this chat right now.');
