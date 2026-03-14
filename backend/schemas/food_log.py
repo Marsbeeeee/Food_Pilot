@@ -32,11 +32,11 @@ class FoodLogEntryOut(BaseModel):
     calories: str
     date: str
     time: str
-    image: str
     breakdown: list[EstimateItem]
-    protein: str
-    carbs: str
-    fat: str
+    image: str | None = None
+    protein: str | None = None
+    carbs: str | None = None
+    fat: str | None = None
     session_id: str | None = Field(
         default=None,
         validation_alias=AliasChoices("session_id", "sessionId"),
@@ -107,11 +107,7 @@ def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
             "calories": _normalize_calories(entry["total_calories"]),
             "date": _format_entry_date(timestamp),
             "time": _format_entry_time(timestamp),
-            "image": f"https://picsum.photos/seed/foodpilot-log-{entry['id']}/640/480",
             "breakdown": parse_food_log_items(entry["ingredients_json"]),
-            "protein": "--",
-            "carbs": "--",
-            "fat": "--",
             "session_id": (
                 str(entry["session_id"])
                 if entry.get("session_id") is not None

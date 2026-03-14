@@ -118,11 +118,11 @@ export interface FoodLogEntry {
   calories: string;
   date: string;
   time: string;
-  image: string;
   breakdown: IngredientResult[];
-  protein: string;
-  carbs: string;
-  fat: string;
+  image?: string;
+  protein?: string;
+  carbs?: string;
+  fat?: string;
   sessionId?: string;
 }
 

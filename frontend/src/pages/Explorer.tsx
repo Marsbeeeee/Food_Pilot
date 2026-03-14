@@ -46,28 +46,29 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
               Food Log
             </span>
             <h1 className="font-serif-brand text-4xl font-bold text-[#4A453E] md:text-5xl">
-              我的饮食日志
+              My Food Log
             </h1>
             <p className="max-w-2xl text-sm leading-7 text-[#4A453E]/60 md:text-base">
-              回看近期的热量估算与食材拆分，快速找到每次分析记录，并跳转回对应对话。
+              Review your saved calorie estimates and ingredient breakdowns, then jump back into the
+              related chat when a session link is available.
             </p>
           </div>
 
           <div className="mb-12 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
             <SummaryCard
-              label="累计热量"
+              label="Total Calories"
               value={String(totalCalories)}
               unit="kcal"
             />
             <SummaryCard
-              label="每餐平均"
+              label="Average Meal"
               value={String(averageCalories)}
               unit="kcal"
             />
             <SummaryCard
-              label="记录总数"
+              label="Entries"
               value={String(logEntries.length)}
-              unit="条"
+              unit="logs"
               accent
             />
           </div>
@@ -75,11 +76,11 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between px-1">
               <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-                最近记录
+                Recent Records
               </h2>
               {logEntries.length > 0 && (
                 <span className="text-[11px] font-semibold text-[#4A453E]/35">
-                  最近一次记录已自动置顶
+                  Newest entries are shown first
                 </span>
               )}
             </div>
@@ -100,16 +101,17 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
                     }`}
                   >
                     <div className="mb-4 size-full h-40 overflow-hidden rounded-[22px] border border-[#4A453E]/05 md:mb-0 md:size-14 md:shrink-0">
-                      <img
+                      <FoodLogImage
                         src={entry.image}
                         alt={entry.name}
+                        compact
                         className="h-full w-full object-cover grayscale-[20%] transition-all group-hover:grayscale-0"
                       />
                     </div>
 
                     <div className="min-w-0 flex-1 md:px-6">
                       <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-[#4A453E]/30">
-                        {entry.date} · {entry.time}
+                        {entry.date} / {entry.time}
                       </span>
                       <h4 className="truncate text-lg font-bold text-[#4A453E]">{entry.name}</h4>
                       <p className="mt-1 truncate text-xs text-[#4A453E]/50">{entry.description}</p>
@@ -143,9 +145,9 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
                     history_toggle_off
                   </span>
                 </div>
-                <p className="text-base font-bold text-[#4A453E]/45">还没有饮食日志记录</p>
+                <p className="text-base font-bold text-[#4A453E]/45">No food log entries yet.</p>
                 <p className="mt-2 text-sm text-[#4A453E]/35">
-                  去 Workshop 发起一次食物分析，结果会自动出现在这里。
+                  Start a meal analysis in the workspace and saved records will appear here.
                 </p>
               </div>
             )}
@@ -159,10 +161,10 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#FF8A65]">
-                  分析详情
+                  Analysis Detail
                 </span>
                 <p className="mt-2 text-[11px] font-semibold text-[#4A453E]/35">
-                  {selectedEntry.date} · {selectedEntry.time}
+                  {selectedEntry.date} / {selectedEntry.time}
                 </p>
               </div>
               <button
@@ -183,17 +185,11 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
 
           <div className="custom-scrollbar flex-1 space-y-8 overflow-y-auto p-6 md:p-8">
             <div className="relative aspect-video overflow-hidden rounded-[32px] border border-[#4A453E]/05 shadow-sm">
-              <img
+              <FoodLogImage
                 src={selectedEntry.image}
-                className="h-full w-full object-cover"
                 alt={selectedEntry.name}
+                className="h-full w-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-              <div className="absolute bottom-4 left-6">
-                <span className="rounded-full border border-white/10 bg-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white backdrop-blur-md">
-                  AI 视觉匹配
-                </span>
-              </div>
             </div>
 
             <div className="rounded-[32px] border border-[#4A453E]/8 bg-[#FFFDF5] p-6 shadow-sm md:p-8">
@@ -202,7 +198,7 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
                   <span className="material-symbols-outlined text-lg text-[#FF8A65]">
                     analytics
                   </span>
-                  营养拆分
+                  Nutrition Breakdown
                 </h5>
                 <span className="font-serif-brand text-[28px] font-bold italic text-[#4A453E]">
                   {selectedEntry.calories}{' '}
@@ -228,11 +224,18 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
                 ))}
               </div>
 
-              <div className="grid grid-cols-3 gap-3 border-t border-[#4A453E]/05 pt-8">
-                <MacroStat label="蛋白质" value={selectedEntry.protein} accent />
-                <MacroStat label="碳水" value={selectedEntry.carbs} />
-                <MacroStat label="脂肪" value={selectedEntry.fat} />
-              </div>
+              {hasMacroData(selectedEntry) ? (
+                <div className="grid grid-cols-3 gap-3 border-t border-[#4A453E]/05 pt-8">
+                  <MacroStat label="Protein" value={selectedEntry.protein ?? 'N/A'} accent />
+                  <MacroStat label="Carbs" value={selectedEntry.carbs ?? 'N/A'} />
+                  <MacroStat label="Fat" value={selectedEntry.fat ?? 'N/A'} />
+                </div>
+              ) : (
+                <div className="rounded-[24px] border border-dashed border-[#4A453E]/10 bg-white/50 px-5 py-4 text-sm text-[#4A453E]/55">
+                  Macro nutrients were not recorded for this entry. The log currently stores the calorie estimate
+                  and ingredient-level breakdown only.
+                </div>
+              )}
             </div>
           </div>
 
@@ -248,7 +251,7 @@ export const Explorer: React.FC<ExplorerProps> = ({ logEntries, onNavigateToSess
               }`}
             >
               <span className="material-symbols-outlined text-lg">forum</span>
-              前往对应对话
+              Open Related Chat
             </button>
           </div>
         </aside>
@@ -312,6 +315,65 @@ const MacroStat: React.FC<MacroStatProps> = ({ label, value, accent = false }) =
     </span>
   </div>
 );
+
+interface FoodLogImageProps {
+  src?: string;
+  alt: string;
+  className?: string;
+  compact?: boolean;
+}
+
+const FoodLogImage: React.FC<FoodLogImageProps> = ({
+  src,
+  alt,
+  className = '',
+  compact = false,
+}) => {
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [src]);
+
+  if (!src || hasError) {
+    return <ImagePlaceholder compact={compact} />;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onError={() => setHasError(true)}
+    />
+  );
+};
+
+interface ImagePlaceholderProps {
+  compact?: boolean;
+}
+
+const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({ compact = false }) => (
+  <div className={`flex h-full w-full items-center justify-center bg-[#F7F3E9] ${compact ? 'px-2' : 'px-6'}`}>
+    <div className="text-center">
+      <span className={`material-symbols-outlined text-[#4A453E]/20 ${compact ? 'text-[20px]' : 'text-5xl'}`}>
+        image_not_supported
+      </span>
+      {!compact && (
+        <>
+          <p className="mt-3 text-sm font-semibold text-[#4A453E]/55">No photo available</p>
+          <p className="mt-1 text-xs text-[#4A453E]/35">
+            This food log entry was saved without an image.
+          </p>
+        </>
+      )}
+    </div>
+  </div>
+);
+
+function hasMacroData(entry: FoodLogEntry): boolean {
+  return Boolean(entry.protein || entry.carbs || entry.fat);
+}
 
 function parseCalories(value: string): number {
   const match = value.replace(/,/g, '').match(/\d+(\.\d+)?/);

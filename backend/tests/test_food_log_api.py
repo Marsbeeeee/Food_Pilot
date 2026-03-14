@@ -108,7 +108,6 @@ class FoodLogApiTests(unittest.TestCase):
                 "calories": "320",
                 "date": "Mar 14",
                 "time": "09:30 AM",
-                "image": f"https://picsum.photos/seed/foodpilot-log-{latest_entry['id']}/640/480",
                 "breakdown": [
                     {
                         "name": "Oats",
@@ -116,12 +115,13 @@ class FoodLogApiTests(unittest.TestCase):
                         "energy": "320 kcal",
                     }
                 ],
-                "protein": "--",
-                "carbs": "--",
-                "fat": "--",
             },
         )
         self.assertNotIn("sessionId", latest_entry)
+        self.assertNotIn("image", latest_entry)
+        self.assertNotIn("protein", latest_entry)
+        self.assertNotIn("carbs", latest_entry)
+        self.assertNotIn("fat", latest_entry)
 
         linked_entry = payload[1]
         self.assertEqual(linked_entry["name"], "Chicken Salad")
