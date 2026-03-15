@@ -279,8 +279,8 @@ const App: React.FC = () => {
             <h2 className="font-serif-brand text-2xl font-bold text-[#4A453E]">Restoring session</h2>
             <p className="mt-2 text-sm text-[#4A453E]/50">
               {authStatus === 'loading'
-                ? 'Checking whether there is a valid FoodPilot login on this device.'
-                : 'Loading your profile, sessions, and food log.'}
+                ? 'Checking whether there is a valid Food Pilot session on this device.'
+                : 'Loading your profile, chat history, and Food Log.'}
             </p>
           </div>
         </div>

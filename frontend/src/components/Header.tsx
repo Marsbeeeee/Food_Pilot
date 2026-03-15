@@ -54,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'text-[#4A453E]/60 hover:text-[#FF8A65]'
             }`}
           >
-            Ask FoodPilot
+            Chat
           </button>
           <button
             onClick={() => onViewChange(AppView.EXPLORER)}
@@ -64,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'text-[#4A453E]/60 hover:text-[#FF8A65]'
             }`}
           >
-            My Food Log
+            Food Log
           </button>
           <button
             onClick={() => onViewChange(AppView.PROFILE)}
