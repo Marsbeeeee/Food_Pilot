@@ -11,6 +11,7 @@ from backend.services.food_log_service import save_food_log
 from backend.services.chat_service import (
     DEFAULT_SESSION_TITLE,
     DEFAULT_ASSISTANT_ERROR_MESSAGE,
+    DEFAULT_RECOMMENDATION_ERROR_MESSAGE,
     append_assistant_message,
     append_user_message,
     create_empty_session,
@@ -270,6 +271,26 @@ class ChatServiceTests(unittest.TestCase):
                 "description": "A higher-protein dinner with less oil.",
             },
         )
+        self.assertIsNone(exchange["assistant_message"]["result_total"])
+        self.assertIsNone(exchange["assistant_message"]["result_items_json"])
+
+    def test_send_message_in_session_uses_recommendation_fallback_message_when_recommendation_fails(self) -> None:
+        session = create_empty_session(self.user_id)
+
+        with patch(
+            "backend.services.chat_service.generate_meal_recommendation",
+            side_effect=RuntimeError("provider unavailable"),
+        ):
+            exchange = send_message_in_session(
+                self.user_id,
+                int(session["id"]),
+                "帮我推荐一个减脂晚餐",
+                profile_id=12,
+            )
+
+        self.assertIsNotNone(exchange)
+        self.assertEqual(exchange["assistant_message"]["message_type"], "text")
+        self.assertEqual(exchange["assistant_message"]["content"], DEFAULT_RECOMMENDATION_ERROR_MESSAGE)
 
     def test_send_message_in_session_persists_text_reply_for_explanatory_follow_up(self) -> None:
         session = create_empty_session(self.user_id)

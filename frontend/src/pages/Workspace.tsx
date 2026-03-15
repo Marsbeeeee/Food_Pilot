@@ -658,24 +658,32 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             <div className="mb-3 flex items-center justify-between gap-4">
                               <div>
                                 <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#4A453E]/35">
-                                  Meal Recommendation
+                                  餐食推荐
                                 </p>
                                 <h3 className="font-serif-brand text-2xl font-bold italic text-[#4A453E]">
-                                  {message.title || 'Recommendation'}
+                                  {message.title || '推荐建议'}
                                 </h3>
                               </div>
                               <span className="rounded-full border border-[#FF8A65]/15 bg-[#FF8A65]/8 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#FF8A65]">
-                                Preview
+                                建议
                               </span>
                             </div>
                             {message.description && (
-                              <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">
-                                {message.description}
-                              </p>
+                              <div className="rounded-[20px] border border-[#4A453E]/5 bg-[#FFFDF5] px-5 py-4">
+                                <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
+                                  为什么这样选
+                                </p>
+                                <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">
+                                  {message.description}
+                                </p>
+                              </div>
                             )}
                           </div>
                           {message.content && (
                             <div className="px-8 py-6">
+                              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
+                                推荐怎么吃
+                              </p>
                               <p className="text-[15px] leading-relaxed text-[#4A453E]/75">
                                 {message.content}
                               </p>

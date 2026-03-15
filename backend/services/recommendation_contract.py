@@ -17,6 +17,9 @@ Use exactly these top-level keys:
 - description
 - response
 The response should provide a practical recommendation, comparison, swap, or optimization suggestion.
+The response must clearly tell the user what to choose, eat, replace, or prioritize.
+The description should briefly explain why this direction fits.
+Do not output calorie tables, ingredient breakdown arrays, or estimate-style sections.
 Do not add markdown, code fences, tables, or extra keys.
 """.strip(),
     "text": """

@@ -16,18 +16,20 @@ DEFAULT_RECOMMENDATION_SYSTEM_PROMPT = """
 You are Food Pilot, a friendly and practical nutrition assistant.
 Reply in Simplified Chinese.
 For recommendation requests, focus on actionable meal choices, comparisons, swaps, and optimization suggestions.
+Always give the user a concrete choice or direction first, then explain briefly why it fits.
+Do not turn recommendation requests into calorie-estimate tables or ingredient breakdowns.
 For plain chat or explanation requests, answer clearly and directly without turning the reply into a calorie estimate.
 Return only JSON that matches the requested schema.
 """.strip()
 
 DEFAULT_GUIDANCE_COPY = {
     "meal_recommendation": {
-        "title": "Meal Recommendation",
-        "description": "Here is a practical recommendation based on your question.",
+        "title": "餐食推荐",
+        "description": "这是基于你当前问题给出的推荐建议。",
     },
     "text": {
-        "title": "Food Pilot Reply",
-        "description": "Here is a direct answer to your question.",
+        "title": "Food Pilot 回复",
+        "description": "这是对你问题的直接说明。",
     },
 }
 
@@ -56,7 +58,7 @@ class MissingAPIKeyError(RecommendationServiceError):
             code="AI_CONFIG_MISSING",
             status_code=503,
             message="GEMINI_API_KEY is missing",
-            user_message="The recommendation assistant is not configured yet.",
+            user_message="推荐服务暂未配置，请稍后再试。",
             retryable=False,
         )
 
@@ -67,7 +69,7 @@ class UpstreamAIError(RecommendationServiceError):
             code="AI_UPSTREAM_ERROR",
             status_code=503,
             message=message,
-            user_message="The recommendation assistant is temporarily unavailable.",
+            user_message="推荐服务暂时不可用，请稍后重试。",
             retryable=retryable,
         )
 
@@ -78,7 +80,7 @@ class InvalidAIResponseError(RecommendationServiceError):
             code="AI_RESPONSE_INVALID",
             status_code=502,
             message=message,
-            user_message="The recommendation assistant returned an invalid response.",
+            user_message="推荐服务返回结果异常，请稍后重试。",
             retryable=True,
         )
 
@@ -89,7 +91,7 @@ class IncompleteAIResponseError(RecommendationServiceError):
             code="AI_RESPONSE_INCOMPLETE",
             status_code=502,
             message=message,
-            user_message="The recommendation assistant returned an incomplete response.",
+            user_message="推荐服务返回结果不完整，请稍后重试。",
             retryable=True,
         )
 
@@ -222,6 +224,9 @@ def _build_guidance_system_instruction(
         parts.append(
             "The user wants a recommendation, comparison, substitution, or optimization suggestion about meals."
         )
+        parts.append(
+            "Start with the recommended option or direction, then explain in plain language why it is the better fit."
+        )
     elif response_mode == "text":
         parts.append(
             "The user wants a plain conversational or explanatory reply instead of a meal estimate."
@@ -249,13 +254,24 @@ def _parse_guidance_payload(
 ) -> GuidanceReply:
     defaults = DEFAULT_GUIDANCE_COPY[response_mode]
     normalized_payload = {
-        "title": _coerce_text(payload.get("title")) or defaults["title"],
-        "description": _coerce_text(payload.get("description")) or defaults["description"],
+        "title": _coerce_text(
+            payload.get("title")
+            or payload.get("name")
+        ) or defaults["title"],
+        "description": _coerce_text(
+            payload.get("description")
+            or payload.get("summary")
+            or payload.get("reason")
+            or payload.get("why")
+        ) or defaults["description"],
         "response": _coerce_text(
             payload.get("response")
             or payload.get("content")
             or payload.get("answer")
             or payload.get("recommendation")
+            or payload.get("suggestion")
+            or payload.get("plan")
+            or payload.get("choice")
         ),
     }
 

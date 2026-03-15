@@ -20,7 +20,10 @@ from backend.services.recommendation import (
 
 DEFAULT_SESSION_TITLE = "New chat"
 MAX_SESSION_TITLE_LENGTH = 120
-DEFAULT_ASSISTANT_ERROR_MESSAGE = "这次估算暂时没有完成，请稍后重试，或补充更具体的餐食描述。"
+DEFAULT_ESTIMATE_ERROR_MESSAGE = "这次估算暂时没有完成，请稍后重试，或补充更具体的餐食描述。"
+DEFAULT_RECOMMENDATION_ERROR_MESSAGE = "这次推荐暂时没有完成，请稍后重试，或换一种更明确的问法。"
+DEFAULT_TEXT_ERROR_MESSAGE = "这次回复暂时没有完成，请稍后重试。"
+DEFAULT_ASSISTANT_ERROR_MESSAGE = DEFAULT_ESTIMATE_ERROR_MESSAGE
 DEFAULT_RESOLVED_MESSAGE_TYPE = "meal_estimate"
 RECOMMENDATION_MESSAGE_TYPE = "meal_recommendation"
 TEXT_MESSAGE_TYPE = "text"
@@ -340,6 +343,7 @@ def _generate_assistant_reply_with_conn(
     content: str,
     profile_id: int | None,
 ) -> dict[str, object]:
+    message_type = DEFAULT_RESOLVED_MESSAGE_TYPE
     try:
         message_type = resolve_message_type(
             content,
@@ -362,7 +366,7 @@ def _generate_assistant_reply_with_conn(
             user_id,
             "assistant",
             TEXT_MESSAGE_TYPE,
-            content=_build_fallback_message(exc),
+            content=_build_fallback_message(exc, message_type=message_type),
         )
     return assistant_message
 
@@ -549,11 +553,19 @@ def _create_text_message_with_conn(
     )
 
 
-def _build_fallback_message(error: Exception) -> str:
+def _build_fallback_message(
+    error: Exception,
+    *,
+    message_type: str = DEFAULT_RESOLVED_MESSAGE_TYPE,
+) -> str:
     user_message = getattr(error, "user_message", None)
     if isinstance(user_message, str) and user_message.strip():
         return user_message
-    return DEFAULT_ASSISTANT_ERROR_MESSAGE
+    if message_type == RECOMMENDATION_MESSAGE_TYPE:
+        return DEFAULT_RECOMMENDATION_ERROR_MESSAGE
+    if message_type == TEXT_MESSAGE_TYPE:
+        return DEFAULT_TEXT_ERROR_MESSAGE
+    return DEFAULT_ESTIMATE_ERROR_MESSAGE
 
 
 def _build_title_from_first_message(content: str) -> str:
