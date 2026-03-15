@@ -17,6 +17,7 @@ from backend.repositories.message_repository import (
 DEFAULT_SESSION_TITLE = "New chat"
 MAX_SESSION_TITLE_LENGTH = 120
 DEFAULT_ASSISTANT_ERROR_MESSAGE = "Unable to process this meal description right now. Please try again."
+DEFAULT_RESOLVED_MESSAGE_TYPE = "meal_estimate"
 
 
 def create_empty_session(user_id: int) -> dict[str, object]:
@@ -274,12 +275,18 @@ def _generate_assistant_reply_with_conn(
     profile_id: int | None,
 ) -> dict[str, object]:
     try:
-        estimate = estimate_meal(content, profile_id, user_id)
-        assistant_message = _create_estimate_result_message_with_conn(
+        message_type = resolve_message_type(
+            content,
+            profile_id=profile_id,
+            user_id=user_id,
+        )
+        assistant_message = build_response_by_type(
             conn,
             user_id,
             session_id,
-            estimate=estimate,
+            content=content,
+            profile_id=profile_id,
+            message_type=message_type,
         )
     except Exception as exc:
         conn.rollback()
@@ -292,6 +299,54 @@ def _generate_assistant_reply_with_conn(
             content=_build_fallback_message(exc),
         )
     return assistant_message
+
+
+def resolve_message_type(
+    content: str,
+    *,
+    profile_id: int | None,
+    user_id: int,
+) -> str:
+    del content, profile_id, user_id
+    return DEFAULT_RESOLVED_MESSAGE_TYPE
+
+
+def build_response_by_type(
+    conn,
+    user_id: int,
+    session_id: int,
+    *,
+    content: str,
+    profile_id: int | None,
+    message_type: str,
+) -> dict[str, object]:
+    if message_type in {"meal_estimate", "meal_recommendation", "text"}:
+        return _build_meal_estimate_response_with_conn(
+            conn,
+            user_id,
+            session_id,
+            content=content,
+            profile_id=profile_id,
+        )
+
+    raise ValueError(f"Unsupported message_type: {message_type}")
+
+
+def _build_meal_estimate_response_with_conn(
+    conn,
+    user_id: int,
+    session_id: int,
+    *,
+    content: str,
+    profile_id: int | None,
+) -> dict[str, object]:
+    estimate = estimate_meal(content, profile_id, user_id)
+    return _create_estimate_result_message_with_conn(
+        conn,
+        user_id,
+        session_id,
+        estimate=estimate,
+    )
 
 
 def _create_estimate_result_message_with_conn(
