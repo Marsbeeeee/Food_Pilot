@@ -80,7 +80,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
     } catch (error) {
       const message = error instanceof Error
         ? error.message
-        : 'Unable to remove this saved favorite right now.';
+        : 'Unable to remove this saved entry right now.';
       window.alert(message);
     } finally {
       setDeletingEntryId((current) => (current === selectedEntry.id ? null : current));
@@ -99,7 +99,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
     } catch (error) {
       const message = error instanceof Error
         ? error.message
-        : 'Unable to restore this saved favorite right now.';
+        : 'Unable to restore this saved entry right now.';
       window.alert(message);
     } finally {
       setRestoringEntryId(null);
@@ -201,7 +201,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
     } catch (error) {
       const message = error instanceof Error
         ? error.message
-        : 'Unable to update this saved favorite right now.';
+        : 'Unable to update this saved entry right now.';
       window.alert(message);
     } finally {
       setIsSavingEdit(false);
@@ -228,18 +228,18 @@ export const Explorer: React.FC<ExplorerProps> = ({
               Food Log
             </span>
             <h1 className="font-serif-brand text-4xl font-bold text-[#4A453E] md:text-5xl">
-              Saved Favorites
+              Saved Entries
             </h1>
             <p className="max-w-2xl text-sm leading-7 text-[#4A453E]/60 md:text-base">
-              Food Log is your saved collection of meal analyses. Think of it as a favorites shelf
-              for analyses you want to keep and refine over time, not a full eating diary. The
-              collection is organized around when each favorite was last saved or edited.
+              Food Log keeps the meal analyses you choose to save. It is a list of saved entries
+              you can revisit and refine over time, not a full eating diary. Entries are organized
+              around when they were last saved or edited.
             </p>
           </div>
 
           <div className="mb-12 grid grid-cols-1 gap-4 md:grid-cols-3">
             <SummaryCard
-              label="Saved Favorites"
+              label="Saved Entries"
               value={String(orderedEntries.length)}
               unit="items"
               accent
@@ -259,7 +259,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between px-1">
               <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-                Saved Collection
+                Saved Entries
               </h2>
               {orderedEntries.length > 0 && (
                 <span className="text-[11px] font-semibold text-[#4A453E]/35">
@@ -442,16 +442,16 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
       <ConfirmDialog
         open={Boolean(selectedEntry) && isDeleteDialogOpen}
-        title="Remove Saved Favorite?"
+        title="Remove Entry?"
         description={(
           <>
             <span className="font-bold text-[#4A453E]">
-              {selectedEntry?.name ?? 'This saved favorite'}
+              {selectedEntry?.name ?? 'This saved entry'}
             </span>{' '}
             will disappear from Food Log, but you can save it again from a new analysis later.
           </>
         )}
-        confirmLabel={deletingEntryId ? 'Removing...' : 'Remove Favorite'}
+        confirmLabel={deletingEntryId ? 'Removing...' : 'Remove Entry'}
         icon="delete"
         isConfirming={Boolean(deletingEntryId)}
         onClose={() => {
@@ -525,7 +525,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
         <div className="mb-4 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#FF8A65]">
-              Saved Favorite
+              Saved Entry
             </span>
             <p className="mt-2 text-[11px] font-semibold text-[#4A453E]/35">
               Last updated {savedMoment.date} / {savedMoment.time}
@@ -537,7 +537,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                 type="button"
                 onClick={onEdit}
                 className="flex size-9 items-center justify-center rounded-full text-[#4A453E]/40 transition-all hover:bg-[#FF8A65]/5 hover:text-[#FF8A65]"
-                title="Edit saved favorite"
+                title="Edit saved entry"
               >
                 <span className="material-symbols-outlined text-lg">edit</span>
               </button>
@@ -679,7 +679,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
               </>
             ) : (
               <div className="rounded-[20px] border border-dashed border-[#4A453E]/10 bg-white/50 px-4 py-3 text-[13px] leading-6 text-[#4A453E]/55">
-                Macro nutrients were not recorded for this saved favorite. Food Log currently
+                Macro nutrients were not recorded for this saved entry. Food Log currently
                 stores the calorie estimate and ingredient-level breakdown only.
               </div>
             )}
@@ -752,7 +752,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                 }`}
               >
                 <span className="material-symbols-outlined text-lg">delete</span>
-                {isDeleting ? 'Removing...' : 'Remove Favorite'}
+                {isDeleting ? 'Removing...' : 'Remove Entry'}
               </button>
               <button
                 type="button"
@@ -873,7 +873,7 @@ const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({ compact = false }) 
         <>
           <p className="mt-3 text-sm font-semibold text-[#4A453E]/55">No photo available</p>
           <p className="mt-1 text-xs text-[#4A453E]/35">
-            This saved favorite was stored without an image.
+            This saved entry was stored without an image.
           </p>
         </>
       )}
