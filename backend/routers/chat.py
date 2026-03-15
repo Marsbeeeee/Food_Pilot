@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from backend.dependencies.auth import get_current_user
@@ -142,8 +144,9 @@ def _serialize_message(message: dict[str, object]) -> ChatMessageOut:
             "id": message["id"],
             "session_id": message["session_id"],
             "role": message["role"],
-            "message_type": message["message_type"],
+            "message_type": _serialize_message_type(message["message_type"]),
             "content": message["content"],
+            "payload": _parse_payload_json(message.get("payload_json")),
             "result_title": message["result_title"],
             "result_confidence": message["result_confidence"],
             "result_description": message["result_description"],
@@ -152,3 +155,28 @@ def _serialize_message(message: dict[str, object]) -> ChatMessageOut:
             "created_at": message["created_at"],
         }
     )
+
+
+def _serialize_message_type(message_type: object) -> str:
+    if message_type == "estimate_result":
+        return "meal_estimate"
+    if message_type == "text":
+        return "text"
+    if isinstance(message_type, str):
+        return message_type
+    raise ValueError("message_type must be a string")
+
+
+def _parse_payload_json(value: object) -> dict[str, object] | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+
+    try:
+        payload = json.loads(value)
+    except json.JSONDecodeError:
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    return payload
