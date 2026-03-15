@@ -1,4 +1,5 @@
-from datetime import datetime, UTC
+import json
+from datetime import UTC, datetime
 
 from backend.database.connection import get_db_connection
 from backend.text import normalize_food_log_query
@@ -35,6 +36,20 @@ def _table_exists(cursor, table_name: str) -> bool:
         (table_name,),
     ).fetchone()
     return row is not None
+
+
+def _get_table_sql(cursor, table_name: str) -> str:
+    row = cursor.execute(
+        """
+        SELECT sql
+        FROM sqlite_master
+        WHERE type = 'table' AND name = ?
+        """,
+        (table_name,),
+    ).fetchone()
+    if row is None or row["sql"] is None:
+        return ""
+    return str(row["sql"])
 
 
 def _ensure_users_table(cursor) -> None:
@@ -204,7 +219,8 @@ def _ensure_chat_sessions_table(cursor) -> None:
 def _ensure_messages_table(cursor) -> None:
     _create_messages_table(cursor)
     message_columns = _get_table_columns(cursor, "messages")
-    if _requires_messages_rebuild(message_columns):
+    message_table_sql = _get_table_sql(cursor, "messages")
+    if _requires_messages_rebuild(message_columns, message_table_sql):
         _rebuild_messages_table(cursor, message_columns)
         message_columns = _get_table_columns(cursor, "messages")
 
@@ -220,6 +236,13 @@ def _ensure_messages_table(cursor) -> None:
             """
             ALTER TABLE messages
             ADD COLUMN message_type TEXT
+            """
+        )
+    if "payload_json" not in message_columns:
+        cursor.execute(
+            """
+            ALTER TABLE messages
+            ADD COLUMN payload_json TEXT
             """
         )
     if "result_title" not in message_columns:
@@ -276,6 +299,7 @@ def _ensure_messages_table(cursor) -> None:
         WHERE message_type IS NULL
         """
     )
+    _backfill_messages_payload_json(cursor)
 
     cursor.execute(
         """
@@ -516,6 +540,7 @@ def _create_messages_table(cursor, table_name: str = "messages") -> None:
             role TEXT NOT NULL,
             message_type TEXT NOT NULL,
             content TEXT,
+            payload_json TEXT,
             result_title TEXT,
             result_confidence TEXT,
             result_description TEXT,
@@ -523,31 +548,44 @@ def _create_messages_table(cursor, table_name: str = "messages") -> None:
             result_total TEXT,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             CHECK (role IN ('user', 'assistant')),
-            CHECK (message_type IN ('text', 'estimate_result')),
+            CHECK (
+                CASE
+                    WHEN message_type = 'estimate_result' THEN 'meal_estimate'
+                    ELSE message_type
+                END IN ('text', 'meal_estimate', 'meal_recommendation')
+            ),
             CHECK (content IS NULL OR length(trim(content)) > 0),
+            CHECK (payload_json IS NULL OR length(trim(payload_json)) > 0),
+            CHECK (result_title IS NULL OR length(trim(result_title)) > 0),
+            CHECK (result_confidence IS NULL OR length(trim(result_confidence)) > 0),
+            CHECK (result_description IS NULL OR length(trim(result_description)) > 0),
+            CHECK (result_items_json IS NULL OR length(trim(result_items_json)) > 0),
+            CHECK (result_total IS NULL OR length(trim(result_total)) > 0),
             CHECK (
                 (
-                    message_type = 'text'
-                    AND result_title IS NULL
-                    AND result_confidence IS NULL
-                    AND result_description IS NULL
-                    AND result_items_json IS NULL
-                    AND result_total IS NULL
+                    CASE
+                        WHEN message_type = 'estimate_result' THEN 'meal_estimate'
+                        ELSE message_type
+                    END = 'text'
                     AND content IS NOT NULL
                 )
                 OR (
-                    message_type = 'estimate_result'
+                    CASE
+                        WHEN message_type = 'estimate_result' THEN 'meal_estimate'
+                        ELSE message_type
+                    END IN ('meal_estimate', 'meal_recommendation')
                     AND role = 'assistant'
-                    AND result_title IS NOT NULL
-                    AND result_confidence IS NOT NULL
-                    AND result_description IS NOT NULL
-                    AND result_items_json IS NOT NULL
-                    AND result_total IS NOT NULL
-                    AND length(trim(result_title)) > 0
-                    AND length(trim(result_confidence)) > 0
-                    AND length(trim(result_description)) > 0
-                    AND length(trim(result_items_json)) > 0
-                    AND length(trim(result_total)) > 0
+                    AND (
+                        payload_json IS NOT NULL
+                        OR (
+                            message_type = 'estimate_result'
+                            AND result_title IS NOT NULL
+                            AND result_confidence IS NOT NULL
+                            AND result_description IS NOT NULL
+                            AND result_items_json IS NOT NULL
+                            AND result_total IS NOT NULL
+                        )
+                    )
                 )
             )
         );
@@ -555,7 +593,7 @@ def _create_messages_table(cursor, table_name: str = "messages") -> None:
     )
 
 
-def _requires_messages_rebuild(message_columns: set[str]) -> bool:
+def _requires_messages_rebuild(message_columns: set[str], table_sql: str) -> bool:
     legacy_columns = {
         "time",
         "is_result",
@@ -565,7 +603,16 @@ def _requires_messages_rebuild(message_columns: set[str]) -> bool:
         "items_json",
         "total",
     }
-    return any(column in message_columns for column in legacy_columns)
+    if any(column in message_columns for column in legacy_columns):
+        return True
+    if "payload_json" not in message_columns:
+        return True
+
+    normalized_sql = table_sql.lower()
+    return any(
+        marker not in normalized_sql
+        for marker in ("payload_json", "meal_estimate", "meal_recommendation")
+    )
 
 
 def _rebuild_messages_table(cursor, message_columns: set[str]) -> None:
@@ -575,9 +622,14 @@ def _rebuild_messages_table(cursor, message_columns: set[str]) -> None:
     legacy_rows = cursor.execute("SELECT * FROM messages ORDER BY id ASC").fetchall()
     for row in legacy_rows:
         row_data = dict(row)
-        requested_message_type = _resolve_message_type(row_data, message_columns)
-        result_payload = _resolve_result_payload(row_data, message_columns, requested_message_type)
-        message_type = "estimate_result" if result_payload is not None else "text"
+        message_type = _resolve_message_type(row_data, message_columns)
+        result_payload = _resolve_result_payload(row_data, message_columns, message_type)
+        payload_json = _resolve_payload_json(
+            row_data,
+            message_columns,
+            message_type,
+            result_payload,
+        )
 
         cursor.execute(
             """
@@ -588,13 +640,14 @@ def _rebuild_messages_table(cursor, message_columns: set[str]) -> None:
                 role,
                 message_type,
                 content,
+                payload_json,
                 result_title,
                 result_confidence,
                 result_description,
                 result_items_json,
                 result_total,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 row_data["id"],
@@ -603,6 +656,7 @@ def _rebuild_messages_table(cursor, message_columns: set[str]) -> None:
                 row_data["role"],
                 message_type,
                 row_data.get("content"),
+                payload_json,
                 result_payload["result_title"] if result_payload else None,
                 result_payload["result_confidence"] if result_payload else None,
                 result_payload["result_description"] if result_payload else None,
@@ -632,7 +686,12 @@ def _resolve_user_id(cursor, row_data: dict[str, object], message_columns: set[s
 
 def _resolve_message_type(row_data: dict[str, object], message_columns: set[str]) -> str:
     message_type = row_data.get("message_type") if "message_type" in message_columns else None
-    if isinstance(message_type, str) and message_type in {"text", "estimate_result"}:
+    if isinstance(message_type, str) and message_type in {
+        "text",
+        "estimate_result",
+        "meal_estimate",
+        "meal_recommendation",
+    }:
         return message_type
 
     if "is_result" in message_columns and row_data.get("is_result"):
@@ -651,7 +710,7 @@ def _resolve_result_payload(
     result_items_json = _coalesce_row_value(row_data, message_columns, "result_items_json", "items_json")
     result_total = _coalesce_row_value(row_data, message_columns, "result_total", "total")
 
-    if message_type == "estimate_result" and all(
+    if message_type in {"estimate_result", "meal_estimate"} and all(
         _has_text(value)
         for value in (
             result_title,
@@ -672,6 +731,86 @@ def _resolve_result_payload(
     return None
 
 
+def _backfill_messages_payload_json(cursor) -> None:
+    rows = cursor.execute(
+        """
+        SELECT
+            id,
+            message_type,
+            content,
+            payload_json,
+            result_title,
+            result_confidence,
+            result_description,
+            result_items_json,
+            result_total
+        FROM messages
+        WHERE payload_json IS NULL OR trim(payload_json) = ''
+        ORDER BY id ASC
+        """
+    ).fetchall()
+    message_columns = _get_table_columns(cursor, "messages")
+
+    for row in rows:
+        row_data = dict(row)
+        message_type = _resolve_message_type(row_data, message_columns)
+        result_payload = _resolve_result_payload(row_data, message_columns, message_type)
+        payload_json = _resolve_payload_json(
+            row_data,
+            message_columns,
+            message_type,
+            result_payload,
+        )
+        if payload_json is None:
+            continue
+
+        cursor.execute(
+            """
+            UPDATE messages
+            SET payload_json = ?
+            WHERE id = ?
+            """,
+            (payload_json, int(row["id"])),
+        )
+
+
+def _resolve_payload_json(
+    row_data: dict[str, object],
+    message_columns: set[str],
+    message_type: str,
+    result_payload: dict[str, str | None] | None,
+) -> str | None:
+    if "payload_json" in message_columns:
+        existing_payload_json = row_data.get("payload_json")
+        if isinstance(existing_payload_json, str) and existing_payload_json.strip():
+            return existing_payload_json
+
+    if message_type == "text":
+        content = _coalesce_row_value(row_data, message_columns, "content")
+        if _has_text(content):
+            return json.dumps({"text": content}, ensure_ascii=False)
+        return None
+
+    if message_type in {"estimate_result", "meal_estimate"}:
+        payload: dict[str, object] = {}
+        if result_payload is not None:
+            payload["title"] = result_payload["result_title"]
+            payload["confidence"] = result_payload["result_confidence"]
+            payload["description"] = result_payload["result_description"]
+            payload["total"] = result_payload["result_total"]
+
+            items = _parse_json_list(result_payload["result_items_json"])
+            if items is not None:
+                payload["items"] = items
+        elif message_type == "estimate_result":
+            return None
+
+        if payload:
+            return json.dumps(payload, ensure_ascii=False)
+
+    return None
+
+
 def _coalesce_row_value(
     row_data: dict[str, object],
     message_columns: set[str],
@@ -687,6 +826,20 @@ def _coalesce_row_value(
 
 def _has_text(value: str | None) -> bool:
     return isinstance(value, str) and bool(value.strip())
+
+
+def _parse_json_list(value: str | None) -> list[object] | None:
+    if not _has_text(value):
+        return None
+
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return None
+
+    if not isinstance(parsed, list):
+        return None
+    return parsed
 
 
 def _resolve_legacy_time_value(row_data: dict[str, object], message_columns: set[str]) -> str | None:
