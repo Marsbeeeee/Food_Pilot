@@ -100,10 +100,23 @@ export interface UserProfileForm {
   allergies: string[];
 }
 
+export type ChatMessageType = 'text' | 'meal_estimate' | 'meal_recommendation';
+
+export interface ChatMessagePayload {
+  text?: string;
+  title?: string;
+  confidence?: string;
+  description?: string;
+  items?: IngredientResult[];
+  total?: string;
+}
+
 export interface Message {
   id?: string;
   role: 'user' | 'assistant';
+  messageType?: ChatMessageType;
   content?: string;
+  payload?: ChatMessagePayload | null;
   time: string;
   createdAt?: string;
   isResult?: boolean;

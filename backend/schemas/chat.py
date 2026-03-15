@@ -1,8 +1,16 @@
 import json
+from typing import Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from backend.schemas.estimate import EstimateItem
+
+
+ChatMessageType = Literal["text", "meal_estimate", "meal_recommendation"]
+
+LEGACY_CHAT_MESSAGE_TYPE_MAP = {
+    "estimate_result": "meal_estimate",
+}
 
 
 class ChatSendMessageRequest(BaseModel):
@@ -51,6 +59,17 @@ class RenameSessionRequest(BaseModel):
         return normalized
 
 
+class ChatMessagePayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str | None = None
+    title: str | None = None
+    confidence: str | None = None
+    description: str | None = None
+    items: list[EstimateItem] | None = None
+    total: str | None = None
+
+
 class ChatMessageOut(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -60,11 +79,12 @@ class ChatMessageOut(BaseModel):
         serialization_alias="sessionId",
     )
     role: str
-    message_type: str = Field(
+    message_type: ChatMessageType = Field(
         validation_alias=AliasChoices("message_type", "messageType"),
         serialization_alias="messageType",
     )
     content: str | None = None
+    payload: ChatMessagePayload | None = None
     result_title: str | None = Field(
         default=None,
         validation_alias=AliasChoices("result_title", "resultTitle"),
@@ -94,6 +114,31 @@ class ChatMessageOut(BaseModel):
         validation_alias=AliasChoices("created_at", "createdAt"),
         serialization_alias="createdAt",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_contract(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+
+        data = dict(value)
+        normalized_message_type = _normalize_message_type(
+            _get_first_present(data, "message_type", "messageType")
+        )
+        data.pop("messageType", None)
+        data["message_type"] = normalized_message_type
+
+        if _get_first_present(data, "payload") is None:
+            payload = _build_payload_from_legacy_fields(data, normalized_message_type)
+            if payload is not None:
+                data["payload"] = payload
+
+        return data
+
+    @field_validator("message_type", mode="before")
+    @classmethod
+    def validate_message_type(cls, value: object) -> ChatMessageType:
+        return _normalize_message_type(value)
 
 
 class ChatSessionSummary(BaseModel):
@@ -146,3 +191,42 @@ def parse_result_items(value: str | None) -> list[EstimateItem] | None:
         return None
 
     return [EstimateItem.model_validate(item) for item in parsed]
+
+
+def _normalize_message_type(value: object) -> ChatMessageType:
+    if not isinstance(value, str):
+        raise ValueError("message_type must be a string")
+
+    normalized = LEGACY_CHAT_MESSAGE_TYPE_MAP.get(value, value)
+    if normalized in {"text", "meal_estimate", "meal_recommendation"}:
+        return normalized
+
+    raise ValueError("message_type must be one of: text, meal_estimate, meal_recommendation")
+
+
+def _build_payload_from_legacy_fields(
+    data: dict[str, object],
+    message_type: ChatMessageType,
+) -> dict[str, object] | None:
+    if message_type == "text":
+        content = _get_first_present(data, "content")
+        if isinstance(content, str) and content:
+            return {"text": content}
+        return None
+
+    payload = {
+        "title": _get_first_present(data, "result_title", "resultTitle"),
+        "confidence": _get_first_present(data, "result_confidence", "resultConfidence"),
+        "description": _get_first_present(data, "result_description", "resultDescription"),
+        "items": _get_first_present(data, "result_items", "resultItems"),
+        "total": _get_first_present(data, "result_total", "resultTotal"),
+    }
+    normalized_payload = {key: value for key, value in payload.items() if value is not None}
+    return normalized_payload or None
+
+
+def _get_first_present(data: dict[str, object], *keys: str) -> object | None:
+    for key in keys:
+        if key in data:
+            return data[key]
+    return None
