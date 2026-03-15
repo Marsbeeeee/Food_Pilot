@@ -1,179 +1,273 @@
-# 🍽 FoodPilot
+﻿# Food Pilot
 
-**AI 驱动的饮食热量与营养分析助手**
+Food Pilot 是一个以 `Assistant` 为主入口的营养问答与餐食分析 Web 应用。
 
-> 一个以 **自然语言交互为核心的 AI Agent 型 Web 应用**
-> 帮助用户通过对话，快速理解食物的热量与营养结构，并获得可解释、可个性化的饮食建议。
+用户通过对话描述餐食、提问营养问题或比较不同选择；把值得保留的分析结果保存到 `Food Log`；再通过 `Profile` 让 Assistant 在之后的回复里持续参考同一个人的目标、偏好与限制。
 
----
+主路径可以概括为：
 
-## 🧭 项目简介
+`Assistant -> 保存到 Food Log -> 带着 Profile 上下文再次回来`
 
-**FoodPilot** 是一个面向日常饮食场景的 AI Agent Web 应用。
-用户只需使用自然语言描述食物或用餐情况，系统即可返回 **结构化、可解释的热量与营养分析结果**，并结合用户画像给出更合理的饮食建议。
+## 产品叙事
 
-本项目聚焦于：
+- `Assistant`：产品主入口。承担提问、追问、分析、比较和建议。
+- `Food Log`：已保存分析结果的复用层，不是完整饮食日记。只有用户主动保存的内容才会进入这里。
+- `Profile`：长期上下文层。用于告诉 Assistant“它是在为谁回答”。
+- `Account / Session`：把聊天、Food Log 和 Profile 绑定到同一个账号，支持会话恢复。
 
-* **可解释的营养估算**
-* **连续对话驱动的用户认知**
-* **Web + AI Agent 的完整交互闭环**
+## 当前已经实现
 
-而非复杂或医疗级营养计算，适合作为 **AI Agent / Web + AI 融合方向** 的项目展示。
+- 邮箱密码注册、登录、恢复会话、删除账户
+- 聊天会话创建、续聊、重命名、删除
+- 后端 AI 返回结构化餐食分析结果
+- 从聊天中显式保存结果到 Food Log
+- Food Log 的列表、详情、编辑、删除、恢复
+- 从 Food Log 跳回来源聊天
+- Profile 的创建、读取、更新
+- 基于 SQLite 的本地持久化
 
----
+## 当前不打算把它做成什么
 
-## ✨ 项目亮点
+- 不是完整的热量记账产品
+- 不是自动记录所有饮食行为的日记系统
+- 不是医疗产品
+- 不是临床营养建议工具
 
-### 🤖 对话式 AI Agent 设计
+`Food Log` 在当前产品定位里是“用户主动保存的高价值分析结果集合”，而不是“所有吃过的东西的流水账”。
 
-* 支持自然语言输入食物或饮食场景
-* AI 自动理解用户意图并输出结构化分析结果
-* 以“解释型输出”替代黑盒数值
+## 技术栈
 
-### 📊 清晰的营养拆解与热量估算
+- 前端：React 19、TypeScript、Vite
+- 后端：FastAPI
+- AI：Gemini，仅从后端调用
+- 存储：SQLite，数据库文件位于 `backend/database/foodpilot.db`
 
-* 输出总热量（kcal）
-* 拆解主要食材的能量来源
-* 明确假设前提，降低误导性
+## 仓库结构
 
-### 🧠 基于用户画像的个性化建议
-
-* 支持健康目标、热量目标与饮食偏好设置
-* 后续对话中动态调整分析与建议逻辑
-* 面向生活方式级建议，而非精准处方
-
-### 📒 饮食历史记录（Food Log）
-
-* 已实现真实落库，记录用户每次估算产生的餐食分析结果
-* 同时覆盖聊天内分析与直接调用 `/estimate` 的保存场景
-* 支持按会话、日期区间、关键词检索，并可回看关联对话
-* 强调“长期饮食认知”，而非一次性问答
-
-### 🎨 温馨的 UI 设计
-
-* 健康与生活方式导向的视觉风格
-* 减少技术压迫感，降低使用门槛
-* 强调信息可读性与交互流畅度
-
----
-
-## 🧩 核心功能模块
-
-### 1️⃣ Ask FoodPilot（对话分析）
-
-#### 启动前端
-
-```bash
-在 frontend 目录跑 npm run dev
+```text
+backend/   FastAPI 服务、认证、聊天、Profile、Food Log、估算相关逻辑
+frontend/  React 前端应用与界面壳层
+docs/      产品说明与设计文档
 ```
 
-#### 功能说明
+## 快速开始
 
-用户输入任意食物或饮食描述，例如：
+### 1. 准备环境
 
-> “一份鸡肉沙拉，加半个牛油果”
+- Python 3
+- Node.js
+- npm
+- 一个可用的 Gemini API Key
 
-#### AI 输出内容
+### 2. 配置环境变量
 
-* 热量估算（kcal）
-* 食材级别的能量拆解
-* 简要结论与后续饮食建议
+在仓库根目录创建 `.env` 文件：
 
----
-
-### 2️⃣ My Food Log（饮食记录）
-
-#### 功能说明
-
-My Food Log 现在不是概念展示，而是已经接入后端真实存储的能力。
-
-#### 当前真实存储内容
-
-* 每条记录都会保存餐食描述、结果标题、结果说明、总热量、食材拆解明细
-* 会保存记录时间，以及结果来自聊天分析还是直接 `/estimate` 调用
-* 如果记录来源于聊天分析，还会保存关联的 `chat session`，用于后续跳回对应对话
-* 如果记录来源于直接 `/estimate`，则允许没有会话关联，单独作为一条 food log 保存
-
-#### 检索能力
-
-当前后端已提供 `GET /food-logs` 列表接口，支持：
-
-* 按当前登录用户隔离查询
-* `sessionId` 过滤：只看某个聊天会话下产生的记录
-* `dateFrom` / `dateTo`：按记录日期范围筛选
-* `limit`：限制返回条数
-* `meal`：按餐食描述或结果标题做关键词搜索
-
-#### 与 Chat Session 的关系
-
-* 聊天内成功完成一次餐食分析后，会同时写入消息记录与 food log
-* 这类记录会带上对应的 `sessionId`，前端可以从 My Food Log 直接跳回那次对话
-* 直接调用 `/estimate` 产生的记录默认不绑定聊天会话，但仍会进入 My Food Log
-* 两类记录最终都会进入同一套 food log 数据源，避免“聊天派生记录”和“真实记录”不一致
-
----
-
-### 3️⃣ Profile（用户画像）
-
-#### 可配置内容
-
-* 健康目标（减脂 / 增肌 / 健康 / 表现）
-* 每日热量目标（kcal）
-* 饮食偏好（如高蛋白、无特定限制等）
-* 基础身体与生活方式信息（用于合理性估算）
-
-所有设置仅用于 **生活方式级别的个性化建议**，不构成医疗或营养处方。
-
----
-
-## `/estimate` API
-
-后端负责统一调用 AI 进行餐食热量估算，前端不要直接调用 Gemini。
-
-## `/food-logs` API
-
-用于读取已落库的饮食分析记录，是 My Food Log 页面的真实数据来源。
-
-常用查询参数：
-
-* `sessionId`
-* `dateFrom`
-* `dateTo`
-* `limit`
-* `meal`
-
-返回结果按当前登录用户隔离，并在存在关联关系时返回对应的 `sessionId`，方便前端跳回 chat session。
-
-### 环境变量
-
-必填：
-- `GEMINI_API_KEY`
-
-可选：
-- `GEMINI_MODEL`，默认 `gemini-3-flash-preview`
-- `GEMINI_TIMEOUT_SECONDS`，默认 `20`
-
-### 启动后端
-
-```bash
-uvicorn backend.main:app --reload
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
----
+可选项：
 
-## 🧠 设计理念
+```env
+GEMINI_MODEL=gemini-3-flash-preview
+GEMINI_TIMEOUT_SECONDS=20
+GEMINI_SYSTEM_PROMPT=You are Food Pilot, a friendly and professional nutrition assistant.
+```
 
-* **解释优先**：让用户知道“为什么是这个数”
-* **连续交互**：强调对话上下文，而非单次查询
-* **Agent 思维**：AI 不只是回答问题，而是辅助决策
-* **Web 友好**：以产品化视角构建完整体验
+认证相关配置当前走系统环境变量，未设置时会使用代码里的默认值：
 
----
+```env
+AUTH_SECRET=foodpilot-dev-secret
+AUTH_TOKEN_EXPIRE_SECONDS=604800
+PASSWORD_HASH_ITERATIONS=120000
+```
 
-## ⚠️ 免责声明
+需要注意：
 
-FoodPilot 提供的所有热量与营养信息均为**估算结果**，基于常见食材与标准份量假设，仅用于信息参考与饮食认知辅助。
+- `GEMINI_*` 配置会自动回退读取以下文件：仓库根目录 `.env`、仓库根目录 `.env.local`、`frontend/.env.local`
+- `AUTH_SECRET`、`AUTH_TOKEN_EXPIRE_SECONDS`、`PASSWORD_HASH_ITERATIONS` 当前不会自动从 `.env` 文件解析；如果你要覆盖默认值，请在系统环境变量里显式设置
+- 如果没有 `GEMINI_API_KEY`，AI 分析与聊天回复不会正常工作
 
-本项目**不用于医疗诊断或营养处方**。
-如有健康或医学相关需求，请咨询专业人士。
+### 3. 启动后端
 
+Windows PowerShell：
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn backend.main:app --reload --port 8000
+```
+
+macOS / Linux：
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn backend.main:app --reload --port 8000
+```
+
+后端启动后会：
+
+- 自动初始化 SQLite 数据库
+- 监听 `http://localhost:8000`
+- 提供健康检查 `GET /health`
+- 提供 FastAPI 文档 `http://localhost:8000/docs`
+
+### 4. 启动前端
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+前端默认运行在 `http://localhost:3000`。
+
+当前实现上的几个细节：
+
+- 前端 API 模块目前直接请求 `http://localhost:8000`
+- Vite 开发服务器端口固定为 `3000`
+- 后端 CORS 当前允许 `http://localhost:3000`
+
+## 核心页面
+
+### Assistant
+
+Assistant 是当前 UI 的主入口，支持：
+
+- 创建新聊天
+- 继续已有聊天
+- 通过自然语言描述餐食、提问或比较不同选择
+- 接收结构化分析结果
+- 从聊天里把某条结果保存到 Food Log
+
+### Food Log
+
+Food Log 只保存用户主动留下来的结果，支持：
+
+- 查看已保存条目列表
+- 查看单条结果详情
+- 编辑已保存条目
+- 软删除与恢复条目
+- 当条目有来源聊天时跳回原始对话
+
+后端列表接口当前支持这些筛选参数：
+
+- `sessionId`
+- `dateFrom`
+- `dateTo`
+- `limit`
+- `meal`
+
+### Profile
+
+Profile 用于让 Assistant 的回复和 Food Log 中的已保存条目持续围绕同一个用户上下文展开。当前表单包括：
+
+- 年龄、身高、体重、性别
+- 活动水平、运动类型
+- 目标、节奏、每日热量目标
+- 饮食风格
+- 过敏原与饮食避让项
+
+### Account / Session
+
+账号层当前负责：
+
+- 注册与登录
+- 应用启动时恢复当前会话
+- 把 Profile、聊天和 Food Log 绑定到同一个用户
+- 删除当前账号及其关联资料
+
+## API 概览
+
+当前后端主要路由包括：
+
+### Health
+
+- `GET /health`
+
+### Auth
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `GET /auth/me`
+- `DELETE /auth/me`
+
+### Chat / Assistant
+
+- `POST /chat/messages`
+- `POST /chat/sessions`
+- `GET /chat/sessions`
+- `GET /chat/sessions/{session_id}`
+- `PATCH /chat/sessions/{session_id}`
+- `DELETE /chat/sessions/{session_id}`
+- `POST /chat/sessions/{session_id}/messages`
+
+### Estimate
+
+- `POST /estimate`
+
+说明：
+
+- `/estimate` 当前是后端能力接口，不是产品主入口
+- 成功调用 `/estimate` 或聊天分析后，不会自动写入 Food Log；保存必须是显式用户动作
+
+### Profile
+
+- `POST /profile`
+- `GET /profile/me`
+- `GET /profile/{profile_id}`
+- `PUT /profile/{profile_id}`
+
+### Food Log
+
+- `GET /food-logs`
+- `GET /food-logs/{food_log_id}`
+- `POST /food-logs`
+- `PATCH /food-logs/{food_log_id}`
+- `POST /food-logs/from-estimate`
+- `POST /food-logs/{food_log_id}/restore`
+- `DELETE /food-logs/{food_log_id}`
+
+## 开发命令
+
+前端构建：
+
+```bash
+cd frontend
+npm run build
+```
+
+前端测试：
+
+```bash
+cd frontend
+npm test
+```
+
+后端测试：
+
+```bash
+python -m unittest discover backend/tests
+```
+
+## 当前范围边界
+
+当前代码仓库聚焦的是这条主链路：
+
+- 与 Assistant 对话
+- 把有价值的结果保存到 Food Log
+- 通过 Profile 让之后的回复更个性化
+
+`docs/PRODUCT_SPEC.md` 里提到的日 / 周洞察等更后续的能力，目前不应被当作“已经在界面里交付”的功能来理解。
+
+## 参考文档
+
+- 产品说明：`docs/PRODUCT_SPEC.md`
+
+## 免责声明
+
+Food Pilot 提供的是估算性质的营养信息，仅用于信息参考，不构成医疗建议、诊断或治疗方案。
