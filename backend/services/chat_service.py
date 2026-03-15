@@ -20,7 +20,7 @@ from backend.services.recommendation import (
 
 DEFAULT_SESSION_TITLE = "New chat"
 MAX_SESSION_TITLE_LENGTH = 120
-DEFAULT_ASSISTANT_ERROR_MESSAGE = "Unable to process this request right now. Please try again."
+DEFAULT_ASSISTANT_ERROR_MESSAGE = "这次估算暂时没有完成，请稍后重试，或补充更具体的餐食描述。"
 DEFAULT_RESOLVED_MESSAGE_TYPE = "meal_estimate"
 RECOMMENDATION_MESSAGE_TYPE = "meal_recommendation"
 TEXT_MESSAGE_TYPE = "text"

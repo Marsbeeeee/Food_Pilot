@@ -34,7 +34,7 @@ def create_estimate_response(
             data=None,
             error=EstimateError(
                 code="INTERNAL_ERROR",
-                message="浼扮畻鏈嶅姟鏆傛椂涓嶅彲鐢紝璇风◢鍚庨噸璇曘€?",
+                message="估算服务暂时不可用，请稍后重试。",
                 retryable=True,
             ),
             client_request_id=request_model.client_request_id,

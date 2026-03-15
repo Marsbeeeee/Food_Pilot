@@ -113,20 +113,20 @@ function getErrorMessage(payload: unknown, status: number): string {
   }
 
   if (status === 401) {
-    return 'Please sign in again.';
+    return '登录状态已失效，请重新登录。';
   }
 
   if (status === 404) {
-    return 'Saved Food Log entry not found.';
+    return '未找到对应的 Food Log 记录。';
   }
 
-  return 'Food log is temporarily unavailable. Please try again later.';
+  return 'Food Log 暂时不可用，请稍后重试。';
 }
 
 function requireAuthToken(): string {
   const token = getStoredToken();
   if (!token) {
-    throw new FoodLogApiError('Please sign in again.', 401);
+    throw new FoodLogApiError('登录状态已失效，请重新登录。', 401);
   }
   return token;
 }

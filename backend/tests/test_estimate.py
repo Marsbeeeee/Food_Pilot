@@ -94,6 +94,26 @@ class EstimateTests(unittest.TestCase):
         self.assertEqual(response.error.message, "AI 服务暂时不可用，请稍后重试。")
         self.assertTrue(response.error.retryable)
 
+    def test_internal_error_returns_clear_chinese_fallback_message(self) -> None:
+        request_model = EstimateRequest(
+            query="宫保鸡丁盖饭",
+            clientRequestId="estimate-789",
+        )
+
+        with patch(
+            "backend.services.estimate_service.estimate_meal",
+            side_effect=RuntimeError("unexpected failure"),
+        ):
+            status_code, response = create_estimate_response(request_model)
+
+        self.assertEqual(status_code, 500)
+        self.assertFalse(response.success)
+        self.assertIsNone(response.data)
+        self.assertIsNotNone(response.error)
+        self.assertEqual(response.error.code, "INTERNAL_ERROR")
+        self.assertEqual(response.error.message, "估算服务暂时不可用，请稍后重试。")
+        self.assertTrue(response.error.retryable)
+
 
 if __name__ == "__main__":
     unittest.main()

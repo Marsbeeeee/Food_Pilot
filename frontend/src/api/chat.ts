@@ -311,24 +311,24 @@ function getErrorMessage(payload: unknown, status: number): string {
   }
 
   if (status === 401) {
-    return 'Please sign in again.';
+    return '登录状态已失效，请重新登录。';
   }
 
   if (status === 404) {
-    return 'Chat session not found.';
+    return '未找到对应的聊天会话。';
   }
 
   if (status === 422) {
-    return 'Please check your message or session title.';
+    return '请检查消息内容或会话标题。';
   }
 
-  return 'Chat service is temporarily unavailable. Please try again later.';
+  return '聊天服务暂时不可用，请稍后重试。';
 }
 
 function requireAuthToken(): string {
   const token = getStoredToken();
   if (!token) {
-    throw new ChatApiError('Please sign in again.', 401);
+    throw new ChatApiError('登录状态已失效，请重新登录。', 401);
   }
   return token;
 }

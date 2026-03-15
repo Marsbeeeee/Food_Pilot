@@ -13,10 +13,10 @@ test('resolveFoodLogSavePresentation prioritizes saved state', () => {
   assert.deepEqual(presentation, {
     state: 'saved',
     badgeIcon: 'bookmark_added',
-    badgeLabel: 'Saved',
+    badgeLabel: '已保存',
     saveActionIcon: 'bookmark_add',
-    saveActionLabel: 'Save to Food Log',
-    helperText: 'This analysis is already in Food Log. You can undo the save without losing the source chat.',
+    saveActionLabel: '保存到 Food Log',
+    helperText: '这条估算结果已经保存到 Food Log。撤销保存后，来源聊天仍会保留。',
   });
 });
 
@@ -30,9 +30,9 @@ test('resolveFoodLogSavePresentation returns failed retry state', () => {
   assert.deepEqual(presentation, {
     state: 'failed',
     badgeIcon: 'error',
-    badgeLabel: 'Save failed',
+    badgeLabel: '保存失败',
     saveActionIcon: 'refresh',
-    saveActionLabel: 'Retry save',
+    saveActionLabel: '重试保存',
     helperText: 'Food Log is temporarily unavailable.',
   });
 });
@@ -47,10 +47,10 @@ test('resolveFoodLogSavePresentation returns saving state before failed state', 
   assert.deepEqual(presentation, {
     state: 'saving',
     badgeIcon: 'hourglass_top',
-    badgeLabel: 'Saving',
+    badgeLabel: '保存中',
     saveActionIcon: 'bookmark_add',
-    saveActionLabel: 'Saving...',
-    helperText: 'Food Log is saving this analysis now.',
+    saveActionLabel: '保存中...',
+    helperText: 'Food Log 正在保存这条估算结果。',
   });
 });
 
@@ -64,9 +64,9 @@ test('resolveFoodLogSavePresentation defaults to not saved state', () => {
   assert.deepEqual(presentation, {
     state: 'not_saved',
     badgeIcon: 'bookmark_add',
-    badgeLabel: 'Not saved',
+    badgeLabel: '未保存',
     saveActionIcon: 'bookmark_add',
-    saveActionLabel: 'Save to Food Log',
-    helperText: 'Food Log keeps each saved analysis as its own record. Saving here will not overwrite older entries just because the meal text matches.',
+    saveActionLabel: '保存到 Food Log',
+    helperText: 'Food Log 会把每次保存的估算结果作为独立记录保存，不会因为餐食文字相同就覆盖旧记录。',
   });
 });

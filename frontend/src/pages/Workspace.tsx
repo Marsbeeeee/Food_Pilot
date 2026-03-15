@@ -187,7 +187,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         originalSession,
       ));
       setActiveSessionId(previousActiveSessionId);
-      handleChatError(error, 'Unable to send this message right now.');
+      handleChatError(error, '这条消息暂时发送失败，请稍后重试。');
     } finally {
       setIsTyping(false);
     }
@@ -347,7 +347,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         ...current,
         [message.id as string]: resolveFoodLogErrorMessage(
           error,
-          'Unable to save this analysis to Food Log right now.',
+          '这条估算结果暂时无法保存到 Food Log，请稍后重试。',
         ),
       }));
     } finally {
@@ -379,7 +379,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         return next;
       });
     } catch (error) {
-      handleFoodLogError(error, 'Unable to undo this saved Food Log entry right now.');
+      handleFoodLogError(error, '暂时无法撤销这条 Food Log 保存记录，请稍后重试。');
     } finally {
       setDeletingFoodLogMessageIds((current) => current.filter((item) => item !== messageId));
     }
@@ -496,19 +496,19 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               <div className="mb-8 flex size-20 items-center justify-center rounded-[40px] border border-[#4A453E]/5 bg-white shadow-sm">
                 <span className="material-symbols-outlined text-4xl text-[#FF8A65]">restaurant</span>
               </div>
-              <h3 className="mb-3 font-serif-brand text-3xl font-bold italic text-[#4A453E]">Start with a meal, question, or goal.</h3>
+              <h3 className="mb-3 font-serif-brand text-3xl font-bold italic text-[#4A453E]">从一餐描述、一个问题或一个目标开始。</h3>
               <p className="max-w-md text-base leading-relaxed text-[#4A453E]/50">
-                Ask Food Pilot about a dish, compare options, or work through a nutrition
-                question. Save the answers worth keeping to Food Log.
+                你可以直接描述吃了什么、询问大概热量和营养，或让 Food Pilot 帮你推荐更合适的吃法。
+                值得保留的估算结果可以再保存到 Food Log。
               </p>
               <div className="mt-10 grid w-full max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">
-                <button onClick={() => void handleSendMessage('What nutrition is in a classic avocado toast?')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-4 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
-                  <p className="mb-1 text-[13px] font-bold text-[#4A453E]">Understand a Meal</p>
-                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">"What nutrition is in a classic avocado toast?"</p>
+                <button onClick={() => void handleSendMessage('一份牛油果吐司大概有什么营养？')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-4 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
+                  <p className="mb-1 text-[13px] font-bold text-[#4A453E]">估算这餐</p>
+                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">“一份牛油果吐司大概有什么营养？”</p>
                 </button>
-                <button onClick={() => void handleSendMessage('I am deciding between poke and ramen for dinner. Which is usually the lighter option?')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-4 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
-                  <p className="mb-1 text-[13px] font-bold text-[#4A453E]">Compare Options</p>
-                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">"I am deciding between poke and ramen for dinner. Which is usually the lighter option?"</p>
+                <button onClick={() => void handleSendMessage('晚饭在 poke 和拉面之间怎么选更合适？')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-4 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
+                  <p className="mb-1 text-[13px] font-bold text-[#4A453E]">推荐怎么吃</p>
+                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">“晚饭在 poke 和拉面之间怎么选更合适？”</p>
                 </button>
               </div>
             </div>
@@ -573,9 +573,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             <table className="w-full text-left">
                               <thead className="bg-[#F7F3E9]/30 text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/40">
                                 <tr>
-                                  <th className="px-8 py-4">Ingredient</th>
-                                  <th className="px-8 py-4">Portion</th>
-                                  <th className="px-8 py-4 text-right">Estimated Energy</th>
+                                  <th className="px-8 py-4">食材</th>
+                                  <th className="px-8 py-4">份量</th>
+                                  <th className="px-8 py-4 text-right">估算热量</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-[#4A453E]/5 text-[14px]">
@@ -589,7 +589,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                               </tbody>
                               <tfoot className="border-t border-[#4A453E]/10 bg-[#FFFDF5] font-bold">
                                 <tr>
-                                  <td className="px-8 py-6 text-lg text-[#4A453E]" colSpan={2}>Estimated Total</td>
+                                  <td className="px-8 py-6 text-lg text-[#4A453E]" colSpan={2}>估算总热量</td>
                                   <td className="px-8 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{message.total}</td>
                                 </tr>
                               </tfoot>
@@ -624,7 +624,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                         : 'border-red-200 bg-red-50 text-red-500 hover:bg-red-100'
                                     }`}
                                   >
-                                    {isDeletingSavedFoodLog ? 'Undoing...' : 'Undo save'}
+                                    {isDeletingSavedFoodLog ? '撤销中...' : '撤销保存'}
                                   </button>
                                 ) : (
                                   <button
@@ -719,7 +719,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             <div className="relative flex items-end overflow-hidden rounded-[28px] border border-[#4A453E]/10 bg-white shadow-xl shadow-[#4A453E]/05 transition-all focus-within:border-[#FF8A65]/40">
               <textarea
                 className="custom-scrollbar max-h-40 flex-1 resize-none border-none bg-transparent py-6 pl-8 text-[16px] leading-relaxed text-[#4A453E] placeholder-[#4A453E]/30 focus:ring-0"
-                placeholder="Ask Food Pilot about a meal, ingredient, or goal..."
+                placeholder="描述你吃了什么，或问这餐大概多少热量 / 营养..."
                 rows={1}
                 value={inputValue}
                 onChange={(event) => setInputValue(event.target.value)}
