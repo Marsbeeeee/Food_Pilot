@@ -958,11 +958,7 @@ function formatOptimisticTime(): string {
 }
 
 function getMessageType(message: Message): ChatMessageType {
-  if (message.messageType) {
-    return message.messageType;
-  }
-
-  return message.isResult ? 'meal_estimate' : 'text';
+  return message.messageType ?? 'text';
 }
 
 function isMealEstimateMessage(message: Message): boolean {
