@@ -1,5 +1,11 @@
 import { clearSession, getStoredToken } from './auth';
-import { ChatSession, IngredientResult, Message } from '../types/types';
+import {
+  ChatMessagePayload,
+  ChatMessageType,
+  ChatSession,
+  IngredientResult,
+  Message,
+} from '../types/types';
 
 const CHAT_BASE_URL = 'http://localhost:8000/chat';
 
@@ -25,8 +31,9 @@ interface ChatMessageResponse {
   id: number;
   sessionId: number;
   role: 'user' | 'assistant';
-  messageType: 'text' | 'estimate_result';
+  messageType: ChatMessageType | 'estimate_result';
   content: string | null;
+  payload: ChatMessagePayload | null;
   resultTitle: string | null;
   resultConfidence: string | null;
   resultDescription: string | null;
@@ -167,22 +174,79 @@ function mapChatExchange(exchange: ChatMessageExchangeResponse): ChatExchange {
 function mapMessage(message: ChatMessageResponse): Message {
   const createdAt = message.createdAt;
   const createdDate = new Date(createdAt);
+  const messageType = normalizeMessageType(message.messageType);
+  const payload = normalizePayload(message, messageType);
 
   return {
     id: String(message.id),
     role: message.role,
-    content: message.content ?? undefined,
+    messageType,
+    content: message.content ?? payload?.text ?? undefined,
+    payload,
     time: Number.isNaN(createdDate.getTime())
       ? '--:--'
       : createdDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
     createdAt,
-    isResult: message.messageType === 'estimate_result',
-    title: message.resultTitle ?? undefined,
-    confidence: message.resultConfidence ?? undefined,
-    description: message.resultDescription ?? undefined,
-    items: message.resultItems ? message.resultItems.map((item) => ({ ...item })) : undefined,
-    total: message.resultTotal ?? undefined,
+    isResult: messageType === 'meal_estimate',
+    title: payload?.title ?? message.resultTitle ?? undefined,
+    confidence: payload?.confidence ?? message.resultConfidence ?? undefined,
+    description: payload?.description ?? message.resultDescription ?? undefined,
+    items: payload?.items ? payload.items.map((item) => ({ ...item })) : undefined,
+    total: payload?.total ?? message.resultTotal ?? undefined,
   };
+}
+
+function normalizeMessageType(messageType: ChatMessageResponse['messageType']): ChatMessageType {
+  if (messageType === 'estimate_result') {
+    return 'meal_estimate';
+  }
+
+  return messageType;
+}
+
+function normalizePayload(
+  message: ChatMessageResponse,
+  messageType: ChatMessageType,
+): ChatMessagePayload | null {
+  const payload: ChatMessagePayload = {};
+
+  if (message.payload?.text) {
+    payload.text = message.payload.text;
+  } else if (messageType === 'text' && message.content) {
+    payload.text = message.content;
+  }
+
+  if (message.payload?.title) {
+    payload.title = message.payload.title;
+  } else if (message.resultTitle) {
+    payload.title = message.resultTitle;
+  }
+
+  if (message.payload?.confidence) {
+    payload.confidence = message.payload.confidence;
+  } else if (message.resultConfidence) {
+    payload.confidence = message.resultConfidence;
+  }
+
+  if (message.payload?.description) {
+    payload.description = message.payload.description;
+  } else if (message.resultDescription) {
+    payload.description = message.resultDescription;
+  }
+
+  if (message.payload?.items?.length) {
+    payload.items = message.payload.items.map((item) => ({ ...item }));
+  } else if (message.resultItems?.length) {
+    payload.items = message.resultItems.map((item) => ({ ...item }));
+  }
+
+  if (message.payload?.total) {
+    payload.total = message.payload.total;
+  } else if (message.resultTotal) {
+    payload.total = message.resultTotal;
+  }
+
+  return Object.keys(payload).length > 0 ? payload : null;
 }
 
 function buildMessagePayload(content: string, profileId?: number): Record<string, number | string> {

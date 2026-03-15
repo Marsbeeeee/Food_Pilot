@@ -13,7 +13,7 @@ import {
 } from '../api/chat';
 import { FoodLogApiError, saveFoodLogEntry } from '../api/foodLog';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { ChatSession, FoodLogEntry, Message } from '../types/types';
+import { ChatMessageType, ChatSession, FoodLogEntry, Message } from '../types/types';
 
 interface WorkspaceProps {
   sessions: ChatSession[];
@@ -68,7 +68,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const deleteSessionTarget = deleteSessionId
     ? sessions.find((session) => session.id === deleteSessionId) ?? null
     : null;
-  const persistedSavedFoodLogEntriesByMessageId = new Map(
+  const persistedSavedFoodLogEntriesByMessageId = new Map<string, FoodLogEntry>(
     foodLog
       .filter((entry): entry is FoodLogEntry & { sourceMessageId: string } => Boolean(entry.sourceMessageId))
       .map((entry) => [entry.sourceMessageId, entry]),
@@ -302,6 +302,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     message: Message,
     mealDescription: string,
   ) => {
+    if (getMessageType(message) !== 'meal_estimate') {
+      return;
+    }
+
     if (!message.id || !message.title || !message.description || !message.total || !message.items?.length) {
       return;
     }
@@ -399,7 +403,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               <h3 className="mb-4 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">Chats</h3>
               <div className="flex flex-col gap-1">
                 {sessions.map((session) => {
-                  const lastResult = [...session.messages].reverse().find((message) => message.isResult);
+                  const lastResult = [...session.messages].reverse().find(isMealEstimateMessage);
                   const sessionStatus = getSessionStatusLabel(
                     session,
                     isLoadingSessionId === session.id,
@@ -511,7 +515,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           ) : (
             activeSession.messages.map((message, index) => (
               (() => {
-                const mealDescription = message.isResult
+                const messageType = getMessageType(message);
+                const isMealEstimate = messageType === 'meal_estimate';
+                const isMealRecommendation = messageType === 'meal_recommendation';
+                const mealDescription = isMealEstimate
                   ? resolveMealDescription(activeSession.messages, index, message)
                   : null;
                 const savedFoodLogEntryId = message.id
@@ -551,7 +558,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     )}
 
                     <div className={`flex max-w-[95%] flex-col gap-3 ${message.role === 'user' ? 'items-end max-w-[80%]' : 'items-start'}`}>
-                      {message.isResult ? (
+                      {isMealEstimate ? (
                         <div className="w-full overflow-hidden rounded-[32px] border border-[#4A453E]/5 bg-white shadow-sm">
                           <div className="border-b border-[#4A453E]/5 p-8">
                             <div className="mb-4 flex items-center justify-between">
@@ -644,6 +651,36 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                               {savePresentation.helperText}
                             </p>
                           </div>
+                        </div>
+                      ) : isMealRecommendation ? (
+                        <div className="w-full overflow-hidden rounded-[28px] border border-[#4A453E]/5 bg-white shadow-sm">
+                          <div className="border-b border-[#4A453E]/5 px-8 py-6">
+                            <div className="mb-3 flex items-center justify-between gap-4">
+                              <div>
+                                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#4A453E]/35">
+                                  Meal Recommendation
+                                </p>
+                                <h3 className="font-serif-brand text-2xl font-bold italic text-[#4A453E]">
+                                  {message.title || 'Recommendation'}
+                                </h3>
+                              </div>
+                              <span className="rounded-full border border-[#FF8A65]/15 bg-[#FF8A65]/8 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#FF8A65]">
+                                Preview
+                              </span>
+                            </div>
+                            {message.description && (
+                              <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">
+                                {message.description}
+                              </p>
+                            )}
+                          </div>
+                          {message.content && (
+                            <div className="px-8 py-6">
+                              <p className="text-[15px] leading-relaxed text-[#4A453E]/75">
+                                {message.content}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className={`rounded-[24px] px-6 py-4 text-[15px] leading-relaxed shadow-sm border ${
@@ -803,8 +840,11 @@ function buildOptimisticUserMessage(id: string, content: string): Message {
   return {
     id,
     role: 'user',
+    messageType: 'text',
     content,
+    payload: { text: content },
     time: formatOptimisticTime(),
+    isResult: false,
   };
 }
 
@@ -907,6 +947,18 @@ function formatOptimisticTime(): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function getMessageType(message: Message): ChatMessageType {
+  if (message.messageType) {
+    return message.messageType;
+  }
+
+  return message.isResult ? 'meal_estimate' : 'text';
+}
+
+function isMealEstimateMessage(message: Message): boolean {
+  return getMessageType(message) === 'meal_estimate';
 }
 
 function resolveMealDescription(

@@ -114,7 +114,7 @@ export interface ChatMessagePayload {
 export interface Message {
   id?: string;
   role: 'user' | 'assistant';
-  messageType?: ChatMessageType;
+  messageType: ChatMessageType;
   content?: string;
   payload?: ChatMessagePayload | null;
   time: string;
