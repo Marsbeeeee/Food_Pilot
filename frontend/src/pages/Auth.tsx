@@ -58,30 +58,31 @@ export const AuthPage: React.FC<AuthPageProps> = ({
       <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-10 px-6 py-10 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:px-10">
         <section className="rounded-[36px] border border-white/70 bg-white/50 p-8 shadow-[0_24px_80px_rgba(74,69,62,0.08)] backdrop-blur-sm lg:p-10">
           <p className="mb-4 text-[11px] font-black uppercase tracking-[0.32em] text-[#FF8A65]">
-            FoodPilot Account
+            Food Pilot Account
           </p>
           <h1 className="max-w-xl font-serif-brand text-5xl font-bold leading-tight text-[#4A453E]">
-            Keep your nutrition context synced to a real account.
+            Keep your Assistant, Food Log, and Profile in sync.
           </h1>
           <p className="mt-6 max-w-xl text-base leading-8 text-[#4A453E]/70">
-            Sign in to restore your profile and keep FoodPilot anchored to the same person on every request.
+            Sign in to restore your chats, Food Log, and Profile so the Assistant can pick up
+            with the right context.
           </p>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-3">
             <InsightCard
-              eyebrow="Identity"
-              title="Real session"
-              body="The app now restores the current user from a signed token instead of a mock boolean."
+              eyebrow="Assistant"
+              title="Consistent replies"
+              body="Signing in gives the Assistant the same profile and account context each time you return."
             />
             <InsightCard
-              eyebrow="Security"
-              title="Safe by default"
-              body="Passwords stay on the backend. The frontend only stores the bearer token and the cached user payload."
+              eyebrow="Food Log"
+              title="Saved entries stay with you"
+              body="The analyses you choose to keep in Food Log reload with your account instead of staying on one device."
             />
             <InsightCard
-              eyebrow="Flow"
-              title="One account"
-              body="Register once, sign in again later, and the app verifies the session on startup."
+              eyebrow="Profile"
+              title="Personalization follows you"
+              body="Goals, allergies, and eating preferences restore with your session instead of being re-entered each visit."
             />
           </div>
         </section>
@@ -121,8 +122,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               </h2>
               <p className="mt-2 text-sm leading-7 text-[#4A453E]/55">
                 {isRegister
-                  ? 'Use email and password for the first working version of FoodPilot authentication.'
-                  : 'Sign in with the same email and password you registered with.'}
+                  ? 'Create an account to save your Profile, keep Food Log entries attached to you, and give the Assistant a stable identity.'
+                  : 'Sign in with the same email and password used for your chats, Food Log, and Profile.'}
               </p>
             </div>
 
@@ -133,7 +134,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                     className={INPUT_CLASSNAME}
                     value={displayName}
                     onChange={(event) => setDisplayName(event.target.value)}
-                    placeholder="How FoodPilot should address you"
+                    placeholder="How the Assistant should address you"
                     autoComplete="name"
                     disabled={isSubmitting}
                   />

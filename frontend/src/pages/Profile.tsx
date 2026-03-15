@@ -205,17 +205,18 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
         <div className="flex flex-col gap-2">
           <h1 className="text-4xl font-serif-brand font-bold text-[#4A453E]">Profile</h1>
           <p className="text-[#4A453E]/60 text-base max-w-2xl">
-            Keep your profile current so estimates and suggestions stay aligned with your goals.
+            Profile tells the Assistant who it is answering for and keeps saved Food Log entries
+            grounded in the same goals, preferences, and constraints.
           </p>
           {status === 'loading' && (
-            <p className="text-sm font-bold text-[#FF8A65]">Loading saved profile...</p>
+            <p className="text-sm font-bold text-[#FF8A65]">Loading your Profile...</p>
           )}
           {inlineError && (
             <p className="text-sm font-medium text-red-500">{inlineError}</p>
           )}
           {!inlineError && isDirty && !hasRequiredFields && (
             <p className="text-sm font-medium text-[#FF8A65]">
-              Complete the required numeric fields before saving.
+              Complete the required profile fields before saving.
             </p>
           )}
           {!inlineError && isDirty && status !== 'saving' && (
@@ -257,7 +258,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
             ) : (
               <>
                 <span className="material-symbols-outlined text-sm font-bold">check</span>
-                <span>{profile.id ? 'Save changes' : 'Create profile'}</span>
+                <span>{profile.id ? 'Save changes' : 'Create Profile'}</span>
               </>
             )}
           </button>
@@ -426,7 +427,8 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
           Note
         </h5>
         <p className="text-xs text-[#4A453E]/50 leading-relaxed font-medium">
-          This profile is used for personalization only. It does not replace medical advice, diagnosis, or treatment.
+          Profile is used to personalize Assistant replies and add context around the entries you
+          save to Food Log. It does not replace medical advice, diagnosis, or treatment.
         </p>
       </div>
     </div>
