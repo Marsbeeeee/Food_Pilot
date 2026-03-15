@@ -25,32 +25,64 @@ DEFAULT_RESOLVED_MESSAGE_TYPE = "meal_estimate"
 RECOMMENDATION_MESSAGE_TYPE = "meal_recommendation"
 TEXT_MESSAGE_TYPE = "text"
 MEAL_ESTIMATE_MESSAGE_TYPE = "meal_estimate"
-RECOMMENDATION_KEYWORDS = (
-    "推荐",
-    "建议",
-    "对比",
-    "比较",
-    "替换",
-    "换成",
-    "替代",
-    "优化",
+RECOMMENDATION_ROUTE_PHRASES = (
+    "推荐吃什么",
+    "推荐一个",
+    "推荐一下",
+    "适合吃什么",
+    "吃什么比较合适",
+    "吃什么更合适",
+    "午饭吃什么",
+    "晚饭吃什么",
+    "早餐吃什么",
+    "宵夜吃什么",
+    "夜宵吃什么",
+    "帮我选",
     "怎么选",
+    "选哪个",
     "哪个好",
-    "哪种更",
-    "更适合",
-    "更轻",
-    "更健康",
+    "哪个更好",
+    "哪个更适合",
+    "对比一下",
+    "比较一下",
+    "换什么",
+    "换成什么",
+    "替代方案",
+    "有什么替代",
+    "怎么优化",
+    "优化一下",
 )
-TEXT_KEYWORDS = (
+ESTIMATE_ROUTE_PHRASES = (
+    "多少热量",
+    "多少卡",
+    "多少千卡",
+    "多少大卡",
+    "多少蛋白质",
+    "多少碳水",
+    "多少脂肪",
+    "大概多少",
+    "热量大概",
+    "营养大概",
+    "营养怎么样",
+    "营养结构",
+)
+TEXT_ROUTE_PHRASES = (
     "你好",
     "谢谢",
     "为什么",
+    "解释一下",
+    "解释下",
     "解释",
     "区别",
     "差别",
     "原理",
     "怎么理解",
     "展开讲",
+    "什么意思",
+    "说明一下",
+    "详细说说",
+    "详细讲讲",
+    "看不懂",
 )
 
 
@@ -344,10 +376,10 @@ def resolve_message_type(
     del profile_id, user_id
     normalized_content = _normalize_routing_text(content)
 
-    if _contains_any_keyword(normalized_content, TEXT_KEYWORDS):
+    if _matches_text_request(normalized_content):
         return TEXT_MESSAGE_TYPE
 
-    if _contains_any_keyword(normalized_content, RECOMMENDATION_KEYWORDS):
+    if _matches_recommendation_request(normalized_content):
         return RECOMMENDATION_MESSAGE_TYPE
 
     return DEFAULT_RESOLVED_MESSAGE_TYPE
@@ -539,8 +571,22 @@ def _normalize_routing_text(value: str) -> str:
     return " ".join(value.lower().strip().split())
 
 
-def _contains_any_keyword(value: str, keywords: tuple[str, ...]) -> bool:
-    return any(keyword in value for keyword in keywords)
+def _matches_text_request(value: str) -> bool:
+    return _contains_any_phrase(value, TEXT_ROUTE_PHRASES)
+
+
+def _matches_recommendation_request(value: str) -> bool:
+    if _matches_estimate_request(value):
+        return False
+    return _contains_any_phrase(value, RECOMMENDATION_ROUTE_PHRASES)
+
+
+def _matches_estimate_request(value: str) -> bool:
+    return _contains_any_phrase(value, ESTIMATE_ROUTE_PHRASES)
+
+
+def _contains_any_phrase(value: str, phrases: tuple[str, ...]) -> bool:
+    return any(phrase in value for phrase in phrases)
 
 
 def estimate_meal(query: str, profile_id: int | None, user_id: int):

@@ -139,6 +139,15 @@ class ChatServiceTests(unittest.TestCase):
 
         self.assertEqual(resolved, "meal_recommendation")
 
+    def test_resolve_message_type_routes_comparison_request_to_recommendation(self) -> None:
+        resolved = resolve_message_type(
+            "汉堡和鸡肉沙拉哪个更适合我今天晚饭？",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "meal_recommendation")
+
     def test_resolve_message_type_routes_explanatory_follow_up_to_text(self) -> None:
         resolved = resolve_message_type(
             "为什么拉面通常热量更高？",
@@ -160,6 +169,24 @@ class ChatServiceTests(unittest.TestCase):
     def test_resolve_message_type_defaults_plain_meal_descriptions_to_estimate(self) -> None:
         resolved = resolve_message_type(
             "一碗鸡胸肉沙拉加半个牛油果",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "meal_estimate")
+
+    def test_resolve_message_type_routes_typical_estimate_question_to_estimate(self) -> None:
+        resolved = resolve_message_type(
+            "这碗麻辣烫大概有多少蛋白质和碳水？",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "meal_estimate")
+
+    def test_resolve_message_type_prefers_estimate_for_ambiguous_message_with_estimate_markers(self) -> None:
+        resolved = resolve_message_type(
+            "汉堡和鸡肉沙拉哪个更适合我今天晚饭？热量大概多少？",
             profile_id=12,
             user_id=self.user_id,
         )
