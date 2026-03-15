@@ -2,3 +2,5 @@
 frontend-page.png
 tmp*/
 .env
+.env.local
+frontend/.env.local
