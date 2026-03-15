@@ -82,7 +82,10 @@ class ChatRouterTests(unittest.TestCase):
 
         self.assertEqual(response.session.id, 1)
         self.assertEqual(response.user_message.role, "user")
-        self.assertEqual(response.assistant_message.message_type, "estimate_result")
+        self.assertEqual(response.assistant_message.message_type, "meal_estimate")
+        self.assertIsNotNone(response.assistant_message.payload)
+        self.assertEqual(response.assistant_message.payload.title, "Chicken salad")
+        self.assertEqual(response.assistant_message.payload.total, "240 kcal")
 
     def test_create_chat_message_creates_session_and_returns_exchange_response(self) -> None:
         request = ChatSendMessageRequest.model_validate({"content": "oatmeal"})

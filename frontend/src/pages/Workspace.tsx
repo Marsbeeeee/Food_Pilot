@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+import { buildWorkspaceMessagePresentation } from '../app/workspaceMessagePresentation';
 import { resolveFoodLogSavePresentation } from '../app/workspaceFoodLogState';
 import {
   ChatApiError,
@@ -515,9 +516,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           ) : (
             activeSession.messages.map((message, index) => (
               (() => {
-                const messageType = getMessageType(message);
-                const isMealEstimate = messageType === 'meal_estimate';
-                const isMealRecommendation = messageType === 'meal_recommendation';
+                const messagePresentation = buildWorkspaceMessagePresentation(message);
+                const isMealEstimate = messagePresentation.variant === 'meal_estimate';
+                const isMealRecommendation = messagePresentation.variant === 'meal_recommendation';
                 const mealDescription = isMealEstimate
                   ? resolveMealDescription(activeSession.messages, index, message)
                   : null;
@@ -562,24 +563,24 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                         <div className="w-full overflow-hidden rounded-[32px] border border-[#4A453E]/5 bg-white shadow-sm">
                           <div className="border-b border-[#4A453E]/5 p-8">
                             <div className="mb-4 flex items-center justify-between">
-                              <h3 className="font-serif-brand text-2xl font-bold italic text-[#4A453E]">{message.title}</h3>
+                              <h3 className="font-serif-brand text-2xl font-bold italic text-[#4A453E]">{messagePresentation.title}</h3>
                               <span className="rounded-full border border-[#81C784]/10 bg-[#81C784]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#81C784]">
-                                {message.confidence}
+                                {messagePresentation.confidence}
                               </span>
                             </div>
-                            <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">{message.description}</p>
+                            <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">{messagePresentation.description}</p>
                           </div>
                           <div className="p-0">
                             <table className="w-full text-left">
                               <thead className="bg-[#F7F3E9]/30 text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/40">
                                 <tr>
-                                  <th className="px-8 py-4">食材</th>
-                                  <th className="px-8 py-4">份量</th>
-                                  <th className="px-8 py-4 text-right">估算热量</th>
+                                  <th className="px-8 py-4">{messagePresentation.ingredientColumnLabel}</th>
+                                  <th className="px-8 py-4">{messagePresentation.portionColumnLabel}</th>
+                                  <th className="px-8 py-4 text-right">{messagePresentation.energyColumnLabel}</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-[#4A453E]/5 text-[14px]">
-                                {message.items?.map((item, itemIndex) => (
+                                {messagePresentation.items?.map((item, itemIndex) => (
                                   <tr key={itemIndex} className="transition-colors hover:bg-[#F7F3E9]/10">
                                     <td className="px-8 py-4 font-bold text-[#4A453E]">{item.name}</td>
                                     <td className="px-8 py-4 font-medium text-[#4A453E]/50">{item.portion}</td>
@@ -589,8 +590,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                               </tbody>
                               <tfoot className="border-t border-[#4A453E]/10 bg-[#FFFDF5] font-bold">
                                 <tr>
-                                  <td className="px-8 py-6 text-lg text-[#4A453E]" colSpan={2}>估算总热量</td>
-                                  <td className="px-8 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{message.total}</td>
+                                  <td className="px-8 py-6 text-lg text-[#4A453E]" colSpan={2}>{messagePresentation.totalLabel}</td>
+                                  <td className="px-8 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{messagePresentation.total}</td>
                                 </tr>
                               </tfoot>
                             </table>
@@ -658,34 +659,34 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             <div className="mb-3 flex items-center justify-between gap-4">
                               <div>
                                 <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#4A453E]/35">
-                                  餐食推荐
+                                  {messagePresentation.eyebrow}
                                 </p>
                                 <h3 className="font-serif-brand text-2xl font-bold italic text-[#4A453E]">
-                                  {message.title || '推荐建议'}
+                                  {messagePresentation.title}
                                 </h3>
                               </div>
                               <span className="rounded-full border border-[#FF8A65]/15 bg-[#FF8A65]/8 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#FF8A65]">
-                                建议
+                                {messagePresentation.badgeLabel}
                               </span>
                             </div>
-                            {message.description && (
+                            {messagePresentation.description && (
                               <div className="rounded-[20px] border border-[#4A453E]/5 bg-[#FFFDF5] px-5 py-4">
                                 <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
-                                  为什么这样选
+                                  {messagePresentation.reasonLabel}
                                 </p>
                                 <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">
-                                  {message.description}
+                                  {messagePresentation.description}
                                 </p>
                               </div>
                             )}
                           </div>
-                          {message.content && (
+                          {messagePresentation.content && (
                             <div className="px-8 py-6">
                               <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
-                                推荐怎么吃
+                                {messagePresentation.contentLabel}
                               </p>
                               <p className="text-[15px] leading-relaxed text-[#4A453E]/75">
-                                {message.content}
+                                {messagePresentation.content}
                               </p>
                             </div>
                           )}
@@ -696,7 +697,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             ? 'bg-[#F7F3E9] text-[#4A453E] border-[#4A453E]/5 rounded-tr-[4px]'
                             : 'bg-white text-[#4A453E] border-[#4A453E]/8 rounded-tl-[4px]'
                         }`}>
-                          {message.content}
+                          {messagePresentation.content}
                         </div>
                       )}
                       <span className="px-1 text-[9px] font-bold uppercase tracking-widest text-[#4A453E]/20">{message.time || 'Just now'}</span>
