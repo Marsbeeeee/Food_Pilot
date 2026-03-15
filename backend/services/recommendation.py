@@ -18,7 +18,9 @@ Reply in Simplified Chinese.
 For recommendation requests, focus on actionable meal choices, comparisons, swaps, and optimization suggestions.
 Always give the user a concrete choice or direction first, then explain briefly why it fits.
 Do not turn recommendation requests into calorie-estimate tables or ingredient breakdowns.
-For plain chat or explanation requests, answer clearly and directly without turning the reply into a calorie estimate.
+For text requests, act only as an auxiliary fallback for small talk, explanatory follow-ups,
+and short clarifications about an existing recommendation or estimate.
+Do not expand text requests into a third complex capability, a new recommendation plan, or a fresh estimate.
 Return only JSON that matches the requested schema.
 """.strip()
 
@@ -28,8 +30,8 @@ DEFAULT_GUIDANCE_COPY = {
         "description": "这是基于你当前问题给出的推荐建议。",
     },
     "text": {
-        "title": "Food Pilot 回复",
-        "description": "这是对你问题的直接说明。",
+        "title": "补充说明",
+        "description": "这是对当前问题的补充说明。",
     },
 }
 
@@ -230,6 +232,9 @@ def _build_guidance_system_instruction(
     elif response_mode == "text":
         parts.append(
             "The user wants a plain conversational or explanatory reply instead of a meal estimate."
+        )
+        parts.append(
+            "Keep the reply short, direct, and clarifying. Treat it as an auxiliary fallback, not a standalone complex capability."
         )
     else:
         raise ValueError(f"Unsupported response_mode: {response_mode}")

@@ -21,6 +21,18 @@ class RecommendationServiceTests(unittest.TestCase):
         self.assertEqual(result.description, "这是基于你当前问题给出的推荐建议。")
         self.assertEqual(result.response, "晚饭优先选鸡肉沙拉，再补一份玉米汤，会更稳妥。")
 
+    def test_parse_guidance_payload_uses_auxiliary_defaults_for_text(self) -> None:
+        result = _parse_guidance_payload(
+            {
+                "response": "更推荐烤鸡，是因为它通常更容易控制油脂和总热量。",
+            },
+            response_mode="text",
+        )
+
+        self.assertEqual(result.title, "补充说明")
+        self.assertEqual(result.description, "这是对当前问题的补充说明。")
+        self.assertEqual(result.response, "更推荐烤鸡，是因为它通常更容易控制油脂和总热量。")
+
     def test_parse_guidance_payload_accepts_common_aliases(self) -> None:
         result = _parse_guidance_payload(
             {
@@ -45,6 +57,15 @@ class RecommendationServiceTests(unittest.TestCase):
         self.assertIn("give the user a concrete choice or direction first", system_instruction)
         self.assertIn("Do not turn recommendation requests into calorie-estimate tables", system_instruction)
         self.assertIn("Do not output calorie tables", system_instruction)
+
+    def test_build_guidance_system_instruction_for_text_keeps_auxiliary_scope(self) -> None:
+        system_instruction = _build_guidance_system_instruction(
+            response_mode="text",
+            profile_context=None,
+        )
+
+        self.assertIn("auxiliary fallback", system_instruction)
+        self.assertIn("not a standalone complex capability", system_instruction)
 
     def test_build_profile_context_contains_constraints(self) -> None:
         profile = ProfileOut(

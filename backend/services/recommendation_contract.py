@@ -29,6 +29,8 @@ Use exactly these top-level keys:
 - description
 - response
 The response should answer the user's question directly in a conversational way without calorie tables or ingredient breakdowns.
+Use this mode only for small talk, explanatory follow-ups, or short clarifications about an existing recommendation or estimate.
+Do not turn this mode into a fresh recommendation plan, a comparison workflow, or a new estimate result.
 Do not add markdown, code fences, tables, or extra keys.
 """.strip(),
 }

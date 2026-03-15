@@ -167,6 +167,24 @@ class ChatServiceTests(unittest.TestCase):
 
         self.assertEqual(resolved, "text")
 
+    def test_resolve_message_type_routes_explanation_request_about_recommendation_to_text(self) -> None:
+        resolved = resolve_message_type(
+            "解释一下这个推荐为什么更适合减脂",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "text")
+
+    def test_resolve_message_type_routes_explanation_request_about_estimate_to_text(self) -> None:
+        resolved = resolve_message_type(
+            "说明一下这个估算为什么这么高",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "text")
+
     def test_resolve_message_type_defaults_plain_meal_descriptions_to_estimate(self) -> None:
         resolved = resolve_message_type(
             "一碗鸡胸肉沙拉加半个牛油果",
@@ -321,6 +339,31 @@ class ChatServiceTests(unittest.TestCase):
             {
                 "text": "拉面通常会同时叠加高油汤底、精制面和叉烧，所以总热量更高。",
             },
+        )
+
+    def test_send_message_in_session_uses_text_reply_for_explanation_about_recommendation(self) -> None:
+        session = create_empty_session(self.user_id)
+
+        with patch(
+            "backend.services.chat_service.generate_text_reply",
+            return_value=GuidanceReply(
+                title="补充说明",
+                description="这是对推荐结果的补充说明。",
+                response="更推荐烤鸡，是因为同等份量下它通常油脂更低，也更容易控制总热量。",
+            ),
+        ):
+            exchange = send_message_in_session(
+                self.user_id,
+                int(session["id"]),
+                "解释一下这个推荐为什么更适合减脂",
+                profile_id=12,
+            )
+
+        self.assertIsNotNone(exchange)
+        self.assertEqual(exchange["assistant_message"]["message_type"], "text")
+        self.assertEqual(
+            exchange["assistant_message"]["content"],
+            "更推荐烤鸡，是因为同等份量下它通常油脂更低，也更容易控制总热量。",
         )
 
     def test_send_message_in_session_persists_fallback_assistant_message_on_estimate_error(self) -> None:
