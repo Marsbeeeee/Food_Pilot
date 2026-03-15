@@ -396,7 +396,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
           <div className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-2 pb-10">
             <div>
-              <h3 className="mb-4 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">History</h3>
+              <h3 className="mb-4 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">Chats</h3>
               <div className="flex flex-col gap-1">
                 {sessions.map((session) => {
                   const lastResult = [...session.messages].reverse().find((message) => message.isResult);
@@ -435,7 +435,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                   );
                 })}
                 {sessions.length === 0 && (
-                  <p className="px-3 text-[11px] italic text-[#4A453E]/30">No chat history yet.</p>
+                  <p className="px-3 text-[11px] italic text-[#4A453E]/30">No chats yet.</p>
                 )}
               </div>
             </div>
@@ -492,18 +492,19 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               <div className="mb-8 flex size-20 items-center justify-center rounded-[40px] border border-[#4A453E]/5 bg-white shadow-sm">
                 <span className="material-symbols-outlined text-4xl text-[#FF8A65]">restaurant</span>
               </div>
-              <h3 className="mb-3 font-serif-brand text-3xl font-bold italic text-[#4A453E]">What is on your plate?</h3>
+              <h3 className="mb-3 font-serif-brand text-3xl font-bold italic text-[#4A453E]">Start with a meal, question, or goal.</h3>
               <p className="max-w-md text-base leading-relaxed text-[#4A453E]/50">
-                Describe your meal and Food Pilot will estimate the ingredients and calories for you.
+                Ask Food Pilot about a dish, compare options, or work through a nutrition
+                question. Save the answers worth keeping to Food Log.
               </p>
               <div className="mt-10 grid w-full max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">
                 <button onClick={() => void handleSendMessage('What nutrition is in a classic avocado toast?')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-4 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
-                  <p className="mb-1 text-[13px] font-bold text-[#4A453E]">Quick Question</p>
+                  <p className="mb-1 text-[13px] font-bold text-[#4A453E]">Understand a Meal</p>
                   <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">"What nutrition is in a classic avocado toast?"</p>
                 </button>
-                <button onClick={() => void handleSendMessage('How many calories are in a bowl of poke?')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-4 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
-                  <p className="mb-1 text-[13px] font-bold text-[#4A453E]">Meal Estimate</p>
-                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">"How many calories are in a bowl of poke?"</p>
+                <button onClick={() => void handleSendMessage('I am deciding between poke and ramen for dinner. Which is usually the lighter option?')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-4 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
+                  <p className="mb-1 text-[13px] font-bold text-[#4A453E]">Compare Options</p>
+                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">"I am deciding between poke and ramen for dinner. Which is usually the lighter option?"</p>
                 </button>
               </div>
             </div>
@@ -681,7 +682,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             <div className="relative flex items-end overflow-hidden rounded-[28px] border border-[#4A453E]/10 bg-white shadow-xl shadow-[#4A453E]/05 transition-all focus-within:border-[#FF8A65]/40">
               <textarea
                 className="custom-scrollbar max-h-40 flex-1 resize-none border-none bg-transparent py-6 pl-8 text-[16px] leading-relaxed text-[#4A453E] placeholder-[#4A453E]/30 focus:ring-0"
-                placeholder="和 Food Pilot 聊聊... (例如：我的寿司里有什么？)"
+                placeholder="Ask Food Pilot about a meal, ingredient, or goal..."
                 rows={1}
                 value={inputValue}
                 onChange={(event) => setInputValue(event.target.value)}
@@ -704,7 +705,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             </div>
 
             <p className="mt-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-              你的均衡饮食助手。
+              Your conversational nutrition assistant.
             </p>
           </div>
         </div>
@@ -722,7 +723,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             <div className="mb-5">
               <h3 className="text-lg font-bold text-[#4A453E]">Rename Chat</h3>
               <p className="mt-1 text-sm text-[#4A453E]/50">
-                Update the conversation title shown in your history.
+                Update the conversation title shown in your chats.
               </p>
             </div>
             <input
