@@ -1,6 +1,12 @@
 import unittest
 
 from backend.services.chat_service import resolve_message_type
+from backend.tests.fixtures.real_user_intent_regression_cases import (
+    REAL_USER_CASES,
+)
+
+# 验收标准：高频问题正确分到两大核心意图，错误分流率不超过此阈值
+ACCEPTABLE_ERROR_DIVERSION_RATE = 0.00
 
 
 class ChatIntentRoutingRegressionTests(unittest.TestCase):
@@ -27,6 +33,39 @@ class ChatIntentRoutingRegressionTests(unittest.TestCase):
                 )
 
                 self.assertEqual(resolved, expected)
+
+    def test_real_user_questions_correctly_routed_to_two_core_intents(self) -> None:
+        """小范围验证：真实用户问题回归，推荐像建议、估算像估算。"""
+        failures: list[tuple[str, str, str]] = []
+        for content, expected in REAL_USER_CASES:
+            resolved = resolve_message_type(
+                content,
+                profile_id=12,
+                user_id=7,
+            )
+            if resolved != expected:
+                failures.append((content, expected, resolved))
+
+        total = len(REAL_USER_CASES)
+        error_count = len(failures)
+        error_rate = error_count / total if total else 0.0
+
+        self.assertLessEqual(
+            error_rate,
+            ACCEPTABLE_ERROR_DIVERSION_RATE,
+            (
+                f"错误分流 {error_count}/{total}，错误率 {error_rate:.1%} 超过可接受阈值 {ACCEPTABLE_ERROR_DIVERSION_RATE:.0%}。"
+                + (
+                    " 误分样本：\n  "
+                    + "\n  ".join(
+                        f"输入: {c!r} -> 期望 {e}, 实际 {r}"
+                        for c, e, r in failures
+                    )
+                    if failures
+                    else ""
+                )
+            ),
+        )
 
 
 if __name__ == "__main__":
