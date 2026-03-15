@@ -2,9 +2,11 @@ import os
 import sqlite3
 import unittest
 from unittest.mock import patch
+import json
 
 from backend.database.connection import get_db_connection
 from backend.database.init_db import init_db
+from backend.schemas.recommendation import GuidanceReply
 from backend.services.food_log_service import save_food_log
 from backend.services.chat_service import (
     DEFAULT_SESSION_TITLE,
@@ -18,6 +20,7 @@ from backend.services.chat_service import (
     get_session_detail,
     list_user_sessions,
     rename_session,
+    resolve_message_type,
     send_message_in_session,
 )
 
@@ -127,6 +130,42 @@ class ChatServiceTests(unittest.TestCase):
         self.assertEqual(len(refreshed["messages"]), 3)
         self.assertEqual(refreshed["messages"][-1]["result_total"], "320 kcal")
 
+    def test_resolve_message_type_routes_typical_recommendation_requests(self) -> None:
+        resolved = resolve_message_type(
+            "帮我推荐一个更轻一点的晚餐",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "meal_recommendation")
+
+    def test_resolve_message_type_routes_explanatory_follow_up_to_text(self) -> None:
+        resolved = resolve_message_type(
+            "为什么拉面通常热量更高？",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "text")
+
+    def test_resolve_message_type_prefers_text_for_explanatory_follow_up_about_recommendations(self) -> None:
+        resolved = resolve_message_type(
+            "为什么更推荐烤鸡而不是炸鸡？",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "text")
+
+    def test_resolve_message_type_defaults_plain_meal_descriptions_to_estimate(self) -> None:
+        resolved = resolve_message_type(
+            "一碗鸡胸肉沙拉加半个牛油果",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "meal_estimate")
+
     def test_send_message_in_session_orchestrates_user_and_assistant_messages(self) -> None:
         session = create_empty_session(self.user_id)
 
@@ -171,6 +210,70 @@ class ChatServiceTests(unittest.TestCase):
         self.assertEqual(exchange["user_message"]["role"], "user")
         self.assertEqual(exchange["assistant_message"]["message_type"], "estimate_result")
         self.assertEqual(exchange["assistant_message"]["result_total"], "240 kcal")
+
+    def test_send_message_in_session_persists_meal_recommendation_message(self) -> None:
+        session = create_empty_session(self.user_id)
+
+        with patch(
+            "backend.services.chat_service.generate_meal_recommendation",
+            return_value=GuidanceReply(
+                title="Lighter Dinner Swap",
+                description="A higher-protein dinner with less oil.",
+                response="可以把炸鸡饭换成烤鸡沙拉，再配一份玉米汤，会更轻一些。",
+            ),
+        ):
+            exchange = send_message_in_session(
+                self.user_id,
+                int(session["id"]),
+                "帮我推荐一个更轻一点的晚餐",
+                profile_id=12,
+            )
+
+        self.assertIsNotNone(exchange)
+        self.assertEqual(exchange["assistant_message"]["message_type"], "meal_recommendation")
+        self.assertEqual(
+            exchange["assistant_message"]["content"],
+            "可以把炸鸡饭换成烤鸡沙拉，再配一份玉米汤，会更轻一些。",
+        )
+        self.assertIsNone(exchange["assistant_message"]["result_title"])
+        self.assertEqual(
+            json.loads(exchange["assistant_message"]["payload_json"]),
+            {
+                "title": "Lighter Dinner Swap",
+                "description": "A higher-protein dinner with less oil.",
+            },
+        )
+
+    def test_send_message_in_session_persists_text_reply_for_explanatory_follow_up(self) -> None:
+        session = create_empty_session(self.user_id)
+
+        with patch(
+            "backend.services.chat_service.generate_text_reply",
+            return_value=GuidanceReply(
+                title="Food Pilot Reply",
+                description="A direct explanation.",
+                response="拉面通常会同时叠加高油汤底、精制面和叉烧，所以总热量更高。",
+            ),
+        ):
+            exchange = send_message_in_session(
+                self.user_id,
+                int(session["id"]),
+                "为什么拉面通常热量更高？",
+                profile_id=12,
+            )
+
+        self.assertIsNotNone(exchange)
+        self.assertEqual(exchange["assistant_message"]["message_type"], "text")
+        self.assertEqual(
+            exchange["assistant_message"]["content"],
+            "拉面通常会同时叠加高油汤底、精制面和叉烧，所以总热量更高。",
+        )
+        self.assertEqual(
+            json.loads(exchange["assistant_message"]["payload_json"]),
+            {
+                "text": "拉面通常会同时叠加高油汤底、精制面和叉烧，所以总热量更高。",
+            },
+        )
 
     def test_send_message_in_session_persists_fallback_assistant_message_on_estimate_error(self) -> None:
         session = create_empty_session(self.user_id)

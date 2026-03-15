@@ -12,12 +12,74 @@ from backend.repositories.message_repository import (
     create_message as create_message_record,
     list_messages_by_session as list_messages_by_session_record,
 )
+from backend.services.recommendation import (
+    generate_meal_recommendation,
+    generate_text_reply,
+)
 
 
 DEFAULT_SESSION_TITLE = "New chat"
 MAX_SESSION_TITLE_LENGTH = 120
-DEFAULT_ASSISTANT_ERROR_MESSAGE = "Unable to process this meal description right now. Please try again."
+DEFAULT_ASSISTANT_ERROR_MESSAGE = "Unable to process this request right now. Please try again."
 DEFAULT_RESOLVED_MESSAGE_TYPE = "meal_estimate"
+RECOMMENDATION_MESSAGE_TYPE = "meal_recommendation"
+TEXT_MESSAGE_TYPE = "text"
+MEAL_ESTIMATE_MESSAGE_TYPE = "meal_estimate"
+RECOMMENDATION_KEYWORDS = (
+    "recommend",
+    "recommendation",
+    "comparison",
+    "compare",
+    "vs",
+    "versus",
+    "swap",
+    "replace",
+    "instead",
+    "substitute",
+    "alternative",
+    "optimize",
+    "improve",
+    "better option",
+    "lighter option",
+    "healthier option",
+    "recommended",
+    "推荐",
+    "建议",
+    "对比",
+    "比较",
+    "替换",
+    "换成",
+    "替代",
+    "优化",
+    "怎么选",
+    "哪个好",
+    "哪种更",
+    "更适合",
+    "更轻",
+    "更健康",
+)
+TEXT_KEYWORDS = (
+    "hello",
+    "hi ",
+    "hey",
+    "thanks",
+    "thank you",
+    "why",
+    "explain",
+    "difference",
+    "tell me more",
+    "help me understand",
+    "what does",
+    "你好",
+    "谢谢",
+    "为什么",
+    "解释",
+    "区别",
+    "差别",
+    "原理",
+    "怎么理解",
+    "展开讲",
+)
 
 
 def create_empty_session(user_id: int) -> dict[str, object]:
@@ -139,7 +201,7 @@ def append_assistant_message(
     user_id: int,
     session_id: int,
     *,
-    message_type: str = "text",
+    message_type: str = TEXT_MESSAGE_TYPE,
     content: str | None = None,
     result_title: str | None = None,
     result_confidence: str | None = None,
@@ -295,7 +357,7 @@ def _generate_assistant_reply_with_conn(
             session_id,
             user_id,
             "assistant",
-            "text",
+            TEXT_MESSAGE_TYPE,
             content=_build_fallback_message(exc),
         )
     return assistant_message
@@ -307,7 +369,15 @@ def resolve_message_type(
     profile_id: int | None,
     user_id: int,
 ) -> str:
-    del content, profile_id, user_id
+    del profile_id, user_id
+    normalized_content = _normalize_routing_text(content)
+
+    if _contains_any_keyword(normalized_content, TEXT_KEYWORDS):
+        return TEXT_MESSAGE_TYPE
+
+    if _contains_any_keyword(normalized_content, RECOMMENDATION_KEYWORDS):
+        return RECOMMENDATION_MESSAGE_TYPE
+
     return DEFAULT_RESOLVED_MESSAGE_TYPE
 
 
@@ -320,8 +390,24 @@ def build_response_by_type(
     profile_id: int | None,
     message_type: str,
 ) -> dict[str, object]:
-    if message_type in {"meal_estimate", "meal_recommendation", "text"}:
+    if message_type == MEAL_ESTIMATE_MESSAGE_TYPE:
         return _build_meal_estimate_response_with_conn(
+            conn,
+            user_id,
+            session_id,
+            content=content,
+            profile_id=profile_id,
+        )
+    if message_type == RECOMMENDATION_MESSAGE_TYPE:
+        return _build_meal_recommendation_response_with_conn(
+            conn,
+            user_id,
+            session_id,
+            content=content,
+            profile_id=profile_id,
+        )
+    if message_type == TEXT_MESSAGE_TYPE:
+        return _build_text_response_with_conn(
             conn,
             user_id,
             session_id,
@@ -346,6 +432,42 @@ def _build_meal_estimate_response_with_conn(
         user_id,
         session_id,
         estimate=estimate,
+    )
+
+
+def _build_meal_recommendation_response_with_conn(
+    conn,
+    user_id: int,
+    session_id: int,
+    *,
+    content: str,
+    profile_id: int | None,
+) -> dict[str, object]:
+    recommendation = generate_meal_recommendation(content, profile_id, user_id)
+    return _create_meal_recommendation_message_with_conn(
+        conn,
+        user_id,
+        session_id,
+        title=recommendation.title,
+        description=recommendation.description,
+        content=recommendation.response,
+    )
+
+
+def _build_text_response_with_conn(
+    conn,
+    user_id: int,
+    session_id: int,
+    *,
+    content: str,
+    profile_id: int | None,
+) -> dict[str, object]:
+    reply = generate_text_reply(content, profile_id, user_id)
+    return _create_text_message_with_conn(
+        conn,
+        user_id,
+        session_id,
+        content=reply.response,
     )
 
 
@@ -379,6 +501,50 @@ def _create_estimate_result_message_with_conn(
     return assistant_message
 
 
+def _create_meal_recommendation_message_with_conn(
+    conn,
+    user_id: int,
+    session_id: int,
+    *,
+    title: str,
+    description: str,
+    content: str,
+) -> dict[str, object]:
+    payload_json = json.dumps(
+        {
+            "title": title,
+            "description": description,
+        },
+        ensure_ascii=False,
+    )
+    return create_message_record(
+        conn,
+        session_id,
+        user_id,
+        "assistant",
+        RECOMMENDATION_MESSAGE_TYPE,
+        content=content,
+        payload_json=payload_json,
+    )
+
+
+def _create_text_message_with_conn(
+    conn,
+    user_id: int,
+    session_id: int,
+    *,
+    content: str,
+) -> dict[str, object]:
+    return create_message_record(
+        conn,
+        session_id,
+        user_id,
+        "assistant",
+        TEXT_MESSAGE_TYPE,
+        content=content,
+    )
+
+
 def _build_fallback_message(error: Exception) -> str:
     user_message = getattr(error, "user_message", None)
     if isinstance(user_message, str) and user_message.strip():
@@ -395,6 +561,14 @@ def _build_title_from_first_message(content: str) -> str:
 
 def _normalize_title(value: str) -> str:
     return " ".join(value.strip().split())
+
+
+def _normalize_routing_text(value: str) -> str:
+    return " ".join(value.lower().strip().split())
+
+
+def _contains_any_keyword(value: str, keywords: tuple[str, ...]) -> bool:
+    return any(keyword in value for keyword in keywords)
 
 
 def estimate_meal(query: str, profile_id: int | None, user_id: int):
