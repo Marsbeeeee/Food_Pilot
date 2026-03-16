@@ -16,6 +16,7 @@ interface ExplorerProps {
   onRestoreFoodLog: (entryId: string) => Promise<void>;
   onUpdateFoodLog: (entryId: string, payload: FoodLogPatchInput) => Promise<void>;
   onAnalyzeSelection?: (entries: FoodLogEntry[], date: string) => Promise<string>;
+  defaultToAnalysisView?: boolean;
 }
 
 interface FoodLogEditDraft {
@@ -37,6 +38,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
   onRestoreFoodLog,
   onUpdateFoodLog,
   onAnalyzeSelection,
+  defaultToAnalysisView = false,
 }) => {
   const orderedEntries = sortFoodLogEntries(logEntries);
   const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(
@@ -52,7 +54,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
   const [editDraft, setEditDraft] = useState<FoodLogEditDraft | null>(null);
 
   const [analysisBasket, setAnalysisBasket] = useState<AnalysisSelectionItem[]>([]);
-  const [showAnalysisView, setShowAnalysisView] = useState(false);
+  const [showAnalysisView, setShowAnalysisView] = useState(defaultToAnalysisView);
 
   const collectionStats = buildFoodLogCollectionStats(orderedEntries);
 

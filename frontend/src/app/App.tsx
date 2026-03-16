@@ -322,6 +322,17 @@ const App: React.FC = () => {
             onUpdateFoodLog={handleUpdateFoodLog}
           />
         );
+      case AppView.INSIGHTS:
+        return (
+          <Explorer
+            logEntries={foodLog}
+            onNavigateToSession={handleNavigateToSession}
+            onDeleteFoodLog={handleDeleteFoodLog}
+            onRestoreFoodLog={handleRestoreFoodLog}
+            onUpdateFoodLog={handleUpdateFoodLog}
+            defaultToAnalysisView
+          />
+        );
       case AppView.PROFILE:
         return <Profile profile={profile} setProfile={setProfile} />;
       default:
