@@ -659,26 +659,18 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       <main className="flex min-h-0 flex-1 overflow-hidden">
         <section className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-6 md:px-8 md:py-8">
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-            {/* 顶部：返回按钮 */}
-            <div className="flex items-center justify-start">
-              <button
-                type="button"
-                onClick={onBack}
-                className="flex size-9 items-center justify-center rounded-full text-[#4A453E]/50 transition-colors hover:bg-[#F7F3E9] hover:text-[#4A453E]"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-
-            {/* 标题行：Nutrition Analysis + 日期选择器 */}
-            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-              <h1 className="font-serif-brand text-3xl font-bold text-[#4A453E] md:text-4xl">
-                Nutrition Analysis
-              </h1>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4A453E]/40">
-                  Date
-                </span>
+            {/* 标题行：Nutrition Analysis + 副标题文案 + 日期选择器 */}
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="flex-1">
+                <h1 className="font-serif-brand text-3xl font-bold text-[#4A453E] md:text-4xl">
+                  Nutrition Analysis
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-[#4A453E]/60 md:text-base">
+                  Insights summarizes your selected Food Log entries into a simple daily view so
+                  that suggestions stay grounded in the same requirements.
+                </p>
+              </div>
+              <div className="mt-1 flex items-center md:mt-12">
                 <input
                   type="date"
                   value={currentDate}
@@ -687,7 +679,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                     setCurrentDate(nextDate);
                     onAnalysisDateChange?.(nextDate);
                   }}
-                  className="rounded-full border border-[#FF8A65]/25 bg-[#FFF7F2] px-3 py-1.5 text-[11px] font-bold text-[#FF8A65] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
+                  className="rounded-full border border-[#FF8A65]/25 bg-[#FFF7F2] px-3 py-2 text-[11px] font-bold text-[#FF8A65] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
                 />
               </div>
             </div>
