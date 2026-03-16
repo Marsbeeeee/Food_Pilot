@@ -659,8 +659,8 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       <main className="flex min-h-0 flex-1 overflow-hidden">
         <section className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-6 md:px-8 md:py-8">
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-            {/* 局部头部：关闭按钮 + 标题 */}
-            <div className="flex items-center justify-between gap-3 md:gap-4">
+            {/* 顶部：返回按钮 */}
+            <div className="flex items-center justify-start">
               <button
                 type="button"
                 onClick={onBack}
@@ -668,11 +668,28 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
               >
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
-              <h1 className="flex-1 text-center font-serif-brand text-2xl font-bold text-[#4A453E] md:text-3xl">
+            </div>
+
+            {/* 标题行：Nutrition Analysis + 日期选择器 */}
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <h1 className="font-serif-brand text-3xl font-bold text-[#4A453E] md:text-4xl">
                 Nutrition Analysis
               </h1>
-              {/* 占位用于平衡布局 */}
-              <div className="size-9" />
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4A453E]/40">
+                  Date
+                </span>
+                <input
+                  type="date"
+                  value={currentDate}
+                  onChange={(event) => {
+                    const nextDate = event.target.value;
+                    setCurrentDate(nextDate);
+                    onAnalysisDateChange?.(nextDate);
+                  }}
+                  className="rounded-full border border-[#FF8A65]/25 bg-[#FFF7F2] px-3 py-1.5 text-[11px] font-bold text-[#FF8A65] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -681,16 +698,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
                         Total Energy
                       </p>
-                      <input
-                        type="date"
-                        value={currentDate}
-                        onChange={(event) => {
-                          const nextDate = event.target.value;
-                          setCurrentDate(nextDate);
-                          onAnalysisDateChange?.(nextDate);
-                        }}
-                        className="rounded-full border border-[#FF8A65]/20 bg-[#FFF7F2] px-3 py-1.5 text-[11px] font-bold text-[#FF8A65] outline-none transition-all focus:border-[#FF8A65]/40"
-                      />
                     </div>
                     <div className="flex flex-col items-center justify-center pt-2">
                       <div className="relative flex h-44 w-44 items-center justify-center rounded-full bg-[#FFF7F2]">
