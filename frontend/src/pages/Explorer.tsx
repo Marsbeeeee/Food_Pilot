@@ -655,33 +655,26 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   }, [currentDate]);
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#FFFDF5]">
-      <header className="flex shrink-0 items-center justify-between border-b border-[#4A453E]/05 bg-white px-6 py-4 md:px-8 md:py-5">
-        <div className="flex items-center gap-3 md:gap-4">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex size-10 items-center justify-center rounded-full text-[#4A453E]/50 transition-colors hover:bg-[#F7F3E9] hover:text-[#4A453E]"
-          >
-            <span className="material-symbols-outlined text-[22px]">close</span>
-          </button>
-
-          <div>
-            <h1 className="font-serif-brand text-3xl font-bold text-[#4A453E] md:text-4xl">
-              Nutrition Analysis
-            </h1>
-          </div>
-        </div>
-
-        <div className="hidden rounded-full bg-[#FFF2EC] px-4 py-2 text-sm font-bold text-[#FF8A65] md:flex md:items-center md:gap-2">
-          <span className="material-symbols-outlined text-[18px]">restaurant</span>
-          {filteredItems.length} Items
-        </div>
-      </header>
-
+    <div className="flex h-full min-h-0 flex-1 overflow-hidden bg-[#FFFDF5]">
       <main className="flex min-h-0 flex-1 overflow-hidden">
         <section className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-6 md:px-8 md:py-8">
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+            {/* 局部头部：关闭按钮 + 标题 */}
+            <div className="flex items-center justify-between gap-3 md:gap-4">
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex size-9 items-center justify-center rounded-full text-[#4A453E]/50 transition-colors hover:bg-[#F7F3E9] hover:text-[#4A453E]"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+              <h1 className="flex-1 text-center font-serif-brand text-2xl font-bold text-[#4A453E] md:text-3xl">
+                Nutrition Analysis
+              </h1>
+              {/* 占位用于平衡布局 */}
+              <div className="size-9" />
+            </div>
+
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
                     <div className="mb-4 flex items-center justify-between gap-3">
@@ -867,9 +860,10 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                 <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
                   Selected Items
                 </h2>
-                <span className="text-xs font-semibold text-[#4A453E]/35">
-                  {currentDate === getLocalDateKey() ? 'Today' : currentDate}
-                </span>
+                <div className="inline-flex items-center gap-1 rounded-full bg-[#FFF7EF] px-3 py-1 text-[11px] font-semibold text-[#FF8A65]">
+                  <span className="material-symbols-outlined text-[14px]">restaurant</span>
+                  <span>{filteredItems.length} Items</span>
+                </div>
               </div>
 
               {filteredItems.length > 0 ? (
