@@ -1,4 +1,4 @@
-﻿# Food Pilot
+# Food Pilot
 
 Food Pilot 是一个以 `Assistant` 为主入口的营养问答与餐食分析 Web 应用。
 
@@ -25,6 +25,7 @@ Food Pilot 是一个以 `Assistant` 为主入口的营养问答与餐食分析 W
 - 从 Food Log 跳回来源聊天
 - Profile 的创建、读取、更新
 - 基于 SQLite 的本地持久化
+- 推荐路径上的 Profile 硬规则：prompt 显式使用目标/热量/饮食风格/过敏原，过敏原校验与拦截，以及专门回归测试（`test_profile_allergen_constraints.py`）
 
 ## 当前不打算把它做成什么
 
