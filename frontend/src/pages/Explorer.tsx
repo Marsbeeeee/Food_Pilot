@@ -785,7 +785,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                                 <span className="font-serif-brand text-sm font-semibold text-[#4A453E]">
                                   {macro.label}
                                 </span>
-                                <div className="mt-2 h-[6px] w-[94%] overflow-hidden rounded-full bg-[#F5F2ED]">
+                                <div className="mt-2 h-[6px] w-[88%] overflow-hidden rounded-full bg-[#F5F2ED]">
                                   <div
                                     className="h-full rounded-full transition-all"
                                     style={{
