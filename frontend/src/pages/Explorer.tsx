@@ -17,6 +17,7 @@ interface ExplorerProps {
   onUpdateFoodLog: (entryId: string, payload: FoodLogPatchInput) => Promise<void>;
   onAnalyzeSelection?: (entries: FoodLogEntry[], date: string) => Promise<string>;
   defaultToAnalysisView?: boolean;
+  initialAnalysisEntries?: FoodLogEntry[];
 }
 
 interface FoodLogEditDraft {
@@ -39,6 +40,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
   onUpdateFoodLog,
   onAnalyzeSelection,
   defaultToAnalysisView = false,
+  initialAnalysisEntries,
 }) => {
   const orderedEntries = sortFoodLogEntries(logEntries);
   const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(
@@ -55,6 +57,33 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
   const [analysisBasket, setAnalysisBasket] = useState<AnalysisSelectionItem[]>([]);
   const [showAnalysisView, setShowAnalysisView] = useState(defaultToAnalysisView);
+
+  useEffect(() => {
+    setShowAnalysisView(Boolean(defaultToAnalysisView));
+  }, [defaultToAnalysisView]);
+
+  // 当从 Insights 入口进入时，如果希望直接看到每日分析，
+  // 且当前还没有任何选中项，则用传入的 initialAnalysisEntries 预填充今日分析集合。
+  useEffect(() => {
+    if (!defaultToAnalysisView) {
+      return;
+    }
+    if (analysisBasket.length > 0) {
+      return;
+    }
+    if (!initialAnalysisEntries || initialAnalysisEntries.length === 0) {
+      return;
+    }
+
+    const today = getLocalDateKey();
+    setAnalysisBasket(
+      initialAnalysisEntries.map((entry) => ({
+        ...entry,
+        basketId: createLocalId(),
+        analysisDate: today,
+      })),
+    );
+  }, [defaultToAnalysisView, initialAnalysisEntries, analysisBasket.length]);
 
   const collectionStats = buildFoodLogCollectionStats(orderedEntries);
 

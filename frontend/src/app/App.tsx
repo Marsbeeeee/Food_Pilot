@@ -331,6 +331,7 @@ const App: React.FC = () => {
             onRestoreFoodLog={handleRestoreFoodLog}
             onUpdateFoodLog={handleUpdateFoodLog}
             defaultToAnalysisView
+            initialAnalysisEntries={foodLog}
           />
         );
       case AppView.PROFILE:
