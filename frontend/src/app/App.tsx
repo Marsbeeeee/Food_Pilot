@@ -51,6 +51,7 @@ const App: React.FC = () => {
   const [isBootstrappingData, setIsBootstrappingData] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
+  const [currentAnalysisDate, setCurrentAnalysisDate] = useState<string>(getTodayKey());
 
   useEffect(() => {
     let cancelled = false;
@@ -169,6 +170,7 @@ const App: React.FC = () => {
     setProfile(createDefaultProfile());
     setCurrentView(AppView.WORKSPACE);
     setActiveSessionId('');
+    setCurrentAnalysisDate(getTodayKey());
   };
 
   const applyAuthenticatedState = (nextSession: AuthSession) => {
@@ -180,6 +182,7 @@ const App: React.FC = () => {
     setProfile(createDefaultProfile());
     setCurrentView(AppView.WORKSPACE);
     setActiveSessionId('');
+    setCurrentAnalysisDate(getTodayKey());
   };
 
   const refreshFoodLog = async () => {
@@ -320,6 +323,8 @@ const App: React.FC = () => {
             onDeleteFoodLog={handleDeleteFoodLog}
             onRestoreFoodLog={handleRestoreFoodLog}
             onUpdateFoodLog={handleUpdateFoodLog}
+            analysisDate={currentAnalysisDate}
+            onAnalysisDateChange={setCurrentAnalysisDate}
           />
         );
       case AppView.INSIGHTS:
@@ -332,6 +337,8 @@ const App: React.FC = () => {
             onUpdateFoodLog={handleUpdateFoodLog}
             defaultToAnalysisView
             initialAnalysisEntries={foodLog}
+            analysisDate={currentAnalysisDate}
+            onAnalysisDateChange={setCurrentAnalysisDate}
           />
         );
       case AppView.PROFILE:
@@ -376,6 +383,13 @@ function createDefaultProfile(): UserProfileForm {
     ...DEFAULT_PROFILE,
     allergies: [...DEFAULT_PROFILE.allergies],
   };
+}
+
+function getTodayKey(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export default App;

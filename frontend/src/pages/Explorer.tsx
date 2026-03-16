@@ -18,6 +18,8 @@ interface ExplorerProps {
   onAnalyzeSelection?: (entries: FoodLogEntry[], date: string) => Promise<string>;
   defaultToAnalysisView?: boolean;
   initialAnalysisEntries?: FoodLogEntry[];
+  analysisDate: string;
+  onAnalysisDateChange?: (date: string) => void;
 }
 
 interface FoodLogEditDraft {
@@ -41,6 +43,8 @@ export const Explorer: React.FC<ExplorerProps> = ({
   onAnalyzeSelection,
   defaultToAnalysisView = false,
   initialAnalysisEntries,
+  analysisDate,
+  onAnalysisDateChange,
 }) => {
   const orderedEntries = sortFoodLogEntries(logEntries);
   const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(
@@ -264,14 +268,12 @@ export const Explorer: React.FC<ExplorerProps> = ({
   };
 
   const handleAddToAnalysis = (entry: FoodLogEntry) => {
-    const today = getLocalDateKey();
-
     setAnalysisBasket((current) => ([
       ...current,
       {
         ...entry,
         basketId: createLocalId(),
-        analysisDate: today,
+        analysisDate,
       },
     ]));
   };
@@ -280,6 +282,10 @@ export const Explorer: React.FC<ExplorerProps> = ({
     setAnalysisBasket((current) => current.filter((item) => item.basketId !== basketId));
   };
 
+  const currentDayAnalysisItems = analysisBasket.filter(
+    (item) => item.analysisDate === analysisDate,
+  );
+
   if (showAnalysisView) {
     return (
       <AnalysisView
@@ -287,6 +293,8 @@ export const Explorer: React.FC<ExplorerProps> = ({
         onBack={() => setShowAnalysisView(false)}
         onRemove={handleRemoveFromAnalysis}
         onAnalyzeSelection={onAnalyzeSelection}
+        analysisDate={analysisDate}
+        onAnalysisDateChange={onAnalysisDateChange}
       />
     );
   }
@@ -483,7 +491,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
         </>
       )}
 
-      {analysisBasket.length > 0 && !selectedEntry && (
+      {currentDayAnalysisItems.length > 0 && !selectedEntry && (
         <button
           type="button"
           onClick={() => setShowAnalysisView(true)}
@@ -492,8 +500,8 @@ export const Explorer: React.FC<ExplorerProps> = ({
         >
           <div className="relative flex items-center justify-center">
             <span className="material-symbols-outlined text-[22px] leading-none">pie_chart</span>
-            <span className="absolute -right-3 -top-3 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-[#FF8A65] bg-white px-1 text-[10px] font-bold text-[#FF8A65]">
-              {analysisBasket.length}
+            <span className="absolute -right-4 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-[#FF8A65] bg-white px-1 text-[9px] font-bold text-[#FF8A65]">
+              {currentDayAnalysisItems.length}
             </span>
           </div>
         </button>
@@ -566,6 +574,8 @@ interface AnalysisViewProps {
   onBack: () => void;
   onRemove: (basketId: string) => void;
   onAnalyzeSelection?: (entries: FoodLogEntry[], date: string) => Promise<string>;
+  analysisDate: string;
+  onAnalysisDateChange?: (date: string) => void;
 }
 
 const AnalysisView: React.FC<AnalysisViewProps> = ({
@@ -573,10 +583,16 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   onBack,
   onRemove,
   onAnalyzeSelection,
+  analysisDate,
+  onAnalysisDateChange,
 }) => {
-  const [currentDate, setCurrentDate] = useState(getLocalDateKey());
+  const [currentDate, setCurrentDate] = useState(analysisDate);
   const [aiAdvice, setAiAdvice] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  useEffect(() => {
+    setCurrentDate(analysisDate);
+  }, [analysisDate]);
 
   const filteredItems = items.filter((item) => item.analysisDate === currentDate);
 
@@ -675,7 +691,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                       <input
                         type="date"
                         value={currentDate}
-                        onChange={(event) => setCurrentDate(event.target.value)}
+                        onChange={(event) => {
+                          const nextDate = event.target.value;
+                          setCurrentDate(nextDate);
+                          onAnalysisDateChange?.(nextDate);
+                        }}
                         className="rounded-full border border-[#FF8A65]/20 bg-[#FFF7F2] px-3 py-1.5 text-[11px] font-bold text-[#FF8A65] outline-none transition-all focus:border-[#FF8A65]/40"
                       />
                     </div>
