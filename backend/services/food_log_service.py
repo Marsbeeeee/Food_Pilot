@@ -224,6 +224,36 @@ def get_food_log_by_id(
         conn.close()
 
 
+def can_save_message_to_food_log(message: dict[str, object]) -> bool:
+    """
+    Pure helper to decide whether a chat message is eligible to be saved
+    as a Food Log entry.
+
+    It encodes the same rules as the product spec:
+    - Only structured meal estimate results (meal_estimate / estimate_result)
+      with a concrete meal object and structured nutrition data can be saved.
+    - Recommendation and text messages are not directly savable.
+    """
+    message_type = str(message.get("message_type") or "").strip()
+
+    # Accept both the legacy internal "estimate_result" and the external
+    # "meal_estimate" naming as estimate-like messages.
+    if message_type not in {"estimate_result", "meal_estimate"}:
+        return False
+
+    result_title = str(message.get("result_title") or "").strip()
+    result_description = str(message.get("result_description") or "").strip()
+    result_items_json = str(message.get("result_items_json") or "").strip()
+    result_total = str(message.get("result_total") or "").strip()
+
+    if not result_title or not result_description:
+        return False
+    if not result_items_json or not result_total:
+        return False
+
+    return True
+
+
 def update_food_log_entry(
     user_id: int,
     food_log_id: int,
