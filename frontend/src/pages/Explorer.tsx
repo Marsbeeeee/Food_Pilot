@@ -452,15 +452,15 @@ export const Explorer: React.FC<ExplorerProps> = ({
         </>
       )}
 
-      {analysisBasket.length > 0 && (
+      {analysisBasket.length > 0 && !selectedEntry && (
         <button
           type="button"
           onClick={() => setShowAnalysisView(true)}
-          className="fixed bottom-6 right-6 z-[120] flex h-16 w-16 items-center justify-center rounded-full bg-[#FF8A65] text-white shadow-[0_20px_60px_rgba(255,138,101,0.35)] transition-all hover:scale-[1.03] hover:bg-[#FF7A50]"
+          className="fixed bottom-6 right-6 z-[120] flex h-12 w-12 items-center justify-center rounded-full bg-[#FF8A65] text-white shadow-[0_14px_40px_rgba(255,138,101,0.35)] transition-all hover:scale-[1.03] hover:bg-[#FF7A50]"
           title="Open today analysis"
         >
-          <div className="relative">
-            <span className="material-symbols-outlined text-[28px]">pie_chart</span>
+          <div className="relative flex items-center justify-center">
+            <span className="material-symbols-outlined text-[22px] leading-none">pie_chart</span>
             <span className="absolute -right-3 -top-3 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-[#FF8A65] bg-white px-1 text-[10px] font-bold text-[#FF8A65]">
               {analysisBasket.length}
             </span>
