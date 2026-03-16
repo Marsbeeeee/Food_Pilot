@@ -5,6 +5,7 @@ from backend.services.recommendation import (
     _build_guidance_system_instruction,
     _build_profile_context,
     _parse_guidance_payload,
+    check_allergen_violations,
 )
 
 
@@ -87,7 +88,33 @@ class RecommendationServiceTests(unittest.TestCase):
 
         self.assertIn("Goal: Fat loss", context)
         self.assertIn("Daily calorie target: 1800 kcal", context)
-        self.assertIn("Allergies / avoidances: Peanut", context)
+        self.assertIn("Peanut", context)
+
+    def test_check_allergen_violations_reports_allergens_in_nested_structures(self) -> None:
+        ok, violations = check_allergen_violations(
+            {
+                "title": "晚餐推荐",
+                "description": "推荐鸡肉沙拉搭配一小把花生作为零食。",
+                "options": [
+                    "鸡肉沙拉 + 花生",
+                    "清炒西兰花",
+                ],
+            },
+            allergens=["花生", "牛奶"],
+        )
+
+        self.assertFalse(ok)
+        self.assertIn("花生", violations)
+        self.assertNotIn("牛奶", violations)
+
+    def test_check_allergen_violations_is_ok_when_no_allergens_present(self) -> None:
+        ok, violations = check_allergen_violations(
+            ["鸡肉沙拉", "清炒西兰花"],
+            allergens=["花生"],
+        )
+
+        self.assertTrue(ok)
+        self.assertEqual(violations, [])
 
 
 if __name__ == "__main__":

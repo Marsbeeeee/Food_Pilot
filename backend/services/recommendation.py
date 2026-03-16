@@ -275,3 +275,50 @@ def _coerce_text(value: Any) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def check_allergen_violations(
+    recommended_items: Any,
+    allergens: list[str] | tuple[str, ...],
+) -> tuple[bool, list[str]]:
+    """
+    Check whether recommended content contains any of the given allergen keywords.
+
+    This is a pure helper and does not perform any I/O. It is intended to be
+    used as a post-processing safety check on model outputs.
+    """
+    if not allergens:
+        return True, []
+
+    text_fragments: list[str] = []
+
+    def _collect(value: Any) -> None:
+        if value is None:
+            return
+        if isinstance(value, str):
+            text_fragments.append(value)
+            return
+        if isinstance(value, (list, tuple, set)):
+            for item in value:
+                _collect(item)
+            return
+        if isinstance(value, dict):
+            for v in value.values():
+                _collect(v)
+            return
+        # Fallback: coerce other primitive types to string
+        if isinstance(value, (int, float, bool)):
+            text_fragments.append(str(value))
+
+    _collect(recommended_items)
+
+    haystack = " ".join(text_fragments).lower()
+    violations: list[str] = []
+    for allergen in allergens:
+        if not allergen:
+            continue
+        if str(allergen).lower() in haystack:
+            violations.append(str(allergen))
+
+    ok = not violations
+    return ok, violations
