@@ -114,6 +114,19 @@ def save_food_log(
             source_message_id=source_message_id,
             is_manual=is_manual,
         )
+        # For chat-originated entries, enforce that the source message actually
+        # contains a concrete, structured, reusable meal result before allowing
+        # it to be saved into the Food Log.
+        if source_type == "chat_message" and source_message_id is not None:
+            message = get_message_by_id_record(
+                active_conn,
+                source_message_id,
+                user_id,
+            )
+            if message is None:
+                raise LookupError("source message not found")
+            if not can_save_message_to_food_log(message):
+                raise ValueError("当前这条回复不包含可复用的菜品结果，无法保存到 Food Log。")
         return save_food_log_record(
             active_conn,
             user_id,
