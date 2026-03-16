@@ -666,9 +666,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       <main className="flex min-h-0 flex-1 overflow-hidden">
         <section className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-6 md:px-8 md:py-8">
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-            {filteredItems.length > 0 ? (
-              <>
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
@@ -842,69 +840,64 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                       })}
                     </div>
                   </div>
-                </div>
+            </div>
 
-                <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
-                  <div className="mb-5 flex items-center justify-between">
-                    <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-                      Selected Items
-                    </h2>
-                    <span className="text-xs font-semibold text-[#4A453E]/35">
-                      {currentDate === getLocalDateKey() ? 'Today' : currentDate}
-                    </span>
-                  </div>
+            <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
+                  Selected Items
+                </h2>
+                <span className="text-xs font-semibold text-[#4A453E]/35">
+                  {currentDate === getLocalDateKey() ? 'Today' : currentDate}
+                </span>
+              </div>
 
-                  <div className="space-y-3">
-                    {filteredItems.map((item) => (
-                      <div
-                        key={item.basketId}
-                        className="group flex items-center justify-between rounded-[22px] border border-[#4A453E]/06 bg-[#FFFDF9] p-4 transition-colors hover:bg-white"
-                      >
-                        <div className="flex min-w-0 items-center gap-4">
-                          <div className="size-12 overflow-hidden rounded-[14px] border border-[#4A453E]/05 bg-[#F7F3E9]">
-                            <FoodLogImage
-                              src={item.image}
-                              alt={item.name}
-                              compact
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-
-                          <div className="min-w-0">
-                            <h4 className="truncate text-sm font-bold text-[#4A453E]">{item.name}</h4>
-                            <p className="mt-1 text-xs text-[#4A453E]/50">
-                              {item.calories} kcal
-                            </p>
-                          </div>
+              {filteredItems.length > 0 ? (
+                <div className="space-y-3">
+                  {filteredItems.map((item) => (
+                    <div
+                      key={item.basketId}
+                      className="group flex items-center justify-between rounded-[22px] border border-[#4A453E]/06 bg-[#FFFDF9] p-4 transition-colors hover:bg-white"
+                    >
+                      <div className="flex min-w-0 items-center gap-4">
+                        <div className="size-12 overflow-hidden rounded-[14px] border border-[#4A453E]/05 bg-[#F7F3E9]">
+                          <FoodLogImage
+                            src={item.image}
+                            alt={item.name}
+                            compact
+                            className="h-full w-full object-cover"
+                          />
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => onRemove(item.basketId)}
-                          className="flex size-9 items-center justify-center rounded-full text-[#4A453E]/20 transition-all hover:bg-red-50 hover:text-red-500"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">delete</span>
-                        </button>
+                        <div className="min-w-0">
+                          <h4 className="truncate text-sm font-bold text-[#4A453E]">{item.name}</h4>
+                          <p className="mt-1 text-xs text-[#4A453E]/50">
+                            {item.calories} kcal
+                          </p>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+
+                      <button
+                        type="button"
+                        onClick={() => onRemove(item.basketId)}
+                        className="flex size-9 items-center justify-center rounded-full text-[#4A453E]/20 transition-all hover:bg-red-50 hover:text-red-500"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              </>
-            ) : (
-              <div className="flex min-h-[60vh] flex-col items-center justify-center rounded-[32px] border border-dashed border-[#4A453E]/10 bg-white/50 px-6 text-center">
-                <div className="mb-5 flex size-16 items-center justify-center rounded-full bg-white shadow-sm">
-                  <span className="material-symbols-outlined text-4xl text-[#4A453E]/20">
-                    restaurant
+              ) : (
+                <div className="flex min-h-[120px] flex-col items-center justify-center rounded-[22px] bg-[#FFFDF9] px-4 py-6 text-center">
+                  <span className="mb-2 text-sm font-semibold text-[#4A453E]">
+                    No records for this date
                   </span>
+                  <p className="text-xs leading-6 text-[#4A453E]/55">
+                    Add saved entries from Food Log into today’s analysis to see them here.
+                  </p>
                 </div>
-                <h3 className="font-serif-brand text-2xl font-bold text-[#4A453E]">
-                  No records for this date
-                </h3>
-                <p className="mt-3 max-w-md text-sm leading-7 text-[#4A453E]/50">
-                  You have not added any saved entries into the analysis list for {currentDate}.
-                </p>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </section>
 
