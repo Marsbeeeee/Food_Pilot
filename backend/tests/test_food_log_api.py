@@ -8,6 +8,7 @@ from backend.routers.food_log import (
     list_food_log_entries,
     patch_food_log_entry,
     restore_saved_food_log_entry,
+    save_food_log_entry,
     save_food_log_from_estimate_entry,
 )
 from backend.schemas.estimate import EstimateResult
@@ -15,6 +16,7 @@ from backend.schemas.food_log import (
     FoodLogFromEstimateRequest,
     FoodLogListQuery,
     FoodLogPatchRequest,
+    FoodLogSaveRequest,
 )
 from backend.schemas.user import UserCreate
 from backend.services.chat_service import create_empty_session
@@ -414,6 +416,137 @@ class FoodLogApiTests(unittest.TestCase):
         )
         self.assertEqual(len(entries), 1)
         self.assertEqual(entries[0].id, payload["foodLogId"])
+
+    def test_save_food_log_entry_from_chat_estimate_succeeds(self) -> None:
+        """
+        chat → Food Log：对于 estimate 结果（结构完整），保存应成功。
+        """
+        session = create_empty_session(self.user_id)
+        # 使用 service 直接创建一条符合 can_save_message_to_food_log 条件的消息。
+        from backend.database.connection import get_db_connection
+
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO messages (
+                    session_id,
+                    user_id,
+                    role,
+                    message_type,
+                    content,
+                    result_title,
+                    result_confidence,
+                    result_description,
+                    result_items_json,
+                    result_total,
+                    created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    int(session["id"]),
+                    self.user_id,
+                    "assistant",
+                    "estimate_result",
+                    "A lighter dressing would reduce calories.",
+                    "Chicken Salad",
+                    "high",
+                    "Protein-forward salad with avocado.",
+                    '[{"name":"Chicken","portion":"150g","energy":"240 kcal"}]',
+                    "240 kcal",
+                    "2026-03-16 12:00:00",
+                ),
+            )
+            message_id = cursor.lastrowid
+            conn.commit()
+        finally:
+            conn.close()
+
+        request = FoodLogSaveRequest.model_validate(
+            {
+                "sourceType": "chat_message",
+                "mealDescription": "chicken salad",
+                "resultTitle": "Chicken Salad",
+                "resultDescription": "Protein-forward salad with avocado.",
+                "totalCalories": "240 kcal",
+                "ingredients": [
+                    {
+                        "name": "Chicken",
+                        "portion": "150g",
+                        "energy": "240 kcal",
+                    }
+                ],
+                "sessionId": int(session["id"]),
+                "sourceMessageId": int(message_id),
+            }
+        )
+
+        entry = save_food_log_entry(
+            request=request,
+            current_user=self.user,
+        )
+
+        payload = entry.model_dump(by_alias=True, exclude_none=True)
+        self.assertEqual(payload["name"], "Chicken Salad")
+        self.assertEqual(payload["sourceType"], "chat_message")
+
+    def test_save_food_log_entry_from_chat_recommendation_is_rejected(self) -> None:
+        """
+        chat → Food Log：对于推荐 / 解释性结果，保存应被拒绝并返回明确错误。
+        """
+        session = create_empty_session(self.user_id)
+        from backend.database.connection import get_db_connection
+
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO messages (
+                    session_id,
+                    user_id,
+                    role,
+                    message_type,
+                    content,
+                    created_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    int(session["id"]),
+                    self.user_id,
+                    "assistant",
+                    "meal_recommendation",
+                    "多吃蔬菜、少油少盐会更好。",
+                    "2026-03-16 12:10:00",
+                ),
+            )
+            message_id = cursor.lastrowid
+            conn.commit()
+        finally:
+            conn.close()
+
+        request = FoodLogSaveRequest.model_validate(
+            {
+                "sourceType": "chat_message",
+                "mealDescription": "generic advice",
+                "resultTitle": "General advice",
+                "resultDescription": "多吃蔬菜、少油少盐会更好。",
+                "totalCalories": "0 kcal",
+                "ingredients": [],
+                "sessionId": int(session["id"]),
+                "sourceMessageId": int(message_id),
+            }
+        )
+
+        with self.assertRaises(Exception) as exc:
+            save_food_log_entry(
+                request=request,
+                current_user=self.user,
+            )
+
+        # FastAPI router 会把 ValueError 映射成 HTTP 400，这里只断言错误信息。
+        self.assertIn("当前这条回复不包含可复用的菜品结果，无法保存到 Food Log。", str(exc.exception))
 
 def _build_estimate_result(
     *,
