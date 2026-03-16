@@ -67,6 +67,16 @@ export const Header: React.FC<HeaderProps> = ({
             Food Log
           </button>
           <button
+            onClick={() => onViewChange(AppView.TODAY)}
+            className={`relative py-1 text-sm font-semibold transition-colors ${
+              currentView === AppView.TODAY
+                ? 'text-[#FF8A65] after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:bg-[#FF8A65]'
+                : 'text-[#4A453E]/60 hover:text-[#FF8A65]'
+            }`}
+          >
+            Today
+          </button>
+          <button
             onClick={() => onViewChange(AppView.PROFILE)}
             className={`relative py-1 text-sm font-semibold transition-colors ${
               currentView === AppView.PROFILE

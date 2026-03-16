@@ -2,7 +2,8 @@
 export enum AppView {
   WORKSPACE = 'WORKSPACE',
   EXPLORER = 'EXPLORER',
-  PROFILE = 'PROFILE'
+  TODAY = 'TODAY',
+  PROFILE = 'PROFILE',
 }
 
 export type AuthScreenMode = 'login' | 'register';

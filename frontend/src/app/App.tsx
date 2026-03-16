@@ -14,6 +14,7 @@ import { Header } from '../components/Header';
 import { AuthPage } from '../pages/Auth';
 import { Explorer } from '../pages/Explorer';
 import { Profile } from '../pages/Profile';
+import { TodayAnalysis } from '../pages/TodayAnalysis';
 import { Workspace } from '../pages/Workspace';
 import {
   AppView,
@@ -322,6 +323,8 @@ const App: React.FC = () => {
             onUpdateFoodLog={handleUpdateFoodLog}
           />
         );
+      case AppView.TODAY:
+        return <TodayAnalysis foodLog={foodLog} />;
       case AppView.PROFILE:
         return <Profile profile={profile} setProfile={setProfile} />;
       default:
