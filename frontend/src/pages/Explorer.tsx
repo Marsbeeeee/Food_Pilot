@@ -365,12 +365,6 @@ export const Explorer: React.FC<ExplorerProps> = ({
                       >
                         <span className="material-symbols-outlined text-[20px]">add</span>
                       </button>
-
-                      <div className="border-l border-[#4A453E]/05 pl-2 md:pl-4">
-                        <span className="flex size-10 items-center justify-center rounded-full text-[#4A453E]/20 transition-all group-hover:bg-[#FF8A65]/5 group-hover:text-[#FF8A65]">
-                          <span className="material-symbols-outlined text-xl">chevron_right</span>
-                        </span>
-                      </div>
                     </div>
                   </button>
                 );
