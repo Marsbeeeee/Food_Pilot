@@ -232,18 +232,41 @@ def _load_profile_and_context(
 
 
 def _build_profile_context(profile: ProfileOut) -> str:
-    allergies = ", ".join(profile.allergies) if profile.allergies else "None reported"
+    # Explicitly surface core fields for recommendations and make missing data visible,
+    # so the model does not silently assume defaults.
+    goal = profile.goal or "Unknown goal – do not assume a specific fat loss or muscle gain target."
+    if getattr(profile, "kcal_target", None):
+        kcal_target = f"{profile.kcal_target} kcal"
+    else:
+        kcal_target = "Unknown daily calorie target – do not infer a precise number."
+
+    diet_style = profile.diet_style or "Unknown diet style – avoid overfitting to any specific pattern."
+
+    if profile.allergies:
+        allergies = (
+            "The following ingredients MUST NOT appear in recommended foods: "
+            + ", ".join(profile.allergies)
+        )
+    else:
+        allergies = (
+            "No explicit allergies reported in profile – only avoid ingredients the user "
+            "states in the current conversation."
+        )
+
+    activity_level = profile.activity_level or "Unspecified"
+    exercise_type = profile.exercise_type or "Unspecified"
+    pace = profile.pace or "Unspecified"
 
     return "\n".join(
         [
-            "User profile:",
-            f"- Goal: {profile.goal}",
-            f"- Daily calorie target: {profile.kcal_target} kcal",
-            f"- Diet style: {profile.diet_style}",
+            "User profile (for personalization):",
+            f"- Goal: {goal}",
+            f"- Daily calorie target: {kcal_target}",
+            f"- Diet style: {diet_style}",
             f"- Allergies / avoidances: {allergies}",
-            f"- Activity level: {profile.activity_level}",
-            f"- Exercise type: {profile.exercise_type}",
-            f"- Pace: {profile.pace}",
+            f"- Activity level: {activity_level}",
+            f"- Exercise type: {exercise_type}",
+            f"- Pace: {pace}",
         ]
     )
 
