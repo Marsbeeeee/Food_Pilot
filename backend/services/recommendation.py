@@ -131,7 +131,9 @@ def _generate_guidance(
     profile_id: int | None,
     user_id: int | None,
 ) -> GuidanceReply:
-    profile_context = _load_profile_context(profile_id, user_id)
+    # 统一在入口尝试加载 Profile：如果有 profile_id，则始终加载 Profile 对象；
+    # 若未设置或加载失败，则使用显式的占位（profile=None），但仍以一致的方式向下传递。
+    _, profile_context = _load_profile_and_context(profile_id, user_id)
     raw_response = _call_gemini_api(query, response_mode=response_mode, profile_context=profile_context)
     try:
         return _parse_guidance_payload(raw_response, response_mode=response_mode)
@@ -215,92 +217,18 @@ def _call_gemini_api(
     return parsed
 
 
-def _build_guidance_system_instruction(
-    *,
-    response_mode: str,
-    profile_context: str | None,
-) -> str:
-    parts = [DEFAULT_RECOMMENDATION_SYSTEM_PROMPT]
-
-    if response_mode == "meal_recommendation":
-        parts.append(
-            "The user wants a recommendation, comparison, substitution, or optimization suggestion about meals."
-        )
-        parts.append(
-            "Start with the recommended option or direction, then explain in plain language why it is the better fit."
-        )
-    elif response_mode == "text":
-        parts.append(
-            "The user wants a plain conversational or explanatory reply instead of a meal estimate."
-        )
-        parts.append(
-            "Keep the reply short, direct, and clarifying. Treat it as an auxiliary fallback, not a standalone complex capability."
-        )
-    else:
-        raise ValueError(f"Unsupported response_mode: {response_mode}")
-
-    if profile_context:
-        parts.extend(
-            [
-                "Use the following user profile context when personalizing the reply.",
-                profile_context,
-                "Do not recommend foods that conflict with listed allergies or avoidances.",
-            ]
-        )
-
-    parts.append(GUIDANCE_RESPONSE_INSTRUCTIONS[response_mode])
-    return "\n\n".join(parts)
-
-
-def _parse_guidance_payload(
-    payload: dict[str, Any],
-    *,
-    response_mode: str,
-) -> GuidanceReply:
-    defaults = DEFAULT_GUIDANCE_COPY[response_mode]
-    normalized_payload = {
-        "title": _coerce_text(
-            payload.get("title")
-            or payload.get("name")
-        ) or defaults["title"],
-        "description": _coerce_text(
-            payload.get("description")
-            or payload.get("summary")
-            or payload.get("reason")
-            or payload.get("why")
-        ) or defaults["description"],
-        "response": _coerce_text(
-            payload.get("response")
-            or payload.get("content")
-            or payload.get("answer")
-            or payload.get("recommendation")
-            or payload.get("suggestion")
-            or payload.get("plan")
-            or payload.get("choice")
-        ),
-    }
-
-    if not normalized_payload["response"]:
-        raise ValueError("AI response is missing response")
-
-    try:
-        return GuidanceReply.model_validate(normalized_payload)
-    except Exception as exc:
-        raise ValueError("AI response failed schema validation") from exc
-
-
-def _load_profile_context(
+def _load_profile_and_context(
     profile_id: int | None,
     user_id: int | None,
-) -> str | None:
+) -> tuple[ProfileOut | None, str | None]:
     if profile_id is None or user_id is None:
-        return None
+        return None, None
 
     profile = get_profile(profile_id, user_id)
     if profile is None:
-        return None
+        return None, None
 
-    return _build_profile_context(profile)
+    return profile, _build_profile_context(profile)
 
 
 def _build_profile_context(profile: ProfileOut) -> str:
