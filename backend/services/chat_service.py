@@ -15,7 +15,9 @@ from backend.repositories.message_repository import (
 from backend.services.recommendation import (
     generate_meal_recommendation,
     generate_text_reply,
+    check_allergen_violations,
 )
+from backend.services.profile_service import get_profile
 
 
 DEFAULT_SESSION_TITLE = "New chat"
@@ -452,6 +454,43 @@ def _build_meal_recommendation_response_with_conn(
     profile_id: int | None,
 ) -> dict[str, object]:
     recommendation = generate_meal_recommendation(content, profile_id, user_id)
+
+    # If we have a profile with recorded allergies, run a simple safety check
+    # to avoid returning recommendations that contain those allergens.
+    if profile_id is not None:
+        profile = get_profile(profile_id, user_id)
+        if profile is not None and getattr(profile, "allergies", None):
+            ok, violations = check_allergen_violations(
+                {
+                    "title": recommendation.title,
+                    "description": recommendation.description,
+                    "response": recommendation.response,
+                },
+                list(profile.allergies),
+            )
+            if not ok and violations:
+                violations_str = "、".join(str(v) for v in violations)
+                warning_title = "推荐已拦截（与过敏原冲突）"
+                warning_description = (
+                    f"你的档案中标记了以下过敏原：{violations_str}。"
+                    "为避免风险，本次不展示包含这些成分的推荐结果。"
+                )
+                warning_content = (
+                    f"由于推荐内容可能包含你过敏的食物（{violations_str}），本次推荐已被系统拦截。"
+                    "你可以：\n"
+                    "- 在 Profile 中确认或更新过敏原信息；\n"
+                    "- 在提问时明确强调“不要包含这些成分”；\n"
+                    "- 或改问其他不含这些过敏原的选择。"
+                )
+                return _create_meal_recommendation_message_with_conn(
+                    conn,
+                    user_id,
+                    session_id,
+                    title=warning_title,
+                    description=warning_description,
+                    content=warning_content,
+                )
+
     return _create_meal_recommendation_message_with_conn(
         conn,
         user_id,
