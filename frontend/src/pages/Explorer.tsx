@@ -686,7 +686,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                           })()}
                         </svg>
                         <div className="absolute flex flex-col items-center justify-center text-[#4A453E]">
-                          <span className="font-serif-brand text-5xl font-bold">
+                          <span className="font-serif-brand text-4xl font-bold">
                             {formatNumber(intake)}
                           </span>
                           <span className="mt-1 text-xs font-semibold text-[#4A453E]/50">
@@ -701,52 +701,110 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   </div>
 
                   <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
-                    <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
+                    <p className="mb-5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
                       Macro Distribution
                     </p>
 
-                    <div className="space-y-4">
+                    <div className="space-y-8 pt-4">
                       {[
                         {
                           label: 'Protein',
                           value: totalProtein,
-                          color: '#FF8A65',
+                          icon: 'protein',
                         },
                         {
                           label: 'Carbs',
                           value: totalCarbs,
-                          color: '#E7D8CC',
+                          icon: 'carbs',
                         },
                         {
                           label: 'Fat',
                           value: totalFat,
-                          color: '#B99880',
+                          icon: 'fat',
                         },
                       ].map((macro) => {
                         const macroTotal = totalProtein + totalCarbs + totalFat;
                         const percent = macroTotal > 0 ? getPercent(macro.value, macroTotal) : 0;
 
                         return (
-                          <div key={macro.label} className="space-y-1">
-                            <div className="flex items-center justify-between text-xs font-semibold text-[#4A453E]/80">
-                              <span>{macro.label}</span>
-                              <span className="text-[11px] text-[#4A453E]/60">
-                                {formatNumber(macro.value)} g
-                              </span>
+                          <div
+                            key={macro.label}
+                            className="flex items-center gap-3"
+                          >
+                            {/* 左侧极简线条图标 */}
+                            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[#4A453E]/5 bg-[#FFF7EF] text-[#4A453E]/60">
+                                {macro.icon === 'protein' && (
+                                  <svg
+                                    viewBox="0 0 24 24"
+                                    className="h-4 w-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.4"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M6 5c1.5-1 3.5-1 5 0l4 2.5c1.2.8 1.7 2.4 1 3.7l-1.8 3.3c-.8 1.4-2.6 2-4.1 1.3L6 14.5C4.8 13.9 4.3 12.4 5 11.1L6.8 7.8" />
+                                    <path d="M9 7.2 11.8 9" />
+                                  </svg>
+                                )}
+                                {macro.icon === 'carbs' && (
+                                  <svg
+                                    viewBox="0 0 24 24"
+                                    className="h-4 w-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.4"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M5 16c0-4.5 3.2-8.5 7-10 3.8 1.5 7 5.5 7 10 0 2-1.5 3.5-3.5 3.5h-7C6.5 19.5 5 18 5 16Z" />
+                                    <path d="M9 13h6" />
+                                    <path d="M9 16h4" />
+                                  </svg>
+                                )}
+                                {macro.icon === 'fat' && (
+                                  <svg
+                                    viewBox="0 0 24 24"
+                                    className="h-4 w-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.4"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M12 4C9.5 7.2 7 10.5 7 13.5 7 16.5 9 19 12 19s5-2.5 5-5.5C17 10.5 14.5 7.2 12 4Z" />
+                                    <path d="M11 11.5c.6-.3 1.3-.3 1.9 0" />
+                                  </svg>
+                                )}
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#F7F3E9]">
-                                <div
-                                  className="h-full rounded-full"
-                                  style={{
-                                    width: `${percent}%`,
-                                    backgroundColor: macro.color,
-                                  }}
-                                />
+
+                            {/* 中间名称和进度条区域 + 右侧数据组 */}
+                            <div className="flex min-w-0 flex-1 items-center">
+                              {/* 中间部分：名称 + 进度条 */}
+                              <div className="mr-3 flex min-w-0 flex-1 flex-col">
+                                <span className="font-serif-brand text-sm font-semibold text-[#4A453E]">
+                                  {macro.label}
+                                </span>
+                                <div className="mt-2 h-[6px] w-[94%] overflow-hidden rounded-full bg-[#F5F2ED]">
+                                  <div
+                                    className="h-full rounded-full transition-all"
+                                    style={{
+                                      width: `${percent}%`,
+                                      backgroundColor: '#FF8A65',
+                                    }}
+                                  />
+                                </div>
                               </div>
-                              <span className="w-10 text-right text-[11px] font-semibold text-[#4A453E]/55">
-                                {percent.toFixed(0)}%
-                              </span>
+
+                              {/* 右侧数据组：克数 + 百分比，右对齐 */}
+                              <div className="min-w-[56px] text-right">
+                                <span className="block font-sans text-sm font-extrabold text-[#3F3932]">
+                                  {formatNumber(macro.value)} g
+                                </span>
+                                <span className="mt-0.5 block font-sans text-[12px] font-semibold text-[#4A453E]/60">
+                                  {percent.toFixed(0)}%
+                                </span>
+                              </div>
                             </div>
                           </div>
                         );
