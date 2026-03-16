@@ -15,6 +15,7 @@ interface ExplorerProps {
   onDeleteFoodLog: (entryId: string) => Promise<void>;
   onRestoreFoodLog: (entryId: string) => Promise<void>;
   onUpdateFoodLog: (entryId: string, payload: FoodLogPatchInput) => Promise<void>;
+  onAnalyzeSelection?: (entries: FoodLogEntry[], date: string) => Promise<string>;
 }
 
 interface FoodLogEditDraft {
@@ -24,12 +25,18 @@ interface FoodLogEditDraft {
   ingredients: IngredientResult[];
 }
 
+interface AnalysisSelectionItem extends FoodLogEntry {
+  basketId: string;
+  analysisDate: string;
+}
+
 export const Explorer: React.FC<ExplorerProps> = ({
   logEntries,
   onNavigateToSession,
   onDeleteFoodLog,
   onRestoreFoodLog,
   onUpdateFoodLog,
+  onAnalyzeSelection,
 }) => {
   const orderedEntries = sortFoodLogEntries(logEntries);
   const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(
@@ -43,6 +50,10 @@ export const Explorer: React.FC<ExplorerProps> = ({
   const [restoringEntryId, setRestoringEntryId] = useState<string | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editDraft, setEditDraft] = useState<FoodLogEditDraft | null>(null);
+
+  const [analysisBasket, setAnalysisBasket] = useState<AnalysisSelectionItem[]>([]);
+  const [showAnalysisView, setShowAnalysisView] = useState(false);
+
   const collectionStats = buildFoodLogCollectionStats(orderedEntries);
 
   useEffect(() => {
@@ -77,6 +88,8 @@ export const Explorer: React.FC<ExplorerProps> = ({
       setIsMobileDetailOpen(false);
       setIsEditing(false);
       setEditDraft(null);
+
+      setAnalysisBasket((current) => current.filter((item) => item.id !== selectedEntry.id));
     } catch (error) {
       const message = error instanceof Error
         ? error.message
@@ -219,6 +232,34 @@ export const Explorer: React.FC<ExplorerProps> = ({
     }
   };
 
+  const handleAddToAnalysis = (entry: FoodLogEntry) => {
+    const today = getLocalDateKey();
+
+    setAnalysisBasket((current) => ([
+      ...current,
+      {
+        ...entry,
+        basketId: createLocalId(),
+        analysisDate: today,
+      },
+    ]));
+  };
+
+  const handleRemoveFromAnalysis = (basketId: string) => {
+    setAnalysisBasket((current) => current.filter((item) => item.basketId !== basketId));
+  };
+
+  if (showAnalysisView) {
+    return (
+      <AnalysisView
+        items={analysisBasket}
+        onBack={() => setShowAnalysisView(false)}
+        onRemove={handleRemoveFromAnalysis}
+        onAnalyzeSelection={onAnalyzeSelection}
+      />
+    );
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#FFFDF5] lg:flex-row">
       <main className="custom-scrollbar flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10 xl:px-12">
@@ -301,7 +342,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                       <p className="mt-1 truncate text-xs text-[#4A453E]/50">{entry.description}</p>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between md:mt-0 md:gap-4">
+                    <div className="mt-4 flex items-center justify-between gap-3 md:mt-0 md:gap-4">
                       <div className="flex flex-col items-start md:items-end">
                         <div className="flex items-baseline gap-1">
                           <span className="font-serif-brand text-2xl font-bold text-[#4A453E]">
@@ -313,7 +354,19 @@ export const Explorer: React.FC<ExplorerProps> = ({
                         </div>
                       </div>
 
-                      <div className="border-l border-[#4A453E]/05 pl-4">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleAddToAnalysis(entry);
+                        }}
+                        className="flex size-10 items-center justify-center rounded-full bg-[#FFF2EC] text-[#FF8A65] transition-all hover:scale-[1.03] hover:bg-[#FF8A65] hover:text-white"
+                        title="Add to today analysis"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">add</span>
+                      </button>
+
+                      <div className="border-l border-[#4A453E]/05 pl-2 md:pl-4">
                         <span className="flex size-10 items-center justify-center rounded-full text-[#4A453E]/20 transition-all group-hover:bg-[#FF8A65]/5 group-hover:text-[#FF8A65]">
                           <span className="material-symbols-outlined text-xl">chevron_right</span>
                         </span>
@@ -363,6 +416,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
               onRemoveIngredient={handleRemoveIngredient}
               onDelete={() => setIsDeleteDialogOpen(true)}
               onOpenChat={() => selectedEntry.sessionId && onNavigateToSession(selectedEntry.sessionId)}
+              onAddToAnalysis={() => handleAddToAnalysis(selectedEntry)}
             />
           </aside>
 
@@ -396,11 +450,28 @@ export const Explorer: React.FC<ExplorerProps> = ({
                   onRemoveIngredient={handleRemoveIngredient}
                   onDelete={() => setIsDeleteDialogOpen(true)}
                   onOpenChat={() => selectedEntry.sessionId && onNavigateToSession(selectedEntry.sessionId)}
+                  onAddToAnalysis={() => handleAddToAnalysis(selectedEntry)}
                 />
               </div>
             </div>
           )}
         </>
+      )}
+
+      {analysisBasket.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowAnalysisView(true)}
+          className="fixed bottom-6 right-6 z-[120] flex h-16 w-16 items-center justify-center rounded-full bg-[#FF8A65] text-white shadow-[0_20px_60px_rgba(255,138,101,0.35)] transition-all hover:scale-[1.03] hover:bg-[#FF7A50]"
+          title="Open today analysis"
+        >
+          <div className="relative">
+            <span className="material-symbols-outlined text-[28px]">pie_chart</span>
+            <span className="absolute -right-3 -top-3 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-[#FF8A65] bg-white px-1 text-[10px] font-bold text-[#FF8A65]">
+              {analysisBasket.length}
+            </span>
+          </div>
+        </button>
       )}
 
       {undoableDeletedEntry && (
@@ -465,6 +536,284 @@ export const Explorer: React.FC<ExplorerProps> = ({
   );
 };
 
+interface AnalysisViewProps {
+  items: AnalysisSelectionItem[];
+  onBack: () => void;
+  onRemove: (basketId: string) => void;
+  onAnalyzeSelection?: (entries: FoodLogEntry[], date: string) => Promise<string>;
+}
+
+const AnalysisView: React.FC<AnalysisViewProps> = ({
+  items,
+  onBack,
+  onRemove,
+  onAnalyzeSelection,
+}) => {
+  const [currentDate, setCurrentDate] = useState(getLocalDateKey());
+  const [aiAdvice, setAiAdvice] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const filteredItems = items.filter((item) => item.analysisDate === currentDate);
+
+  const totalCalories = filteredItems.reduce(
+    (sum, item) => sum + extractCaloriesValue(item.calories),
+    0,
+  );
+
+  const totalProtein = filteredItems.reduce(
+    (sum, item) => sum + extractNutritionValue(item.protein),
+    0,
+  );
+
+  const totalCarbs = filteredItems.reduce(
+    (sum, item) => sum + extractNutritionValue(item.carbs),
+    0,
+  );
+
+  const totalFat = filteredItems.reduce(
+    (sum, item) => sum + extractNutritionValue(item.fat),
+    0,
+  );
+
+  const handleAnalyze = async () => {
+    if (filteredItems.length === 0 || isAnalyzing) {
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      if (onAnalyzeSelection) {
+        const result = await onAnalyzeSelection(filteredItems, currentDate);
+        setAiAdvice(result);
+      } else {
+        setAiAdvice(buildFallbackAnalysis({
+          totalCalories,
+          protein: totalProtein,
+          carbs: totalCarbs,
+          fat: totalFat,
+          itemNames: filteredItems.map((item) => item.name),
+        }));
+      }
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : 'Unable to generate today analysis right now.';
+      setAiAdvice(message);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  useEffect(() => {
+    setAiAdvice(null);
+  }, [currentDate]);
+
+  return (
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#FFFDF5]">
+      <header className="flex shrink-0 items-center justify-between border-b border-[#4A453E]/05 bg-white px-6 py-5 md:px-8 md:py-6">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex size-10 items-center justify-center rounded-full text-[#4A453E]/50 transition-colors hover:bg-[#F7F3E9] hover:text-[#4A453E]"
+          >
+            <span className="material-symbols-outlined text-[22px]">close</span>
+          </button>
+
+          <div>
+            <h1 className="font-serif-brand text-3xl font-bold text-[#4A453E] md:text-4xl">
+              Nutrition Analysis
+            </h1>
+            <div className="mt-2">
+              <input
+                type="date"
+                value={currentDate}
+                onChange={(event) => setCurrentDate(event.target.value)}
+                className="rounded-full border border-[#FF8A65]/20 bg-[#FFF7F2] px-4 py-2 text-xs font-bold text-[#FF8A65] outline-none transition-all focus:border-[#FF8A65]/40"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden rounded-full bg-[#FFF2EC] px-4 py-2 text-sm font-bold text-[#FF8A65] md:flex md:items-center md:gap-2">
+          <span className="material-symbols-outlined text-[18px]">restaurant</span>
+          {filteredItems.length} Items
+        </div>
+      </header>
+
+      <main className="flex min-h-0 flex-1 overflow-hidden">
+        <section className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-6 md:px-8 md:py-8">
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+            {filteredItems.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
+                    <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
+                      Total Energy
+                    </p>
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-serif-brand text-6xl font-bold text-[#4A453E]">
+                        {formatNumber(totalCalories)}
+                      </span>
+                      <span className="text-lg font-bold uppercase text-[#4A453E]/20">
+                        kcal
+                      </span>
+                    </div>
+                    <p className="mt-4 text-sm leading-6 text-[#4A453E]/50">
+                      This is the combined energy of the saved entries you added into today analysis.
+                    </p>
+                  </div>
+
+                  <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
+                    <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
+                      Macro Balance
+                    </p>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <MacroSummaryCard label="Protein" value={`${formatNumber(totalProtein)} g`} accent />
+                      <MacroSummaryCard label="Carbs" value={`${formatNumber(totalCarbs)} g`} />
+                      <MacroSummaryCard label="Fat" value={`${formatNumber(totalFat)} g`} />
+                    </div>
+
+                    <div className="mt-5">
+                      <div className="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.18em] text-[#4A453E]/35">
+                        <span>Distribution</span>
+                        <span>P / C / F</span>
+                      </div>
+                      <div className="flex h-2 overflow-hidden rounded-full bg-[#F7F3E9]">
+                        <div
+                          className="bg-[#FF8A65]"
+                          style={{ width: `${getPercent(totalProtein, totalProtein + totalCarbs + totalFat)}%` }}
+                        />
+                        <div
+                          className="bg-[#E7D8CC]"
+                          style={{ width: `${getPercent(totalCarbs, totalProtein + totalCarbs + totalFat)}%` }}
+                        />
+                        <div
+                          className="bg-[#4A453E]"
+                          style={{ width: `${getPercent(totalFat, totalProtein + totalCarbs + totalFat)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
+                  <div className="mb-5 flex items-center justify-between">
+                    <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
+                      Selected Items
+                    </h2>
+                    <span className="text-xs font-semibold text-[#4A453E]/35">
+                      {currentDate === getLocalDateKey() ? 'Today' : currentDate}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {filteredItems.map((item) => (
+                      <div
+                        key={item.basketId}
+                        className="group flex items-center justify-between rounded-[22px] border border-[#4A453E]/06 bg-[#FFFDF9] p-4 transition-colors hover:bg-white"
+                      >
+                        <div className="flex min-w-0 items-center gap-4">
+                          <div className="size-12 overflow-hidden rounded-[14px] border border-[#4A453E]/05 bg-[#F7F3E9]">
+                            <FoodLogImage
+                              src={item.image}
+                              alt={item.name}
+                              compact
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+
+                          <div className="min-w-0">
+                            <h4 className="truncate text-sm font-bold text-[#4A453E]">{item.name}</h4>
+                            <p className="mt-1 text-xs text-[#4A453E]/50">
+                              {item.calories} kcal
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => onRemove(item.basketId)}
+                          className="flex size-9 items-center justify-center rounded-full text-[#4A453E]/20 transition-all hover:bg-red-50 hover:text-red-500"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex min-h-[60vh] flex-col items-center justify-center rounded-[32px] border border-dashed border-[#4A453E]/10 bg-white/50 px-6 text-center">
+                <div className="mb-5 flex size-16 items-center justify-center rounded-full bg-white shadow-sm">
+                  <span className="material-symbols-outlined text-4xl text-[#4A453E]/20">
+                    restaurant
+                  </span>
+                </div>
+                <h3 className="font-serif-brand text-2xl font-bold text-[#4A453E]">
+                  No records for this date
+                </h3>
+                <p className="mt-3 max-w-md text-sm leading-7 text-[#4A453E]/50">
+                  You have not added any saved entries into the analysis list for {currentDate}.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <aside className="hidden w-[420px] shrink-0 border-l border-[#4A453E]/05 bg-white lg:flex lg:flex-col">
+          <div className="border-b border-[#4A453E]/05 px-6 py-6">
+            <h3 className="font-serif-brand text-2xl font-bold text-[#4A453E]">
+              AI Dietary Insights
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-[#4A453E]/50">
+              Generate a summary of today’s selected intake.
+            </p>
+          </div>
+
+          <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-6">
+            {aiAdvice ? (
+              <div className="whitespace-pre-wrap text-sm leading-7 text-[#4A453E]/75">
+                {aiAdvice}
+              </div>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center px-4 text-center">
+                <div className="mb-5 flex size-16 items-center justify-center rounded-full bg-[#FFF2EC]">
+                  <span className="material-symbols-outlined text-3xl text-[#FF8A65]/50">
+                    chat
+                  </span>
+                </div>
+                <p className="text-sm leading-7 text-[#4A453E]/50">
+                  Click the button below to analyze your selected intake for this date.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-[#4A453E]/05 bg-[#FFFDF8] px-6 py-6">
+            <button
+              type="button"
+              onClick={() => void handleAnalyze()}
+              disabled={isAnalyzing || filteredItems.length === 0}
+              className={`flex h-12 w-full items-center justify-center gap-2 rounded-full px-5 text-sm font-bold text-white shadow-lg transition-all ${
+                isAnalyzing || filteredItems.length === 0
+                  ? 'cursor-not-allowed bg-[#4A453E]/20 shadow-none'
+                  : 'bg-[#FF8A65] shadow-[#FF8A65]/20 hover:bg-[#FF8A65]/90'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {isAnalyzing ? 'progress_activity' : 'forum'}
+              </span>
+              {isAnalyzing ? 'Analyzing Intake...' : 'Generate AI Analysis'}
+            </button>
+          </div>
+        </aside>
+      </main>
+    </div>
+  );
+};
+
 interface SummaryCardProps {
   label: string;
   value: string;
@@ -495,6 +844,7 @@ interface SelectedEntryPanelProps {
   onRemoveIngredient: (ingredientIndex: number) => void;
   onDelete: () => void;
   onOpenChat: () => void;
+  onAddToAnalysis: () => void;
 }
 
 const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
@@ -513,6 +863,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
   onRemoveIngredient,
   onDelete,
   onOpenChat,
+  onAddToAnalysis,
 }) => {
   const savedMoment = formatSavedMoment(entry.savedAt);
   const totalCalories = isEditing && editDraft
@@ -754,6 +1105,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                 <span className="material-symbols-outlined text-lg">delete</span>
                 {isDeleting ? 'Removing...' : 'Remove Entry'}
               </button>
+
               <button
                 type="button"
                 onClick={onOpenChat}
@@ -821,6 +1173,26 @@ const MacroStat: React.FC<MacroStatProps> = ({ label, value, accent = false }) =
       {label}
     </span>
     <span className={`text-[17px] font-bold md:text-lg ${accent ? 'text-[#FF8A65]' : 'text-[#4A453E]'}`}>
+      {value}
+    </span>
+  </div>
+);
+
+interface MacroSummaryCardProps {
+  label: string;
+  value: string;
+  accent?: boolean;
+}
+
+const MacroSummaryCard: React.FC<MacroSummaryCardProps> = ({ label, value, accent = false }) => (
+  <div className={`rounded-[20px] border p-4 text-center ${
+    accent ? 'border-[#FF8A65]/15 bg-[#FFF2EC]' : 'border-[#4A453E]/06 bg-[#FFFDF9]'
+  }`}
+  >
+    <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/35">
+      {label}
+    </span>
+    <span className={`text-sm font-bold ${accent ? 'text-[#FF8A65]' : 'text-[#4A453E]'}`}>
       {value}
     </span>
   </div>
@@ -907,12 +1279,90 @@ function getDraftTotalCalories(draft: FoodLogEditDraft): string {
   return draft.calories;
 }
 
-function extractCaloriesValue(value: string): number {
-  const match = value.match(/(\d+(?:\.\d+)?)/);
+function extractCaloriesValue(value: string | number): number {
+  const match = String(value).match(/(\d+(?:\.\d+)?)/);
   if (!match) {
     return 0;
   }
 
   const parsed = Number.parseFloat(match[1]);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function extractNutritionValue(value?: string | null): number {
+  if (!value) {
+    return 0;
+  }
+
+  const match = String(value).match(/(\d+(?:\.\d+)?)/);
+  if (!match) {
+    return 0;
+  }
+
+  const parsed = Number.parseFloat(match[1]);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getLocalDateKey(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function createLocalId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function getPercent(value: number, total: number): number {
+  if (total <= 0) {
+    return 0;
+  }
+  return Number(((value / total) * 100).toFixed(2));
+}
+
+function formatNumber(value: number): string {
+  if (Number.isInteger(value)) {
+    return String(value);
+  }
+  return value.toFixed(1);
+}
+
+function buildFallbackAnalysis(input: {
+  totalCalories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  itemNames: string[];
+}): string {
+  const { totalCalories, protein, carbs, fat, itemNames } = input;
+
+  const macroTotal = protein + carbs + fat;
+  const proteinRatio = macroTotal > 0 ? (protein / macroTotal) * 100 : 0;
+  const fatRatio = macroTotal > 0 ? (fat / macroTotal) * 100 : 0;
+
+  let balanceComment = 'The macro balance is relatively neutral.';
+  if (proteinRatio >= 35) {
+    balanceComment = 'Protein is relatively strong in this selection.';
+  } else if (fatRatio >= 35) {
+    balanceComment = 'Fat is relatively prominent in this selection.';
+  } else if (carbs > protein && carbs > fat) {
+    balanceComment = 'Carbohydrates are the main contributor in this selection.';
+  }
+
+  return [
+    `Today’s analysis covers: ${itemNames.join(', ')}.`,
+    '',
+    `Total estimated intake: ${formatNumber(totalCalories)} kcal.`,
+    `Protein: ${formatNumber(protein)} g, Carbs: ${formatNumber(carbs)} g, Fat: ${formatNumber(fat)} g.`,
+    '',
+    balanceComment,
+    '',
+    'General suggestion:',
+    '1. Keep protein adequate if this is meant to be a main meal window.',
+    '2. If the overall day feels heavy, reduce dense sauces or oil-heavy components in the next meal.',
+    '3. Add vegetables or fruit later in the day if fiber looks light.',
+    '',
+    'This is a lightweight summary generated from saved entry data. Once your backend analysis endpoint is connected, this panel can return personalized nutrition advice.',
+  ].join('\n');
 }
