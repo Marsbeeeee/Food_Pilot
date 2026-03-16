@@ -569,6 +569,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     0,
   );
 
+  const targetCalories = 2000;
+  const intake = totalCalories;
+  const progressRatio = targetCalories > 0 ? Math.min(intake / targetCalories, 1) : 0;
+  const remainingCalories = Math.max(targetCalories - intake, 0);
+
   const handleAnalyze = async () => {
     if (filteredItems.length === 0 || isAnalyzing) {
       return;
@@ -604,8 +609,8 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#FFFDF5]">
-      <header className="flex shrink-0 items-center justify-between border-b border-[#4A453E]/05 bg-white px-6 py-5 md:px-8 md:py-6">
-        <div className="flex items-center gap-4">
+      <header className="flex shrink-0 items-center justify-between border-b border-[#4A453E]/05 bg-white px-6 py-4 md:px-8 md:py-5">
+        <div className="flex items-center gap-3 md:gap-4">
           <button
             type="button"
             onClick={onBack}
@@ -618,14 +623,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
             <h1 className="font-serif-brand text-3xl font-bold text-[#4A453E] md:text-4xl">
               Nutrition Analysis
             </h1>
-            <div className="mt-2">
-              <input
-                type="date"
-                value={currentDate}
-                onChange={(event) => setCurrentDate(event.target.value)}
-                className="rounded-full border border-[#FF8A65]/20 bg-[#FFF7F2] px-4 py-2 text-xs font-bold text-[#FF8A65] outline-none transition-all focus:border-[#FF8A65]/40"
-              />
-            </div>
           </div>
         </div>
 
@@ -642,52 +639,118 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
               <>
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
-                    <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-                      Total Energy
-                    </p>
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-serif-brand text-6xl font-bold text-[#4A453E]">
-                        {formatNumber(totalCalories)}
-                      </span>
-                      <span className="text-lg font-bold uppercase text-[#4A453E]/20">
-                        kcal
-                      </span>
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
+                        Total Energy
+                      </p>
+                      <input
+                        type="date"
+                        value={currentDate}
+                        onChange={(event) => setCurrentDate(event.target.value)}
+                        className="rounded-full border border-[#FF8A65]/20 bg-[#FFF7F2] px-3 py-1.5 text-[11px] font-bold text-[#FF8A65] outline-none transition-all focus:border-[#FF8A65]/40"
+                      />
                     </div>
-                    <p className="mt-4 text-sm leading-6 text-[#4A453E]/50">
-                      This is the combined energy of the saved entries you added into today analysis.
-                    </p>
+                    <div className="flex flex-col items-center justify-center pt-2">
+                      <div className="relative flex h-44 w-44 items-center justify-center rounded-full bg-[#FFF7F2]">
+                        <svg
+                          className="h-36 w-36 -rotate-90"
+                          viewBox="0 0 120 120"
+                        >
+                          {(() => {
+                            const radius = 52;
+                            const circumference = 2 * Math.PI * radius;
+                            const offset = circumference * (1 - progressRatio);
+                            return (
+                              <>
+                                <circle
+                                  cx="60"
+                                  cy="60"
+                                  r={radius}
+                                  fill="none"
+                                  stroke="#F5E7DD"
+                                  strokeWidth="10"
+                                />
+                                <circle
+                                  cx="60"
+                                  cy="60"
+                                  r={radius}
+                                  fill="none"
+                                  stroke="#FF8A65"
+                                  strokeWidth="10"
+                                  strokeDasharray={circumference}
+                                  strokeDashoffset={offset}
+                                  strokeLinecap="round"
+                                />
+                              </>
+                            );
+                          })()}
+                        </svg>
+                        <div className="absolute flex flex-col items-center justify-center text-[#4A453E]">
+                          <span className="font-serif-brand text-5xl font-bold">
+                            {formatNumber(intake)}
+                          </span>
+                          <span className="mt-1 text-xs font-semibold text-[#4A453E]/50">
+                            / {targetCalories} kcal
+                          </span>
+                        </div>
+                      </div>
+                      <p className="mt-4 text-xs font-semibold text-[#4A453E]/55">
+                        {formatNumber(remainingCalories)} kcal remaining
+                      </p>
+                    </div>
                   </div>
 
                   <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
                     <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-                      Macro Balance
+                      Macro Distribution
                     </p>
 
-                    <div className="grid grid-cols-3 gap-3">
-                      <MacroSummaryCard label="Protein" value={`${formatNumber(totalProtein)} g`} accent />
-                      <MacroSummaryCard label="Carbs" value={`${formatNumber(totalCarbs)} g`} />
-                      <MacroSummaryCard label="Fat" value={`${formatNumber(totalFat)} g`} />
-                    </div>
+                    <div className="space-y-4">
+                      {[
+                        {
+                          label: 'Protein',
+                          value: totalProtein,
+                          color: '#FF8A65',
+                        },
+                        {
+                          label: 'Carbs',
+                          value: totalCarbs,
+                          color: '#E7D8CC',
+                        },
+                        {
+                          label: 'Fat',
+                          value: totalFat,
+                          color: '#B99880',
+                        },
+                      ].map((macro) => {
+                        const macroTotal = totalProtein + totalCarbs + totalFat;
+                        const percent = macroTotal > 0 ? getPercent(macro.value, macroTotal) : 0;
 
-                    <div className="mt-5">
-                      <div className="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.18em] text-[#4A453E]/35">
-                        <span>Distribution</span>
-                        <span>P / C / F</span>
-                      </div>
-                      <div className="flex h-2 overflow-hidden rounded-full bg-[#F7F3E9]">
-                        <div
-                          className="bg-[#FF8A65]"
-                          style={{ width: `${getPercent(totalProtein, totalProtein + totalCarbs + totalFat)}%` }}
-                        />
-                        <div
-                          className="bg-[#E7D8CC]"
-                          style={{ width: `${getPercent(totalCarbs, totalProtein + totalCarbs + totalFat)}%` }}
-                        />
-                        <div
-                          className="bg-[#4A453E]"
-                          style={{ width: `${getPercent(totalFat, totalProtein + totalCarbs + totalFat)}%` }}
-                        />
-                      </div>
+                        return (
+                          <div key={macro.label} className="space-y-1">
+                            <div className="flex items-center justify-between text-xs font-semibold text-[#4A453E]/80">
+                              <span>{macro.label}</span>
+                              <span className="text-[11px] text-[#4A453E]/60">
+                                {formatNumber(macro.value)} g
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#F7F3E9]">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{
+                                    width: `${percent}%`,
+                                    backgroundColor: macro.color,
+                                  }}
+                                />
+                              </div>
+                              <span className="w-10 text-right text-[11px] font-semibold text-[#4A453E]/55">
+                                {percent.toFixed(0)}%
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
