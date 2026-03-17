@@ -62,12 +62,22 @@ export const Explorer: React.FC<ExplorerProps> = ({
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editDraft, setEditDraft] = useState<FoodLogEditDraft | null>(null);
 
-  const [analysisBasket, setAnalysisBasket] = useState<AnalysisSelectionItem[]>([]);
+  const [analysisBasket, setAnalysisBasket] = useState<AnalysisSelectionItem[]>(() => {
+    const userKey = currentUserId != null ? String(currentUserId).trim() : '';
+    if (!userKey || typeof window === 'undefined') return [];
+    return restoreAllAnalysisItems(userKey, logEntries);
+  });
   const [showAnalysisView, setShowAnalysisView] = useState(defaultToAnalysisView);
 
   useEffect(() => {
     setShowAnalysisView(Boolean(defaultToAnalysisView));
   }, [defaultToAnalysisView]);
+
+  useEffect(() => {
+    const userKey = currentUserId != null ? String(currentUserId).trim() : '';
+    if (!userKey || typeof window === 'undefined') return;
+    autoSaveAnalysisBasket(userKey, analysisBasket);
+  }, [analysisBasket, currentUserId]);
 
   const collectionStats = buildFoodLogCollectionStats(orderedEntries);
 
@@ -245,27 +255,6 @@ export const Explorer: React.FC<ExplorerProps> = ({
     (item) => item.analysisDate === analysisDate,
   );
 
-  const handleSaveCurrentDayAnalysis = () => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const userKey = currentUserId != null ? String(currentUserId).trim() : '';
-    if (!userKey) {
-      return;
-    }
-
-    const itemsForDate = analysisBasket.filter((item) => item.analysisDate === analysisDate);
-    const ids = itemsForDate.map((item) => item.id);
-
-    const nextSaved = {
-      ...loadSavedAnalysisSelections(userKey),
-      [analysisDate]: ids,
-    };
-    persistSavedAnalysisSelections(userKey, nextSaved);
-
-    window.alert('Today analysis has been saved for this account on this device.');
-  };
-
   if (showAnalysisView) {
     return (
       <AnalysisView
@@ -275,7 +264,6 @@ export const Explorer: React.FC<ExplorerProps> = ({
         onAnalyzeSelection={onAnalyzeSelection}
         analysisDate={analysisDate}
         onAnalysisDateChange={onAnalysisDateChange}
-        onSaveDay={handleSaveCurrentDayAnalysis}
       />
     );
   }
@@ -561,7 +549,6 @@ interface AnalysisViewProps {
   onAnalyzeSelection?: (entries: FoodLogEntry[], date: string) => Promise<string>;
   analysisDate: string;
   onAnalysisDateChange?: (date: string) => void;
-  onSaveDay?: () => void;
 }
 
 const AnalysisView: React.FC<AnalysisViewProps> = ({
@@ -571,7 +558,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   onAnalyzeSelection,
   analysisDate,
   onAnalysisDateChange,
-  onSaveDay,
 }) => {
   const [currentDate, setCurrentDate] = useState(analysisDate);
   const [aiAdvice, setAiAdvice] = useState<string | null>(null);
@@ -668,15 +654,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   }}
                   className="rounded-full border border-[#FF8A65]/25 bg-[#FFF7F2] px-3 py-2 text-[11px] font-bold text-[#FF8A65] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
                 />
-                {onSaveDay && (
-                  <button
-                    type="button"
-                    onClick={() => onSaveDay()}
-                    className="rounded-full border border-[#FF8A65]/30 bg-white px-3 py-2 text-[11px] font-bold text-[#FF8A65] shadow-sm transition-all hover:bg-[#FF8A65] hover:text-white"
-                  >
-                    Save this day
-                  </button>
-                )}
               </div>
             </div>
 
@@ -1309,51 +1286,47 @@ const NutritionFactsLabel: React.FC<NutritionFactsLabelProps> = ({
   ];
 
   return (
-    <div className="rounded-[20px] border border-[#4A453E]/10 bg-white">
-      <div className="flex items-center gap-2 border-b border-[#4A453E]/08 px-5 py-3.5">
+    <div className="rounded-[24px] border border-[#4A453E]/8 bg-[#FFFDF5] p-5 shadow-sm md:rounded-[28px] md:p-6">
+      <h5 className="mb-5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/40 md:mb-6">
         <span className="material-symbols-outlined text-lg text-[#FF8A65]">nutrition</span>
-        <h6 className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/40">
-          营养成分 / Nutrition Facts
-        </h6>
+        营养成分 / Nutrition Facts
+      </h5>
+
+      <div className="mb-5 flex h-2.5 w-full overflow-hidden rounded-full bg-[#F5F2ED] md:mb-6">
+        {macros.map((m) => m.pct > 0 && (
+          <div
+            key={m.label}
+            className="h-full transition-all"
+            style={{ width: `${m.pct}%`, backgroundColor: m.color, opacity: m.color === '#4A453E' ? 0.3 : 1 }}
+          />
+        ))}
       </div>
 
-      <div className="px-5 py-4">
-        <div className="mb-4 flex h-2.5 w-full overflow-hidden rounded-full bg-[#F5F2ED]">
-          {macros.map((m) => m.pct > 0 && (
-            <div
-              key={m.label}
-              className="h-full transition-all"
-              style={{ width: `${m.pct}%`, backgroundColor: m.color, opacity: m.color === '#4A453E' ? 0.3 : 1 }}
-            />
-          ))}
-        </div>
-
-        <div className="space-y-0">
-          {macros.map((m, i) => (
-            <div
-              key={m.label}
-              className={`flex items-center justify-between py-2.5 ${
-                i < macros.length - 1 ? 'border-b border-[#4A453E]/06' : ''
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <span
-                  className="inline-block size-2 rounded-full"
-                  style={{ backgroundColor: m.color, opacity: m.color === '#4A453E' ? 0.3 : 1 }}
-                />
-                <span className="text-[13px] font-semibold text-[#4A453E]">{m.label}</span>
-              </div>
-              <div className="flex items-baseline gap-3">
-                <span className="text-sm font-bold text-[#4A453E]">
-                  {formatNumber(m.value)} g
-                </span>
-                <span className="min-w-[32px] text-right text-[11px] font-bold text-[#FF8A65]/80">
-                  {m.pct}%
-                </span>
-              </div>
+      <div className="space-y-0">
+        {macros.map((m, i) => (
+          <div
+            key={m.label}
+            className={`flex items-center justify-between py-2.5 ${
+              i < macros.length - 1 ? 'border-b border-[#4A453E]/05' : ''
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <span
+                className="inline-block size-2 rounded-full"
+                style={{ backgroundColor: m.color, opacity: m.color === '#4A453E' ? 0.3 : 1 }}
+              />
+              <span className="text-[13px] font-bold text-[#4A453E]">{m.label}</span>
             </div>
-          ))}
-        </div>
+            <div className="flex items-baseline gap-3">
+              <span className="text-[11px] font-bold text-[#4A453E]/80">
+                {formatNumber(m.value)} g
+              </span>
+              <span className="min-w-[32px] text-right text-[10px] font-bold uppercase tracking-wider text-[#4A453E]/40">
+                {m.pct}%
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -1476,13 +1449,6 @@ function extractNutritionValue(value?: string | null): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function getLocalDateKey(date = new Date()): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 function createLocalId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -1540,6 +1506,44 @@ function persistSavedAnalysisSelections(userId: string, value: SavedAnalysisSele
   } catch {
     // Swallow storage errors to avoid breaking the UI.
   }
+}
+
+function autoSaveAnalysisBasket(
+  userId: string,
+  basket: { analysisDate: string; id: string }[],
+): void {
+  const byDate: Record<string, string[]> = {};
+  for (const item of basket) {
+    if (!byDate[item.analysisDate]) {
+      byDate[item.analysisDate] = [];
+    }
+    byDate[item.analysisDate].push(item.id);
+  }
+  persistSavedAnalysisSelections(userId, byDate);
+}
+
+function restoreAllAnalysisItems(
+  userId: string,
+  allEntries: FoodLogEntry[],
+): AnalysisSelectionItem[] {
+  const saved = loadSavedAnalysisSelections(userId);
+  const entriesById = new Map(allEntries.map((e) => [e.id, e]));
+  const result: AnalysisSelectionItem[] = [];
+
+  for (const [date, ids] of Object.entries(saved)) {
+    for (const id of ids) {
+      const entry = entriesById.get(id);
+      if (entry) {
+        result.push({
+          ...entry,
+          basketId: createLocalId(),
+          analysisDate: date,
+        });
+      }
+    }
+  }
+
+  return result;
 }
 
 function buildFallbackAnalysis(input: {
