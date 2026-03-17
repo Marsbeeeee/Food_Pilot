@@ -325,6 +325,7 @@ const App: React.FC = () => {
             onUpdateFoodLog={handleUpdateFoodLog}
             analysisDate={currentAnalysisDate}
             onAnalysisDateChange={setCurrentAnalysisDate}
+            onNavigateToInsights={() => setCurrentView(AppView.INSIGHTS)}
           />
         );
       case AppView.INSIGHTS:

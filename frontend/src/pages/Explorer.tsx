@@ -20,6 +20,7 @@ interface ExplorerProps {
   initialAnalysisEntries?: FoodLogEntry[];
   analysisDate: string;
   onAnalysisDateChange?: (date: string) => void;
+  onNavigateToInsights?: () => void;
 }
 
 interface FoodLogEditDraft {
@@ -45,6 +46,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
   initialAnalysisEntries,
   analysisDate,
   onAnalysisDateChange,
+  onNavigateToInsights,
 }) => {
   const orderedEntries = sortFoodLogEntries(logEntries);
   const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(
@@ -494,7 +496,10 @@ export const Explorer: React.FC<ExplorerProps> = ({
       {currentDayAnalysisItems.length > 0 && !selectedEntry && (
         <button
           type="button"
-          onClick={() => setShowAnalysisView(true)}
+          onClick={() => {
+            onNavigateToInsights?.();
+            setShowAnalysisView(true);
+          }}
           className="fixed bottom-6 right-6 z-[120] flex h-12 w-12 items-center justify-center rounded-full bg-[#FF8A65] text-white shadow-[0_14px_40px_rgba(255,138,101,0.35)] transition-all hover:scale-[1.03] hover:bg-[#FF7A50]"
           title="Open today analysis"
         >
