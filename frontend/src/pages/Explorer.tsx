@@ -21,6 +21,7 @@ interface ExplorerProps {
   analysisDate: string;
   onAnalysisDateChange?: (date: string) => void;
   onNavigateToInsights?: () => void;
+  currentUserId?: string | number;
 }
 
 interface FoodLogEditDraft {
@@ -47,6 +48,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
   analysisDate,
   onAnalysisDateChange,
   onNavigateToInsights,
+  currentUserId,
 }) => {
   const orderedEntries = sortFoodLogEntries(logEntries);
   const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(
@@ -70,6 +72,52 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
   // 当从 Insights 入口进入时，如果希望直接看到每日分析，
   // 且当前还没有任何选中项，则用传入的 initialAnalysisEntries 预填充今日分析集合。
+  /**
+   * Restore previously saved daily analysis selection from localStorage
+   * for the current user and analysis date, if available.
+   *
+   * 行为类似 Profile：
+   * - 切换到某一天（例如 3.16）时，如果本地有保存的这一天的选择，
+   *   就用保存的数据覆盖当前这一天在 analysisBasket 里的内容；
+   * - 其他日期的数据不会被清空（只覆盖当前 analysisDate 对应的部分）。
+   */
+  useEffect(() => {
+    const userKey = currentUserId != null ? String(currentUserId).trim() : '';
+    if (!userKey || typeof window === 'undefined') {
+      return;
+    }
+
+    const saved = loadSavedAnalysisSelections(userKey);
+    const savedIdsForDate = saved[analysisDate];
+    if (!savedIdsForDate || savedIdsForDate.length === 0) {
+      return;
+    }
+
+    const entriesById = new Map(orderedEntries.map((entry) => [entry.id, entry]));
+    const restoredItems: AnalysisSelectionItem[] = savedIdsForDate
+      .map((id) => entriesById.get(id))
+      .filter((entry): entry is FoodLogEntry => Boolean(entry))
+      .map((entry) => ({
+        ...entry,
+        basketId: createLocalId(),
+        analysisDate,
+      }));
+
+    if (restoredItems.length === 0) {
+      return;
+    }
+
+    setAnalysisBasket((current) => {
+      const others = current.filter((item) => item.analysisDate !== analysisDate);
+      return [...others, ...restoredItems];
+    });
+  }, [analysisDate, orderedEntries, currentUserId]);
+
+  /**
+   * When entering via Insights with defaultToAnalysisView, if there is no
+   * saved selection for this date, fall back to using the provided
+   * initialAnalysisEntries (all Food Log entries).
+   */
   useEffect(() => {
     if (!defaultToAnalysisView) {
       return;
@@ -81,7 +129,18 @@ export const Explorer: React.FC<ExplorerProps> = ({
       return;
     }
 
-    const today = getLocalDateKey();
+    const userKey = currentUserId != null ? String(currentUserId).trim() : '';
+    const hasSavedForDate = Boolean(
+      userKey
+      && typeof window !== 'undefined'
+      && loadSavedAnalysisSelections(userKey)[analysisDate]
+      && loadSavedAnalysisSelections(userKey)[analysisDate]!.length > 0,
+    );
+    if (hasSavedForDate) {
+      return;
+    }
+
+    const today = analysisDate || getLocalDateKey();
     setAnalysisBasket(
       initialAnalysisEntries.map((entry) => ({
         ...entry,
@@ -89,7 +148,13 @@ export const Explorer: React.FC<ExplorerProps> = ({
         analysisDate: today,
       })),
     );
-  }, [defaultToAnalysisView, initialAnalysisEntries, analysisBasket.length]);
+  }, [
+    defaultToAnalysisView,
+    initialAnalysisEntries,
+    analysisBasket.length,
+    analysisDate,
+    currentUserId,
+  ]);
 
   const collectionStats = buildFoodLogCollectionStats(orderedEntries);
 
@@ -288,6 +353,27 @@ export const Explorer: React.FC<ExplorerProps> = ({
     (item) => item.analysisDate === analysisDate,
   );
 
+  const handleSaveCurrentDayAnalysis = () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const userKey = currentUserId != null ? String(currentUserId).trim() : '';
+    if (!userKey) {
+      return;
+    }
+
+    const itemsForDate = analysisBasket.filter((item) => item.analysisDate === analysisDate);
+    const ids = itemsForDate.map((item) => item.id);
+
+    const nextSaved = {
+      ...loadSavedAnalysisSelections(userKey),
+      [analysisDate]: ids,
+    };
+    persistSavedAnalysisSelections(userKey, nextSaved);
+
+    window.alert('Today analysis has been saved for this account on this device.');
+  };
+
   if (showAnalysisView) {
     return (
       <AnalysisView
@@ -297,6 +383,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
         onAnalyzeSelection={onAnalyzeSelection}
         analysisDate={analysisDate}
         onAnalysisDateChange={onAnalysisDateChange}
+        onSaveDay={handleSaveCurrentDayAnalysis}
       />
     );
   }
@@ -350,17 +437,24 @@ export const Explorer: React.FC<ExplorerProps> = ({
               )}
             </div>
 
-            {orderedEntries.length > 0 ? (
+              {orderedEntries.length > 0 ? (
               orderedEntries.map((entry) => {
                 const isActive = selectedEntry?.id === entry.id;
                 const savedMoment = formatSavedMoment(entry.savedAt);
 
                 return (
-                  <button
+                  <div
                     key={entry.id}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleSelectEntry(entry)}
-                    className={`group flex w-full flex-col rounded-[28px] border p-5 text-left transition-all md:flex-row md:items-center ${
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleSelectEntry(entry);
+                      }
+                    }}
+                    className={`group flex w-full flex-col rounded-[28px] border p-5 text-left transition-all md:flex-row md:items-center cursor-pointer ${
                       isActive
                         ? 'translate-x-1 border-[#4A453E]/10 bg-white shadow-md'
                         : 'border-transparent bg-white/40 hover:border-[#4A453E]/05 hover:bg-white hover:shadow-sm'
@@ -407,7 +501,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                         <span className="material-symbols-outlined text-[20px]">add</span>
                       </button>
                     </div>
-                  </button>
+                  </div>
                 );
               })
             ) : (
@@ -581,6 +675,7 @@ interface AnalysisViewProps {
   onAnalyzeSelection?: (entries: FoodLogEntry[], date: string) => Promise<string>;
   analysisDate: string;
   onAnalysisDateChange?: (date: string) => void;
+  onSaveDay?: () => void;
 }
 
 const AnalysisView: React.FC<AnalysisViewProps> = ({
@@ -590,6 +685,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   onAnalyzeSelection,
   analysisDate,
   onAnalysisDateChange,
+  onSaveDay,
 }) => {
   const [currentDate, setCurrentDate] = useState(analysisDate);
   const [aiAdvice, setAiAdvice] = useState<string | null>(null);
@@ -675,7 +771,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   that suggestions stay grounded in the same requirements.
                 </p>
               </div>
-              <div className="mt-1 flex items-center md:mt-12">
+              <div className="mt-1 flex items-center gap-3 md:mt-12">
                 <input
                   type="date"
                   value={currentDate}
@@ -686,6 +782,15 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   }}
                   className="rounded-full border border-[#FF8A65]/25 bg-[#FFF7F2] px-3 py-2 text-[11px] font-bold text-[#FF8A65] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
                 />
+                {onSaveDay && (
+                  <button
+                    type="button"
+                    onClick={() => onSaveDay()}
+                    className="rounded-full border border-[#FF8A65]/30 bg-white px-3 py-2 text-[11px] font-bold text-[#FF8A65] shadow-sm transition-all hover:bg-[#FF8A65] hover:text-white"
+                  >
+                    Save this day
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1483,6 +1588,47 @@ function formatNumber(value: number): string {
     return String(value);
   }
   return value.toFixed(1);
+}
+
+type SavedAnalysisSelections = Record<string, string[]>;
+
+const DAILY_ANALYSIS_STORAGE_PREFIX = 'foodpilot:dailyAnalysis:';
+
+function getDailyAnalysisStorageKey(userId: string): string {
+  return `${DAILY_ANALYSIS_STORAGE_PREFIX}${userId}`;
+}
+
+function loadSavedAnalysisSelections(userId: string): SavedAnalysisSelections {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+  try {
+    const raw = window.localStorage.getItem(getDailyAnalysisStorageKey(userId));
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') {
+      return {};
+    }
+    return parsed as SavedAnalysisSelections;
+  } catch {
+    return {};
+  }
+}
+
+function persistSavedAnalysisSelections(userId: string, value: SavedAnalysisSelections): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(
+      getDailyAnalysisStorageKey(userId),
+      JSON.stringify(value),
+    );
+  } catch {
+    // Swallow storage errors to avoid breaking the UI.
+  }
 }
 
 function buildFallbackAnalysis(input: {

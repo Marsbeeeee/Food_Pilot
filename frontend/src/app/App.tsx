@@ -326,6 +326,7 @@ const App: React.FC = () => {
             analysisDate={currentAnalysisDate}
             onAnalysisDateChange={setCurrentAnalysisDate}
             onNavigateToInsights={() => setCurrentView(AppView.INSIGHTS)}
+            currentUserId={String(session.user.id)}
           />
         );
       case AppView.INSIGHTS:
@@ -340,6 +341,7 @@ const App: React.FC = () => {
             initialAnalysisEntries={foodLog}
             analysisDate={currentAnalysisDate}
             onAnalysisDateChange={setCurrentAnalysisDate}
+            currentUserId={String(session.user.id)}
           />
         );
       case AppView.PROFILE:
