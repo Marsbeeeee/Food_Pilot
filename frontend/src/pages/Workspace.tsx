@@ -595,11 +595,21 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                 ))}
                               </tbody>
                               <tfoot className="border-t border-[#4A453E]/10 bg-[#FFFDF5] font-bold">
-                                <tr>
-                                  <td className="px-6 py-6 text-lg text-[#4A453E]" colSpan={2}>{messagePresentation.totalLabel}</td>
-                                  <td className="px-4 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{messagePresentation.total}</td>
-                                  <td className="px-4 py-6" colSpan={3}></td>
-                                </tr>
+                                {(() => {
+                                  const allItems = messagePresentation.items ?? [];
+                                  const tPro = allItems.reduce((s: number, it: { protein?: string }) => s + extractMacroNum(it.protein), 0);
+                                  const tCarb = allItems.reduce((s: number, it: { carbs?: string }) => s + extractMacroNum(it.carbs), 0);
+                                  const tFat = allItems.reduce((s: number, it: { fat?: string }) => s + extractMacroNum(it.fat), 0);
+                                  return (
+                                    <tr>
+                                      <td className="px-6 py-6 text-lg text-[#4A453E]" colSpan={2}>{messagePresentation.totalLabel}</td>
+                                      <td className="px-4 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{messagePresentation.total}</td>
+                                      <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tPro > 0 ? `${fmtNum(tPro)} g` : '—'}</td>
+                                      <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tCarb > 0 ? `${fmtNum(tCarb)} g` : '—'}</td>
+                                      <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tFat > 0 ? `${fmtNum(tFat)} g` : '—'}</td>
+                                    </tr>
+                                  );
+                                })()}
                               </tfoot>
                             </table>
                           </div>
@@ -963,6 +973,18 @@ function formatOptimisticTime(): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function extractMacroNum(value?: string | null): number {
+  if (!value) return 0;
+  const m = String(value).match(/(\d+(?:\.\d+)?)/);
+  if (!m) return 0;
+  const n = Number.parseFloat(m[1]);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function fmtNum(v: number): string {
+  return Number.isInteger(v) ? String(v) : v.toFixed(1);
 }
 
 function getMessageType(message: Message): ChatMessageType {

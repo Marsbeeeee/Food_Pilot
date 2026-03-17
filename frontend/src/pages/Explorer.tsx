@@ -29,6 +29,7 @@ interface FoodLogEditDraft {
   description: string;
   calories: string;
   ingredients: IngredientResult[];
+  originalIngredients: IngredientResult[];
 }
 
 interface AnalysisSelectionItem extends FoodLogEntry {
@@ -239,61 +240,40 @@ export const Explorer: React.FC<ExplorerProps> = ({
     setEditDraft(null);
   };
 
-  const handleEditFieldChange = (
-    field: keyof Omit<FoodLogEditDraft, 'ingredients'>,
-    value: string,
-  ) => {
-    setEditDraft((current) => (current ? { ...current, [field]: value } : current));
-  };
-
-  const handleIngredientChange = (
+  const handleIngredientGramsChange = (
     ingredientIndex: number,
-    field: keyof IngredientResult,
-    value: string,
+    newGramsInput: string,
   ) => {
     setEditDraft((current) => {
       if (!current) {
         return current;
       }
+
+      const original = current.originalIngredients[ingredientIndex];
+      if (!original) {
+        return current;
+      }
+
+      const originalGrams = extractGramsFromPortion(original.portion);
+      const newGrams = Number.parseFloat(newGramsInput);
+      const ratio = (originalGrams > 0 && Number.isFinite(newGrams) && newGrams >= 0)
+        ? newGrams / originalGrams
+        : 0;
+
+      const updatedIngredient: IngredientResult = {
+        ...original,
+        portion: newGramsInput ? `${newGramsInput}g` : '',
+        energy: ratio > 0 ? `${formatNumber(extractCaloriesValue(original.energy) * ratio)} kcal` : '0 kcal',
+        protein: original.protein ? `${formatNumber(extractNutritionValue(original.protein) * ratio)} g` : undefined,
+        carbs: original.carbs ? `${formatNumber(extractNutritionValue(original.carbs) * ratio)} g` : undefined,
+        fat: original.fat ? `${formatNumber(extractNutritionValue(original.fat) * ratio)} g` : undefined,
+      };
 
       return {
         ...current,
         ingredients: current.ingredients.map((ingredient, currentIndex) => (
-          currentIndex === ingredientIndex
-            ? { ...ingredient, [field]: value }
-            : ingredient
+          currentIndex === ingredientIndex ? updatedIngredient : ingredient
         )),
-      };
-    });
-  };
-
-  const handleAddIngredient = () => {
-    setEditDraft((current) => {
-      if (!current) {
-        return current;
-      }
-
-      return {
-        ...current,
-        ingredients: [
-          ...current.ingredients,
-          { name: '', portion: '', energy: '' },
-        ],
-      };
-    });
-  };
-
-  const handleRemoveIngredient = (ingredientIndex: number) => {
-    setEditDraft((current) => {
-      if (!current) {
-        return current;
-      }
-
-      return {
-        ...current,
-        ingredients: current.ingredients.filter(
-          (_ingredient, currentIndex) => currentIndex !== ingredientIndex,
-        ),
       };
     });
   };
@@ -539,10 +519,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
               onEdit={handleOpenEditModal}
               onCancelEdit={handleCloseEditModal}
               onSaveEdit={() => void handleSaveEdit()}
-              onEditFieldChange={handleEditFieldChange}
-              onIngredientChange={handleIngredientChange}
-              onAddIngredient={handleAddIngredient}
-              onRemoveIngredient={handleRemoveIngredient}
+              onIngredientGramsChange={handleIngredientGramsChange}
               onDelete={() => setIsDeleteDialogOpen(true)}
               onOpenChat={() => selectedEntry.sessionId && onNavigateToSession(selectedEntry.sessionId)}
               onAddToAnalysis={() => handleAddToAnalysis(selectedEntry)}
@@ -573,10 +550,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                   onEdit={handleOpenEditModal}
                   onCancelEdit={handleCloseEditModal}
                   onSaveEdit={() => void handleSaveEdit()}
-                  onEditFieldChange={handleEditFieldChange}
-                  onIngredientChange={handleIngredientChange}
-                  onAddIngredient={handleAddIngredient}
-                  onRemoveIngredient={handleRemoveIngredient}
+                  onIngredientGramsChange={handleIngredientGramsChange}
                   onDelete={() => setIsDeleteDialogOpen(true)}
                   onOpenChat={() => selectedEntry.sessionId && onNavigateToSession(selectedEntry.sessionId)}
                   onAddToAnalysis={() => handleAddToAnalysis(selectedEntry)}
@@ -1093,17 +1067,7 @@ interface SelectedEntryPanelProps {
   onEdit: () => void;
   onCancelEdit: () => void;
   onSaveEdit: () => void;
-  onEditFieldChange: (
-    field: keyof Omit<FoodLogEditDraft, 'ingredients'>,
-    value: string,
-  ) => void;
-  onIngredientChange: (
-    ingredientIndex: number,
-    field: keyof IngredientResult,
-    value: string,
-  ) => void;
-  onAddIngredient: () => void;
-  onRemoveIngredient: (ingredientIndex: number) => void;
+  onIngredientGramsChange: (ingredientIndex: number, newGrams: string) => void;
   onDelete: () => void;
   onOpenChat: () => void;
   onAddToAnalysis: () => void;
@@ -1119,10 +1083,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
   onEdit,
   onCancelEdit,
   onSaveEdit,
-  onEditFieldChange,
-  onIngredientChange,
-  onAddIngredient,
-  onRemoveIngredient,
+  onIngredientGramsChange,
   onDelete,
   onOpenChat,
   onAddToAnalysis,
@@ -1138,7 +1099,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
         <div className="mb-4 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#FF8A65]">
-              Saved Entry
+              {isEditing ? '编辑克重' : 'Saved Entry'}
             </span>
             <p className="mt-2 text-[11px] font-semibold text-[#4A453E]/35">
               Last updated {savedMoment.date} / {savedMoment.time}
@@ -1166,20 +1127,9 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
           </div>
         </div>
 
-        {isEditing && editDraft ? (
-          <input
-            type="text"
-            value={editDraft.name}
-            onChange={(event) => onEditFieldChange('name', event.target.value)}
-            autoFocus
-            placeholder="Meal name"
-            className="w-full rounded-[18px] border border-[#4A453E]/10 bg-[#F7F3E9]/40 px-4 py-3 font-serif-brand text-[26px] font-bold italic leading-[1.16] text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/30 focus:ring-2 focus:ring-[#FF8A65]/15 md:text-[32px]"
-          />
-        ) : (
-          <h2 className="text-balance font-serif-brand text-[28px] font-bold italic leading-[1.14] text-[#4A453E] md:text-[34px]">
-            {entry.name}
-          </h2>
-        )}
+        <h2 className="text-balance font-serif-brand text-[28px] font-bold italic leading-[1.14] text-[#4A453E] md:text-[34px]">
+          {entry.name}
+        </h2>
       </div>
 
       <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-5 md:px-6 md:py-6">
@@ -1201,62 +1151,46 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
             </div>
 
             {isEditing && editDraft ? (
-              <div className="mb-5 space-y-3 md:mb-6 md:space-y-4">
-                {editDraft.ingredients.map((item, index) => (
-                  <div
-                    key={`edit-ingredient-${index}`}
-                    className="group/edit-row relative rounded-[20px] border border-[#4A453E]/05 bg-white p-3.5 shadow-sm"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => onRemoveIngredient(index)}
-                      className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-red-500 text-white opacity-100 shadow-sm transition-opacity sm:opacity-0 sm:group-hover/edit-row:opacity-100 focus:opacity-100"
-                      aria-label={`Remove ingredient ${index + 1}`}
-                    >
-                      <span className="material-symbols-outlined text-sm">close</span>
-                    </button>
-
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      <input
-                        type="text"
-                        value={item.name}
-                        placeholder="Ingredient"
-                        onChange={(event) => onIngredientChange(index, 'name', event.target.value)}
-                        className="rounded-[12px] border border-transparent bg-[#F7F3E9]/20 px-3 py-2 text-[13px] font-bold text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/30 focus:bg-white"
-                      />
-                      <input
-                        type="text"
-                        value={item.energy}
-                        placeholder="Energy, e.g. 100 kcal"
-                        onChange={(event) => onIngredientChange(index, 'energy', event.target.value)}
-                        className="rounded-[12px] border border-transparent bg-[#F7F3E9]/20 px-3 py-2 text-[13px] font-bold text-[#4A453E]/80 outline-none transition-all focus:border-[#FF8A65]/30 focus:bg-white sm:text-right"
-                      />
-                    </div>
-
-                    <input
-                      type="text"
-                      value={item.portion}
-                      placeholder="Portion, e.g. 150g"
-                      onChange={(event) => onIngredientChange(index, 'portion', event.target.value)}
-                      className="mt-2 w-full rounded-[12px] border border-transparent bg-[#F7F3E9]/20 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/45 outline-none transition-all focus:border-[#FF8A65]/30 focus:bg-white"
-                    />
-                  </div>
-                ))}
-
-                {editDraft.ingredients.length === 0 && (
-                  <div className="rounded-[20px] border border-dashed border-[#4A453E]/10 bg-white/70 px-4 py-6 text-center text-sm text-[#4A453E]/45">
-                    Add at least one ingredient before saving.
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={onAddIngredient}
-                  className="flex w-full items-center justify-center gap-2 rounded-[18px] border border-dashed border-[#4A453E]/10 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[#4A453E]/35 transition-all hover:border-[#FF8A65]/30 hover:text-[#FF8A65]"
-                >
-                  <span className="material-symbols-outlined text-sm">add</span>
-                  Add Ingredient
-                </button>
+              <div className="mb-5 md:mb-6">
+                <p className="mb-3 text-[10px] font-bold text-[#FF8A65]/70">
+                  调整克重后，热量与营养素自动按比例重新计算
+                </p>
+                <div className="space-y-2.5">
+                  {editDraft.ingredients.map((item, index) => {
+                    const currentGrams = extractGramsFromPortion(item.portion);
+                    return (
+                      <div
+                        key={`edit-ingredient-${index}`}
+                        className="rounded-[16px] border border-[#4A453E]/06 bg-[#FFFDF9] p-3.5"
+                      >
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <span className="text-[13px] font-bold text-[#4A453E]">{item.name}</span>
+                          <span className="shrink-0 text-[11px] font-bold text-[#FF8A65]">{item.energy}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-[#4A453E]/35">克重</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={currentGrams || ''}
+                            placeholder="0"
+                            onChange={(event) => onIngredientGramsChange(index, event.target.value)}
+                            className="w-20 rounded-[10px] border border-[#FF8A65]/20 bg-white px-3 py-1.5 text-center text-[13px] font-bold text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/10"
+                          />
+                          <span className="text-[10px] font-bold text-[#4A453E]/35">g</span>
+                          {hasAnyIngredientMacro(editDraft.originalIngredients) && (
+                            <div className="ml-auto flex items-center gap-2 text-[10px] text-[#4A453E]/45">
+                              {item.protein && <span>蛋白 {item.protein}</span>}
+                              {item.carbs && <span>碳水 {item.carbs}</span>}
+                              {item.fat && <span>脂肪 {item.fat}</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             ) : (
               <div className="mb-5 md:mb-6">
@@ -1307,19 +1241,37 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
               </div>
             )}
 
-            {hasMacroData(entry) ? (
+          </div>
+
+          {(() => {
+            const showMacro = isEditing && editDraft
+              ? hasAnyIngredientMacro(editDraft.originalIngredients)
+              : hasMacroData(entry);
+            if (!showMacro) {
+              return (
+                <div className="rounded-[20px] border border-dashed border-[#4A453E]/10 bg-white/50 px-4 py-3 text-[13px] leading-6 text-[#4A453E]/55">
+                  营养成分表暂无数据。新分析的菜品将自动包含三大营养素信息。
+                </div>
+              );
+            }
+            const draftProtein = editDraft?.ingredients.reduce(
+              (s, it) => s + extractNutritionValue(it.protein), 0,
+            ) ?? 0;
+            const draftCarbs = editDraft?.ingredients.reduce(
+              (s, it) => s + extractNutritionValue(it.carbs), 0,
+            ) ?? 0;
+            const draftFat = editDraft?.ingredients.reduce(
+              (s, it) => s + extractNutritionValue(it.fat), 0,
+            ) ?? 0;
+            return (
               <NutritionFactsLabel
                 calories={totalCalories}
-                protein={entry.protein}
-                carbs={entry.carbs}
-                fat={entry.fat}
+                protein={isEditing && editDraft ? `${formatNumber(draftProtein)} g` : entry.protein}
+                carbs={isEditing && editDraft ? `${formatNumber(draftCarbs)} g` : entry.carbs}
+                fat={isEditing && editDraft ? `${formatNumber(draftFat)} g` : entry.fat}
               />
-            ) : (
-              <div className="rounded-[20px] border border-dashed border-[#4A453E]/10 bg-white/50 px-4 py-3 text-[13px] leading-6 text-[#4A453E]/55">
-                营养成分表暂无数据。新分析的菜品将自动包含三大营养素信息。
-              </div>
-            )}
-          </div>
+            );
+          })()}
 
           <div className="rounded-[24px] border border-[#4A453E]/8 bg-white p-5 shadow-sm md:rounded-[28px] md:p-6">
             <h5 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/40">
@@ -1329,19 +1281,9 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
               Description
             </h5>
 
-            {isEditing && editDraft ? (
-              <textarea
-                value={editDraft.description}
-                onChange={(event) => onEditFieldChange('description', event.target.value)}
-                rows={4}
-                placeholder="Meal description"
-                className="custom-scrollbar w-full rounded-[16px] border border-[#4A453E]/10 bg-[#F7F3E9]/40 px-4 py-3 text-sm leading-7 text-[#4A453E]/70 outline-none transition-all focus:border-[#FF8A65]/30 focus:ring-2 focus:ring-[#FF8A65]/15"
-              />
-            ) : (
-              <p className="text-sm leading-7 text-[#4A453E]/60">
-                {entry.description}
-              </p>
-            )}
+            <p className="text-sm leading-7 text-[#4A453E]/60">
+              {entry.description}
+            </p>
           </div>
 
           <div className="relative aspect-[4/3] overflow-hidden rounded-[24px] border border-[#4A453E]/05 shadow-sm md:aspect-video md:rounded-[28px]">
@@ -1446,23 +1388,6 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, unit, accent = 
   </div>
 );
 
-interface MacroStatProps {
-  label: string;
-  value: string;
-  accent?: boolean;
-}
-
-const MacroStat: React.FC<MacroStatProps> = ({ label, value, accent = false }) => (
-  <div className="text-center">
-    <span className="mb-1 block text-[9px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/30">
-      {label}
-    </span>
-    <span className={`text-[17px] font-bold md:text-lg ${accent ? 'text-[#FF8A65]' : 'text-[#4A453E]'}`}>
-      {value}
-    </span>
-  </div>
-);
-
 interface NutritionFactsLabelProps {
   calories: string | number;
   protein?: string | null;
@@ -1489,103 +1414,67 @@ const NutritionFactsLabel: React.FC<NutritionFactsLabelProps> = ({
   const carbsPct = macroKcalTotal > 0 ? Math.round((carbsKcal / macroKcalTotal) * 100) : 0;
   const fatPct = macroKcalTotal > 0 ? Math.round((fatKcal / macroKcalTotal) * 100) : 0;
 
+  const macros = [
+    { label: '蛋白质', sub: 'Protein', value: proteinNum, pct: proteinPct, color: '#FF8A65' },
+    { label: '碳水化合物', sub: 'Carbs', value: carbsNum, pct: carbsPct, color: '#FFB74D' },
+    { label: '脂肪', sub: 'Fat', value: fatNum, pct: fatPct, color: '#4A453E' },
+  ];
+
   return (
-    <div className="overflow-hidden rounded-[20px] border-2 border-[#4A453E] bg-white">
-      <div className="border-b-[8px] border-[#4A453E] px-4 pb-2 pt-3">
-        <h6 className="font-sans text-[22px] font-black leading-none tracking-tight text-[#4A453E]">
-          营养成分表
+    <div className="rounded-[20px] border border-[#4A453E]/10 bg-white">
+      <div className="flex items-center gap-2 border-b border-[#4A453E]/08 px-5 py-3.5">
+        <span className="material-symbols-outlined text-lg text-[#FF8A65]">nutrition</span>
+        <h6 className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/40">
+          营养成分 / Nutrition Facts
         </h6>
-        <p className="mt-1 text-[10px] font-semibold text-[#4A453E]/50">
-          Nutrition Facts
-        </p>
       </div>
 
-      <div className="border-b-[4px] border-[#4A453E] px-4 py-3">
-        <div className="flex items-baseline justify-between">
-          <span className="text-sm font-bold text-[#4A453E]">热量 / Calories</span>
-          <span className="font-sans text-[28px] font-black leading-none text-[#4A453E]">
-            {formatNumber(calNum)}
-            <span className="ml-1 text-xs font-bold">kcal</span>
-          </span>
-        </div>
-      </div>
-
-      <div className="px-4">
-        <p className="border-b border-[#4A453E]/15 py-1.5 text-right text-[9px] font-bold text-[#4A453E]/45">
-          每份含量 / Amount Per Serving
-        </p>
-
-        <div className="flex items-center justify-between border-b border-[#4A453E]/15 py-2.5">
-          <span className="text-[13px] font-bold text-[#4A453E]">蛋白质 / Protein</span>
-          <div className="flex items-baseline gap-3">
-            <span className="text-[15px] font-extrabold text-[#4A453E]">
-              {formatNumber(proteinNum)} g
+      <div className="px-5 py-4">
+        <div className="mb-4 flex items-baseline justify-between">
+          <span className="text-xs font-bold text-[#4A453E]/50">热量</span>
+          <div className="flex items-baseline gap-1">
+            <span className="font-serif-brand text-[26px] font-bold italic leading-none text-[#4A453E]">
+              {formatNumber(calNum)}
             </span>
-            <span className="min-w-[36px] text-right text-[11px] font-bold text-[#FF8A65]">
-              {proteinPct}%
-            </span>
+            <span className="text-[10px] font-bold uppercase text-[#4A453E]/25">kcal</span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-b border-[#4A453E]/15 py-2.5">
-          <span className="text-[13px] font-bold text-[#4A453E]">碳水化合物 / Carbs</span>
-          <div className="flex items-baseline gap-3">
-            <span className="text-[15px] font-extrabold text-[#4A453E]">
-              {formatNumber(carbsNum)} g
-            </span>
-            <span className="min-w-[36px] text-right text-[11px] font-bold text-[#FF8A65]">
-              {carbsPct}%
-            </span>
-          </div>
+        <div className="mb-4 flex h-2.5 w-full overflow-hidden rounded-full bg-[#F5F2ED]">
+          {macros.map((m) => m.pct > 0 && (
+            <div
+              key={m.label}
+              className="h-full transition-all"
+              style={{ width: `${m.pct}%`, backgroundColor: m.color, opacity: m.color === '#4A453E' ? 0.3 : 1 }}
+            />
+          ))}
         </div>
 
-        <div className="flex items-center justify-between py-2.5">
-          <span className="text-[13px] font-bold text-[#4A453E]">脂肪 / Fat</span>
-          <div className="flex items-baseline gap-3">
-            <span className="text-[15px] font-extrabold text-[#4A453E]">
-              {formatNumber(fatNum)} g
-            </span>
-            <span className="min-w-[36px] text-right text-[11px] font-bold text-[#FF8A65]">
-              {fatPct}%
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t-[4px] border-[#4A453E] px-4 py-2">
-        <div className="flex h-4 w-full overflow-hidden rounded-full bg-[#F5F2ED]">
-          {proteinPct > 0 && (
+        <div className="space-y-0">
+          {macros.map((m, i) => (
             <div
-              className="h-full bg-[#FF8A65] transition-all"
-              style={{ width: `${proteinPct}%` }}
-              title={`蛋白质 ${proteinPct}%`}
-            />
-          )}
-          {carbsPct > 0 && (
-            <div
-              className="h-full bg-[#FFB74D] transition-all"
-              style={{ width: `${carbsPct}%` }}
-              title={`碳水 ${carbsPct}%`}
-            />
-          )}
-          {fatPct > 0 && (
-            <div
-              className="h-full bg-[#4A453E]/25 transition-all"
-              style={{ width: `${fatPct}%` }}
-              title={`脂肪 ${fatPct}%`}
-            />
-          )}
-        </div>
-        <div className="mt-1.5 flex items-center justify-center gap-4 text-[9px] font-bold text-[#4A453E]/50">
-          <span className="flex items-center gap-1">
-            <span className="inline-block size-2 rounded-full bg-[#FF8A65]" />蛋白质
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="inline-block size-2 rounded-full bg-[#FFB74D]" />碳水
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="inline-block size-2 rounded-full bg-[#4A453E]/25" />脂肪
-          </span>
+              key={m.label}
+              className={`flex items-center justify-between py-2.5 ${
+                i < macros.length - 1 ? 'border-b border-[#4A453E]/06' : ''
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <span
+                  className="inline-block size-2 rounded-full"
+                  style={{ backgroundColor: m.color, opacity: m.color === '#4A453E' ? 0.3 : 1 }}
+                />
+                <span className="text-[13px] font-semibold text-[#4A453E]">{m.label}</span>
+              </div>
+              <div className="flex items-baseline gap-3">
+                <span className="text-sm font-bold text-[#4A453E]">
+                  {formatNumber(m.value)} g
+                </span>
+                <span className="min-w-[32px] text-right text-[11px] font-bold text-[#FF8A65]/80">
+                  {m.pct}%
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -1653,6 +1542,7 @@ function buildEditDraft(entry: FoodLogEntry): FoodLogEditDraft {
     description: entry.description,
     calories: entry.calories,
     ingredients: entry.breakdown.map((item) => ({ ...item })),
+    originalIngredients: entry.breakdown.map((item) => ({ ...item })),
   };
 }
 
@@ -1662,6 +1552,13 @@ function hasMacroData(entry: FoodLogEntry): boolean {
 
 function hasAnyIngredientMacro(breakdown: IngredientResult[]): boolean {
   return breakdown.some((item) => item.protein || item.carbs || item.fat);
+}
+
+function extractGramsFromPortion(portion: string): number {
+  const match = String(portion).match(/(\d+(?:\.\d+)?)/);
+  if (!match) return 0;
+  const parsed = Number.parseFloat(match[1]);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function getDraftTotalCalories(draft: FoodLogEditDraft): string {
