@@ -400,6 +400,8 @@ def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
     saved_at = _resolve_saved_at_value(entry)
     meal_occurred_at = _resolve_meal_occurred_at_value(entry, saved_at)
     timestamp = _parse_timestamp(meal_occurred_at)
+    breakdown = parse_food_log_items(entry["ingredients_json"])
+    protein, carbs, fat = _sum_macros_from_items(breakdown)
 
     return FoodLogEntryOut.model_validate(
         {
@@ -409,7 +411,10 @@ def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
             "calories": _normalize_calories(entry["total_calories"]),
             "date": _format_entry_date(timestamp),
             "time": _format_entry_time(timestamp),
-            "breakdown": parse_food_log_items(entry["ingredients_json"]),
+            "breakdown": breakdown,
+            "protein": protein,
+            "carbs": carbs,
+            "fat": fat,
             "saved_at": saved_at,
             "meal_occurred_at": meal_occurred_at,
             "status": entry["status"],
@@ -501,6 +506,35 @@ def _normalize_calories(value: object) -> str:
     if match is None:
         return "0"
     return match.group(0)
+
+
+def _extract_grams(value: str | None) -> float:
+    if not value:
+        return 0.0
+    match = re.search(r"(\d+(?:\.\d+)?)", str(value).replace(",", ""))
+    if match is None:
+        return 0.0
+    parsed = float(match.group(1))
+    return parsed if parsed == parsed else 0.0  # NaN guard
+
+
+def _format_grams(total: float) -> str | None:
+    if total <= 0:
+        return None
+    return f"{total:.1f} g" if total != int(total) else f"{int(total)} g"
+
+
+def _sum_macros_from_items(
+    items: list[EstimateItem],
+) -> tuple[str | None, str | None, str | None]:
+    total_protein = sum(_extract_grams(item.protein) for item in items)
+    total_carbs = sum(_extract_grams(item.carbs) for item in items)
+    total_fat = sum(_extract_grams(item.fat) for item in items)
+    return (
+        _format_grams(total_protein),
+        _format_grams(total_carbs),
+        _format_grams(total_fat),
+    )
 
 
 def _normalize_timestamp_string(value: str | None) -> str | None:

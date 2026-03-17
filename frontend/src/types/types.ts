@@ -28,6 +28,9 @@ export interface IngredientResult {
   name: string;
   portion: string;
   energy: string;
+  protein?: string;
+  carbs?: string;
+  fat?: string;
 }
 
 export interface EstimateResult {

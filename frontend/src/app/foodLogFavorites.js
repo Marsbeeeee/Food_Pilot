@@ -1,9 +1,21 @@
 export function buildFoodLogEditPayload(draft) {
-  const ingredients = draft.ingredients.map((ingredient, index) => ({
-    name: normalizeRequiredText(ingredient.name, `Ingredient ${index + 1} name`),
-    portion: normalizeRequiredText(ingredient.portion, `Ingredient ${index + 1} portion`),
-    energy: normalizeEnergyText(ingredient.energy, `Ingredient ${index + 1} energy`),
-  }));
+  const ingredients = draft.ingredients.map((ingredient, index) => {
+    const item = {
+      name: normalizeRequiredText(ingredient.name, `Ingredient ${index + 1} name`),
+      portion: normalizeRequiredText(ingredient.portion, `Ingredient ${index + 1} portion`),
+      energy: normalizeEnergyText(ingredient.energy, `Ingredient ${index + 1} energy`),
+    };
+    if (ingredient.protein) {
+      item.protein = ingredient.protein;
+    }
+    if (ingredient.carbs) {
+      item.carbs = ingredient.carbs;
+    }
+    if (ingredient.fat) {
+      item.fat = ingredient.fat;
+    }
+    return item;
+  });
 
   if (ingredients.length === 0) {
     throw new Error('Add at least one ingredient before saving.');

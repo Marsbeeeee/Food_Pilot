@@ -574,24 +574,31 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             <table className="w-full text-left">
                               <thead className="bg-[#F7F3E9]/30 text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/40">
                                 <tr>
-                                  <th className="px-8 py-4">{messagePresentation.ingredientColumnLabel}</th>
-                                  <th className="px-8 py-4">{messagePresentation.portionColumnLabel}</th>
-                                  <th className="px-8 py-4 text-right">{messagePresentation.energyColumnLabel}</th>
+                                  <th className="px-6 py-4">{messagePresentation.ingredientColumnLabel}</th>
+                                  <th className="px-4 py-4">{messagePresentation.portionColumnLabel}</th>
+                                  <th className="px-4 py-4 text-right">{messagePresentation.energyColumnLabel}</th>
+                                  <th className="px-4 py-4 text-right">{messagePresentation.proteinColumnLabel}</th>
+                                  <th className="px-4 py-4 text-right">{messagePresentation.carbsColumnLabel}</th>
+                                  <th className="px-4 py-4 text-right">{messagePresentation.fatColumnLabel}</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-[#4A453E]/5 text-[14px]">
-                                {messagePresentation.items?.map((item, itemIndex) => (
+                                {messagePresentation.items?.map((item: { name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }, itemIndex: number) => (
                                   <tr key={itemIndex} className="transition-colors hover:bg-[#F7F3E9]/10">
-                                    <td className="px-8 py-4 font-bold text-[#4A453E]">{item.name}</td>
-                                    <td className="px-8 py-4 font-medium text-[#4A453E]/50">{item.portion}</td>
-                                    <td className="px-8 py-4 text-right font-bold text-[#4A453E]">{item.energy}</td>
+                                    <td className="px-6 py-4 font-bold text-[#4A453E]">{item.name}</td>
+                                    <td className="px-4 py-4 font-medium text-[#4A453E]/50">{item.portion}</td>
+                                    <td className="px-4 py-4 text-right font-bold text-[#4A453E]">{item.energy}</td>
+                                    <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.protein || '—'}</td>
+                                    <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.carbs || '—'}</td>
+                                    <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.fat || '—'}</td>
                                   </tr>
                                 ))}
                               </tbody>
                               <tfoot className="border-t border-[#4A453E]/10 bg-[#FFFDF5] font-bold">
                                 <tr>
-                                  <td className="px-8 py-6 text-lg text-[#4A453E]" colSpan={2}>{messagePresentation.totalLabel}</td>
-                                  <td className="px-8 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{messagePresentation.total}</td>
+                                  <td className="px-6 py-6 text-lg text-[#4A453E]" colSpan={2}>{messagePresentation.totalLabel}</td>
+                                  <td className="px-4 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{messagePresentation.total}</td>
+                                  <td className="px-4 py-6" colSpan={3}></td>
                                 </tr>
                               </tfoot>
                             </table>

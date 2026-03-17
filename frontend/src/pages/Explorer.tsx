@@ -1259,41 +1259,64 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                 </button>
               </div>
             ) : (
-              <div className="mb-5 space-y-3 md:mb-6 md:space-y-4">
-                {entry.breakdown.map((item, index) => (
-                  <div key={`${item.name}-${index}`} className="group/row flex items-center justify-between gap-4 py-1">
-                    <div className="min-w-0 flex flex-col">
-                      <span className="text-[13px] font-bold text-[#4A453E] transition-colors group-hover/row:text-[#FF8A65] md:text-sm">
-                        {item.name}
-                      </span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A453E]/40">
-                        {item.portion}
-                      </span>
-                    </div>
-                    <span className="shrink-0 text-[11px] font-bold text-[#4A453E]/80 md:text-xs">{item.energy}</span>
-                  </div>
-                ))}
+              <div className="mb-5 md:mb-6">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-[#4A453E]/08 text-[9px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/35">
+                      <th className="pb-2.5 pr-2">食材</th>
+                      <th className="pb-2.5 px-2">份量</th>
+                      <th className="pb-2.5 px-2 text-right">热量</th>
+                      {hasAnyIngredientMacro(entry.breakdown) && (
+                        <>
+                          <th className="pb-2.5 px-2 text-right">蛋白质</th>
+                          <th className="pb-2.5 px-2 text-right">碳水</th>
+                          <th className="pb-2.5 pl-2 text-right">脂肪</th>
+                        </>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#4A453E]/05">
+                    {entry.breakdown.map((item, index) => (
+                      <tr key={`${item.name}-${index}`} className="group/row">
+                        <td className="py-2.5 pr-2 text-[13px] font-bold text-[#4A453E] transition-colors group-hover/row:text-[#FF8A65]">
+                          {item.name}
+                        </td>
+                        <td className="py-2.5 px-2 text-[10px] font-bold uppercase tracking-wider text-[#4A453E]/40">
+                          {item.portion}
+                        </td>
+                        <td className="py-2.5 px-2 text-right text-[11px] font-bold text-[#4A453E]/80">
+                          {item.energy}
+                        </td>
+                        {hasAnyIngredientMacro(entry.breakdown) && (
+                          <>
+                            <td className="py-2.5 px-2 text-right text-[11px] text-[#4A453E]/60">
+                              {item.protein || '—'}
+                            </td>
+                            <td className="py-2.5 px-2 text-right text-[11px] text-[#4A453E]/60">
+                              {item.carbs || '—'}
+                            </td>
+                            <td className="py-2.5 pl-2 text-right text-[11px] text-[#4A453E]/60">
+                              {item.fat || '—'}
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
 
             {hasMacroData(entry) ? (
-              <>
-                <div className="grid grid-cols-3 gap-2 border-t border-[#4A453E]/05 pt-5 md:gap-3 md:pt-6">
-                  <MacroStat label="Protein" value={entry.protein ?? 'N/A'} accent />
-                  <MacroStat label="Carbs" value={entry.carbs ?? 'N/A'} />
-                  <MacroStat label="Fat" value={entry.fat ?? 'N/A'} />
-                </div>
-                {isEditing && (
-                  <p className="mt-3 text-center text-[10px] leading-5 text-[#4A453E]/40">
-                    Macro values stay read-only for now. This editor updates the title,
-                    description, calories, and ingredient breakdown.
-                  </p>
-                )}
-              </>
+              <NutritionFactsLabel
+                calories={totalCalories}
+                protein={entry.protein}
+                carbs={entry.carbs}
+                fat={entry.fat}
+              />
             ) : (
               <div className="rounded-[20px] border border-dashed border-[#4A453E]/10 bg-white/50 px-4 py-3 text-[13px] leading-6 text-[#4A453E]/55">
-                Macro nutrients were not recorded for this saved entry. Food Log currently
-                stores the calorie estimate and ingredient-level breakdown only.
+                营养成分表暂无数据。新分析的菜品将自动包含三大营养素信息。
               </div>
             )}
           </div>
@@ -1440,25 +1463,134 @@ const MacroStat: React.FC<MacroStatProps> = ({ label, value, accent = false }) =
   </div>
 );
 
-interface MacroSummaryCardProps {
-  label: string;
-  value: string;
-  accent?: boolean;
+interface NutritionFactsLabelProps {
+  calories: string | number;
+  protein?: string | null;
+  carbs?: string | null;
+  fat?: string | null;
 }
 
-const MacroSummaryCard: React.FC<MacroSummaryCardProps> = ({ label, value, accent = false }) => (
-  <div className={`rounded-[20px] border p-4 text-center ${
-    accent ? 'border-[#FF8A65]/15 bg-[#FFF2EC]' : 'border-[#4A453E]/06 bg-[#FFFDF9]'
-  }`}
-  >
-    <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/35">
-      {label}
-    </span>
-    <span className={`text-sm font-bold ${accent ? 'text-[#FF8A65]' : 'text-[#4A453E]'}`}>
-      {value}
-    </span>
-  </div>
-);
+const NutritionFactsLabel: React.FC<NutritionFactsLabelProps> = ({
+  calories,
+  protein,
+  carbs,
+  fat,
+}) => {
+  const calNum = extractCaloriesValue(String(calories));
+  const proteinNum = extractNutritionValue(protein);
+  const carbsNum = extractNutritionValue(carbs);
+  const fatNum = extractNutritionValue(fat);
+
+  const proteinKcal = proteinNum * 4;
+  const carbsKcal = carbsNum * 4;
+  const fatKcal = fatNum * 9;
+  const macroKcalTotal = proteinKcal + carbsKcal + fatKcal;
+  const proteinPct = macroKcalTotal > 0 ? Math.round((proteinKcal / macroKcalTotal) * 100) : 0;
+  const carbsPct = macroKcalTotal > 0 ? Math.round((carbsKcal / macroKcalTotal) * 100) : 0;
+  const fatPct = macroKcalTotal > 0 ? Math.round((fatKcal / macroKcalTotal) * 100) : 0;
+
+  return (
+    <div className="overflow-hidden rounded-[20px] border-2 border-[#4A453E] bg-white">
+      <div className="border-b-[8px] border-[#4A453E] px-4 pb-2 pt-3">
+        <h6 className="font-sans text-[22px] font-black leading-none tracking-tight text-[#4A453E]">
+          营养成分表
+        </h6>
+        <p className="mt-1 text-[10px] font-semibold text-[#4A453E]/50">
+          Nutrition Facts
+        </p>
+      </div>
+
+      <div className="border-b-[4px] border-[#4A453E] px-4 py-3">
+        <div className="flex items-baseline justify-between">
+          <span className="text-sm font-bold text-[#4A453E]">热量 / Calories</span>
+          <span className="font-sans text-[28px] font-black leading-none text-[#4A453E]">
+            {formatNumber(calNum)}
+            <span className="ml-1 text-xs font-bold">kcal</span>
+          </span>
+        </div>
+      </div>
+
+      <div className="px-4">
+        <p className="border-b border-[#4A453E]/15 py-1.5 text-right text-[9px] font-bold text-[#4A453E]/45">
+          每份含量 / Amount Per Serving
+        </p>
+
+        <div className="flex items-center justify-between border-b border-[#4A453E]/15 py-2.5">
+          <span className="text-[13px] font-bold text-[#4A453E]">蛋白质 / Protein</span>
+          <div className="flex items-baseline gap-3">
+            <span className="text-[15px] font-extrabold text-[#4A453E]">
+              {formatNumber(proteinNum)} g
+            </span>
+            <span className="min-w-[36px] text-right text-[11px] font-bold text-[#FF8A65]">
+              {proteinPct}%
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between border-b border-[#4A453E]/15 py-2.5">
+          <span className="text-[13px] font-bold text-[#4A453E]">碳水化合物 / Carbs</span>
+          <div className="flex items-baseline gap-3">
+            <span className="text-[15px] font-extrabold text-[#4A453E]">
+              {formatNumber(carbsNum)} g
+            </span>
+            <span className="min-w-[36px] text-right text-[11px] font-bold text-[#FF8A65]">
+              {carbsPct}%
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between py-2.5">
+          <span className="text-[13px] font-bold text-[#4A453E]">脂肪 / Fat</span>
+          <div className="flex items-baseline gap-3">
+            <span className="text-[15px] font-extrabold text-[#4A453E]">
+              {formatNumber(fatNum)} g
+            </span>
+            <span className="min-w-[36px] text-right text-[11px] font-bold text-[#FF8A65]">
+              {fatPct}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t-[4px] border-[#4A453E] px-4 py-2">
+        <div className="flex h-4 w-full overflow-hidden rounded-full bg-[#F5F2ED]">
+          {proteinPct > 0 && (
+            <div
+              className="h-full bg-[#FF8A65] transition-all"
+              style={{ width: `${proteinPct}%` }}
+              title={`蛋白质 ${proteinPct}%`}
+            />
+          )}
+          {carbsPct > 0 && (
+            <div
+              className="h-full bg-[#FFB74D] transition-all"
+              style={{ width: `${carbsPct}%` }}
+              title={`碳水 ${carbsPct}%`}
+            />
+          )}
+          {fatPct > 0 && (
+            <div
+              className="h-full bg-[#4A453E]/25 transition-all"
+              style={{ width: `${fatPct}%` }}
+              title={`脂肪 ${fatPct}%`}
+            />
+          )}
+        </div>
+        <div className="mt-1.5 flex items-center justify-center gap-4 text-[9px] font-bold text-[#4A453E]/50">
+          <span className="flex items-center gap-1">
+            <span className="inline-block size-2 rounded-full bg-[#FF8A65]" />蛋白质
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block size-2 rounded-full bg-[#FFB74D]" />碳水
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block size-2 rounded-full bg-[#4A453E]/25" />脂肪
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface FoodLogImageProps {
   src?: string;
@@ -1526,6 +1658,10 @@ function buildEditDraft(entry: FoodLogEntry): FoodLogEditDraft {
 
 function hasMacroData(entry: FoodLogEntry): boolean {
   return Boolean(entry.protein || entry.carbs || entry.fat);
+}
+
+function hasAnyIngredientMacro(breakdown: IngredientResult[]): boolean {
+  return breakdown.some((item) => item.protein || item.carbs || item.fat);
 }
 
 function getDraftTotalCalories(draft: FoodLogEditDraft): string {

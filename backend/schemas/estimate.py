@@ -68,6 +68,9 @@ class EstimateItem(BaseModel):
     name: str
     portion: str
     energy: str
+    protein: str | None = None
+    carbs: str | None = None
+    fat: str | None = None
 
     @field_validator("name", "portion", "energy")
     @classmethod
@@ -76,6 +79,14 @@ class EstimateItem(BaseModel):
         if not normalized:
             raise ValueError("\u5b57\u6bb5\u4e0d\u80fd\u4e3a\u7a7a")
         return normalized
+
+    @field_validator("protein", "carbs", "fat", mode="before")
+    @classmethod
+    def validate_macro_field(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
 
 
 class EstimateResult(BaseModel):

@@ -2,6 +2,9 @@ const ESTIMATE_COPY = {
   ingredientColumnLabel: '食材',
   portionColumnLabel: '份量',
   energyColumnLabel: '估算热量',
+  proteinColumnLabel: '蛋白质',
+  carbsColumnLabel: '碳水',
+  fatColumnLabel: '脂肪',
   totalLabel: '估算总热量',
 };
 

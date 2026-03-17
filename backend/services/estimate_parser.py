@@ -83,13 +83,34 @@ def _normalize_items(raw_items: Any) -> list[dict[str, str]]:
         if not name or not energy:
             continue
 
-        normalized_items.append(
-            {
-                "name": name,
-                "portion": portion or DEFAULT_PORTION,
-                "energy": energy,
-            }
+        protein = _coerce_text(
+            raw_item.get("protein")
+            or raw_item.get("蛋白质")
         )
+        carbs = _coerce_text(
+            raw_item.get("carbs")
+            or raw_item.get("carbohydrates")
+            or raw_item.get("碳水")
+            or raw_item.get("碳水化合物")
+        )
+        fat = _coerce_text(
+            raw_item.get("fat")
+            or raw_item.get("脂肪")
+        )
+
+        item: dict[str, str] = {
+            "name": name,
+            "portion": portion or DEFAULT_PORTION,
+            "energy": energy,
+        }
+        if protein:
+            item["protein"] = protein
+        if carbs:
+            item["carbs"] = carbs
+        if fat:
+            item["fat"] = fat
+
+        normalized_items.append(item)
 
     return normalized_items
 
