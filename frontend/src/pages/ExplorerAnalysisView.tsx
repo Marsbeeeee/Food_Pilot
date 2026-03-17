@@ -159,7 +159,7 @@ function extractCaloriesValue(value: string | number): number {
     return 0;
   }
   const parsed = Number.parseFloat(match[1]);
-  return Number.isFinite(parsed) ? parsed : 0;
+  return Number.isFinite(parsed) ? Math.ceil(parsed) : 0;
 }
 
 function extractNutritionValue(value?: string | null): number {
@@ -198,8 +198,8 @@ function buildFallbackAnalysis(input: {
   return [
     `Today’s analysis covers: ${itemNames.join(', ')}.`,
     '',
-    `Total estimated intake: ${totalCalories.toFixed(1)} kcal.`,
-    `Protein: ${protein.toFixed(1)} g, Carbs: ${carbs.toFixed(1)} g, Fat: ${fat.toFixed(1)} g.`,
+    `Total estimated intake: ${Math.round(totalCalories)} kcal.`,
+    `Protein: ${Math.round(protein)} g, Carbs: ${Math.round(carbs)} g, Fat: ${Math.round(fat)} g.`,
     '',
     balanceComment,
     '',

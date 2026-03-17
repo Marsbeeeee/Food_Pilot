@@ -62,18 +62,30 @@ export const Explorer: React.FC<ExplorerProps> = ({
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editDraft, setEditDraft] = useState<FoodLogEditDraft | null>(null);
 
-  const [analysisBasket, setAnalysisBasket] = useState<AnalysisSelectionItem[]>(() => {
-    const userKey = currentUserId != null ? String(currentUserId).trim() : '';
-    if (!userKey || typeof window === 'undefined') return [];
-    return restoreAllAnalysisItems(userKey, logEntries);
-  });
+  const [analysisBasket, setAnalysisBasket] = useState<AnalysisSelectionItem[]>([]);
   const [showAnalysisView, setShowAnalysisView] = useState(defaultToAnalysisView);
+  const basketHydratedRef = React.useRef(false);
 
   useEffect(() => {
     setShowAnalysisView(Boolean(defaultToAnalysisView));
   }, [defaultToAnalysisView]);
 
   useEffect(() => {
+    if (logEntries.length === 0) return;
+    if (basketHydratedRef.current) return;
+    basketHydratedRef.current = true;
+
+    const userKey = currentUserId != null ? String(currentUserId).trim() : '';
+    if (!userKey || typeof window === 'undefined') return;
+
+    const restored = restoreAllAnalysisItems(userKey, logEntries);
+    if (restored.length > 0) {
+      setAnalysisBasket(restored);
+    }
+  }, [logEntries, currentUserId]);
+
+  useEffect(() => {
+    if (!basketHydratedRef.current) return;
     const userKey = currentUserId != null ? String(currentUserId).trim() : '';
     if (!userKey || typeof window === 'undefined') return;
     autoSaveAnalysisBasket(userKey, analysisBasket);
@@ -182,10 +194,12 @@ export const Explorer: React.FC<ExplorerProps> = ({
         ? newGrams / originalGrams
         : 0;
 
+      const unit = getPortionUnit(original.portion);
+
       const updatedIngredient: IngredientResult = {
         ...original,
-        portion: newGramsInput ? `${newGramsInput}g` : '',
-        energy: ratio > 0 ? `${formatNumber(extractCaloriesValue(original.energy) * ratio)} kcal` : '0 kcal',
+        portion: newGramsInput ? `${newGramsInput} ${unit}` : '',
+        energy: ratio > 0 ? `${Math.ceil(extractCaloriesValue(original.energy) * ratio)} kcal` : '0 kcal',
         protein: original.protein ? `${formatNumber(extractNutritionValue(original.protein) * ratio)} g` : undefined,
         carbs: original.carbs ? `${formatNumber(extractNutritionValue(original.carbs) * ratio)} g` : undefined,
         fat: original.fat ? `${formatNumber(extractNutritionValue(original.fat) * ratio)} g` : undefined,
@@ -593,6 +607,8 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const intake = totalCalories;
   const progressRatio = targetCalories > 0 ? Math.min(intake / targetCalories, 1) : 0;
   const remainingCalories = Math.max(targetCalories - intake, 0);
+  const exceededCalories = Math.max(intake - targetCalories, 0);
+  const isExceeded = intake > targetCalories;
 
   const handleAnalyze = async () => {
     if (filteredItems.length === 0 || isAnalyzing) {
@@ -665,34 +681,36 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                       </p>
                     </div>
                     <div className="flex flex-col items-center justify-center pt-2">
-                      <div className="relative flex h-44 w-44 items-center justify-center rounded-full bg-[#FFF7F2]">
+                      <div className="relative flex h-56 w-56 items-center justify-center rounded-full bg-[#FFF7F2]">
                         <svg
-                          className="h-36 w-36 -rotate-90"
-                          viewBox="0 0 120 120"
+                          className="h-48 w-48 -rotate-90"
+                          viewBox="0 0 160 160"
                         >
                           {(() => {
-                            const radius = 52;
+                            const radius = 72;
                             const circumference = 2 * Math.PI * radius;
                             const offset = circumference * (1 - progressRatio);
+                            const ringColor = isExceeded ? '#EF4444' : '#FF8A65';
+                            const bgColor = isExceeded ? '#FEE2E2' : '#F5E7DD';
                             return (
                               <>
                                 <circle
-                                  cx="60"
-                                  cy="60"
+                                  cx="80"
+                                  cy="80"
                                   r={radius}
                                   fill="none"
-                                  stroke="#F5E7DD"
-                                  strokeWidth="10"
+                                  stroke={bgColor}
+                                  strokeWidth="12"
                                 />
                                 <circle
-                                  cx="60"
-                                  cy="60"
+                                  cx="80"
+                                  cy="80"
                                   r={radius}
                                   fill="none"
-                                  stroke="#FF8A65"
-                                  strokeWidth="10"
+                                  stroke={ringColor}
+                                  strokeWidth="12"
                                   strokeDasharray={circumference}
-                                  strokeDashoffset={offset}
+                                  strokeDashoffset={isExceeded ? 0 : offset}
                                   strokeLinecap="round"
                                 />
                               </>
@@ -700,16 +718,18 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                           })()}
                         </svg>
                         <div className="absolute flex flex-col items-center justify-center text-[#4A453E]">
-                          <span className="font-serif-brand text-4xl font-bold">
+                          <span className={`font-serif-brand text-5xl font-bold ${isExceeded ? 'text-red-500' : ''}`}>
                             {formatNumber(intake)}
                           </span>
-                          <span className="mt-1 text-xs font-semibold text-[#4A453E]/50">
+                          <span className="mt-1 text-sm font-semibold text-[#4A453E]/50">
                             / {targetCalories} kcal
                           </span>
                         </div>
                       </div>
-                      <p className="mt-4 text-xs font-semibold text-[#4A453E]/55">
-                        {formatNumber(remainingCalories)} kcal remaining
+                      <p className={`mt-6 text-sm font-semibold ${isExceeded ? 'text-red-500' : 'text-[#4A453E]/55'}`}>
+                        {isExceeded 
+                          ? `${formatNumber(exceededCalories)} kcal over limit` 
+                          : `${formatNumber(remainingCalories)} kcal remaining`}
                       </p>
                     </div>
                   </div>
@@ -725,16 +745,19 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                           label: 'Protein',
                           value: totalProtein,
                           icon: 'protein',
+                          color: '#1D4ED8',
                         },
                         {
                           label: 'Carbs',
                           value: totalCarbs,
                           icon: 'carbs',
+                          color: '#F59E0B',
                         },
                         {
                           label: 'Fat',
                           value: totalFat,
                           icon: 'fat',
+                          color: '#DB2777',
                         },
                       ].map((macro) => {
                         const macroTotal = totalProtein + totalCarbs + totalFat;
@@ -804,7 +827,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                                     className="h-full rounded-full transition-all"
                                     style={{
                                       width: `${percent}%`,
-                                      backgroundColor: '#FF8A65',
+                                      backgroundColor: macro.color,
                                     }}
                                   />
                                 </div>
@@ -1023,6 +1046,27 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
 
       <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-5 md:px-6 md:py-6">
         <div className="space-y-5 md:space-y-6">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[24px] border border-[#4A453E]/05 shadow-sm md:aspect-video md:rounded-[28px]">
+            <FoodLogImage
+              src={entry.image}
+              alt={entry.name}
+              className="h-full w-full object-cover"
+            />
+          </div>
+
+          <div className="rounded-[24px] border border-[#4A453E]/8 bg-white p-5 shadow-sm md:rounded-[28px] md:p-6">
+            <h5 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/40">
+              <span className="material-symbols-outlined text-lg text-[#FF8A65]">
+                notes
+              </span>
+              Description
+            </h5>
+
+            <p className="text-sm leading-7 text-[#4A453E]/60">
+              {entry.description}
+            </p>
+          </div>
+
           <div className="rounded-[24px] border border-[#4A453E]/8 bg-[#FFFDF5] p-5 shadow-sm md:rounded-[28px] md:p-6">
             <div className="mb-5 flex flex-col gap-2 md:mb-6 md:flex-row md:items-center md:justify-between">
               <h5 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/40">
@@ -1047,6 +1091,8 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                 <div className="space-y-2.5">
                   {editDraft.ingredients.map((item, index) => {
                     const currentGrams = extractGramsFromPortion(item.portion);
+                    const originalItem = editDraft.originalIngredients[index];
+                    const unit = originalItem ? getPortionUnit(originalItem.portion) : 'g';
                     return (
                       <div
                         key={`edit-ingredient-${index}`}
@@ -1057,7 +1103,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                           <span className="shrink-0 text-[11px] font-bold text-[#FF8A65]">{item.energy}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-[#4A453E]/35">克重</span>
+                          <span className="text-[10px] font-bold text-[#4A453E]/35">份量</span>
                           <input
                             type="number"
                             min="0"
@@ -1067,7 +1113,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                             onChange={(event) => onIngredientGramsChange(index, event.target.value)}
                             className="w-20 rounded-[10px] border border-[#FF8A65]/20 bg-white px-3 py-1.5 text-center text-[13px] font-bold text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/10"
                           />
-                          <span className="text-[10px] font-bold text-[#4A453E]/35">g</span>
+                          <span className="text-[10px] font-bold text-[#4A453E]/35">{unit}</span>
                           {hasAnyIngredientMacro(editDraft.originalIngredients) && (
                             <div className="ml-auto flex items-center gap-2 text-[10px] text-[#4A453E]/45">
                               {item.protein && <span>蛋白 {item.protein}</span>}
@@ -1140,27 +1186,6 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
               />
             );
           })()}
-
-          <div className="rounded-[24px] border border-[#4A453E]/8 bg-white p-5 shadow-sm md:rounded-[28px] md:p-6">
-            <h5 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/40">
-              <span className="material-symbols-outlined text-lg text-[#FF8A65]">
-                notes
-              </span>
-              Description
-            </h5>
-
-            <p className="text-sm leading-7 text-[#4A453E]/60">
-              {entry.description}
-            </p>
-          </div>
-
-          <div className="relative aspect-[4/3] overflow-hidden rounded-[24px] border border-[#4A453E]/05 shadow-sm md:aspect-video md:rounded-[28px]">
-            <FoodLogImage
-              src={entry.image}
-              alt={entry.name}
-              className="h-full w-full object-cover"
-            />
-          </div>
         </div>
       </div>
 
@@ -1280,9 +1305,9 @@ const NutritionFactsLabel: React.FC<NutritionFactsLabelProps> = ({
   const fatPct = macroKcalTotal > 0 ? Math.round((fatKcal / macroKcalTotal) * 100) : 0;
 
   const macros = [
-    { label: '蛋白质', sub: 'Protein', value: proteinNum, pct: proteinPct, color: '#FF8A65' },
-    { label: '碳水化合物', sub: 'Carbs', value: carbsNum, pct: carbsPct, color: '#FFB74D' },
-    { label: '脂肪', sub: 'Fat', value: fatNum, pct: fatPct, color: '#4A453E' },
+    { label: '蛋白质', sub: 'Protein', value: proteinNum, pct: proteinPct, color: '#1D4ED8' },
+    { label: '碳水化合物', sub: 'Carbs', value: carbsNum, pct: carbsPct, color: '#F59E0B' },
+    { label: '脂肪', sub: 'Fat', value: fatNum, pct: fatPct, color: '#DB2777' },
   ];
 
   return (
@@ -1297,7 +1322,7 @@ const NutritionFactsLabel: React.FC<NutritionFactsLabelProps> = ({
           <div
             key={m.label}
             className="h-full transition-all"
-            style={{ width: `${m.pct}%`, backgroundColor: m.color, opacity: m.color === '#4A453E' ? 0.3 : 1 }}
+            style={{ width: `${m.pct}%`, backgroundColor: m.color }}
           />
         ))}
       </div>
@@ -1313,7 +1338,7 @@ const NutritionFactsLabel: React.FC<NutritionFactsLabelProps> = ({
             <div className="flex items-center gap-2.5">
               <span
                 className="inline-block size-2 rounded-full"
-                style={{ backgroundColor: m.color, opacity: m.color === '#4A453E' ? 0.3 : 1 }}
+                style={{ backgroundColor: m.color }}
               />
               <span className="text-[13px] font-bold text-[#4A453E]">{m.label}</span>
             </div>
@@ -1406,10 +1431,15 @@ function hasAnyIngredientMacro(breakdown: IngredientResult[]): boolean {
 }
 
 function extractGramsFromPortion(portion: string): number {
-  const match = String(portion).match(/(\d+(?:\.\d+)?)/);
+  const match = String(portion).match(/(\d+(?:\.\d+)?)\s*(?:g|克|毫升|ml)?/i);
   if (!match) return 0;
   const parsed = Number.parseFloat(match[1]);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getPortionUnit(portion: string): string {
+  const unitMatch = String(portion).match(/\d+(?:\.\d+)?\s*(毫升|ml|克|g)/i);
+  return unitMatch ? unitMatch[1] : 'g';
 }
 
 function getDraftTotalCalories(draft: FoodLogEditDraft): string {
@@ -1419,7 +1449,7 @@ function getDraftTotalCalories(draft: FoodLogEditDraft): string {
   );
 
   if (total > 0 || draft.ingredients.length > 0) {
-    return Number.isInteger(total) ? String(total) : total.toFixed(1);
+    return String(Math.ceil(total));
   }
 
   return draft.calories;
@@ -1432,7 +1462,7 @@ function extractCaloriesValue(value: string | number): number {
   }
 
   const parsed = Number.parseFloat(match[1]);
-  return Number.isFinite(parsed) ? parsed : 0;
+  return Number.isFinite(parsed) ? Math.ceil(parsed) : 0;
 }
 
 function extractNutritionValue(value?: string | null): number {
