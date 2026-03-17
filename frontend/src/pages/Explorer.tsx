@@ -720,7 +720,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                                     cy="70"
                                     r={radius}
                                     fill="none"
-                                    stroke="#EF4444"
+                                    stroke="#C25235"
                                     strokeWidth="10"
                                     strokeDasharray={circumference}
                                     strokeDashoffset={overOffset}
@@ -732,7 +732,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                           })()}
                         </svg>
                         <div className="absolute flex flex-col items-center justify-center text-[#4A453E]">
-                          <span className={`font-serif-brand text-4xl font-bold ${isExceeded ? 'text-red-500' : ''}`}>
+                          <span className={`font-serif-brand text-4xl font-bold ${isExceeded ? 'text-[#C25235]' : ''}`}>
                             {formatNumber(intake)}
                           </span>
                           <span className="mt-1 text-xs font-semibold text-[#4A453E]/50">
@@ -740,7 +740,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                           </span>
                         </div>
                       </div>
-                      <p className={`mt-5 text-sm font-semibold ${isExceeded ? 'text-red-500' : 'text-[#4A453E]/55'}`}>
+                      <p className={`mt-5 text-sm font-semibold ${isExceeded ? 'text-[#C25235]' : 'text-[#4A453E]/55'}`}>
                         {isExceeded 
                           ? `${formatNumber(exceededCalories)} kcal over limit` 
                           : `${formatNumber(remainingCalories)} kcal remaining`}
