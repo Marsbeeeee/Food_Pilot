@@ -338,7 +338,6 @@ const App: React.FC = () => {
             onRestoreFoodLog={handleRestoreFoodLog}
             onUpdateFoodLog={handleUpdateFoodLog}
             defaultToAnalysisView
-            initialAnalysisEntries={foodLog}
             analysisDate={currentAnalysisDate}
             onAnalysisDateChange={setCurrentAnalysisDate}
             currentUserId={String(session.user.id)}

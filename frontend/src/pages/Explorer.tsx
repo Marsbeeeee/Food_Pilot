@@ -17,7 +17,6 @@ interface ExplorerProps {
   onUpdateFoodLog: (entryId: string, payload: FoodLogPatchInput) => Promise<void>;
   onAnalyzeSelection?: (entries: FoodLogEntry[], date: string) => Promise<string>;
   defaultToAnalysisView?: boolean;
-  initialAnalysisEntries?: FoodLogEntry[];
   analysisDate: string;
   onAnalysisDateChange?: (date: string) => void;
   onNavigateToInsights?: () => void;
@@ -45,7 +44,6 @@ export const Explorer: React.FC<ExplorerProps> = ({
   onUpdateFoodLog,
   onAnalyzeSelection,
   defaultToAnalysisView = false,
-  initialAnalysisEntries,
   analysisDate,
   onAnalysisDateChange,
   onNavigateToInsights,
@@ -70,92 +68,6 @@ export const Explorer: React.FC<ExplorerProps> = ({
   useEffect(() => {
     setShowAnalysisView(Boolean(defaultToAnalysisView));
   }, [defaultToAnalysisView]);
-
-  // 当从 Insights 入口进入时，如果希望直接看到每日分析，
-  // 且当前还没有任何选中项，则用传入的 initialAnalysisEntries 预填充今日分析集合。
-  /**
-   * Restore previously saved daily analysis selection from localStorage
-   * for the current user and analysis date, if available.
-   *
-   * 行为类似 Profile：
-   * - 切换到某一天（例如 3.16）时，如果本地有保存的这一天的选择，
-   *   就用保存的数据覆盖当前这一天在 analysisBasket 里的内容；
-   * - 其他日期的数据不会被清空（只覆盖当前 analysisDate 对应的部分）。
-   */
-  useEffect(() => {
-    const userKey = currentUserId != null ? String(currentUserId).trim() : '';
-    if (!userKey || typeof window === 'undefined') {
-      return;
-    }
-
-    const saved = loadSavedAnalysisSelections(userKey);
-    const savedIdsForDate = saved[analysisDate];
-    if (!savedIdsForDate || savedIdsForDate.length === 0) {
-      return;
-    }
-
-    const entriesById = new Map(orderedEntries.map((entry) => [entry.id, entry]));
-    const restoredItems: AnalysisSelectionItem[] = savedIdsForDate
-      .map((id) => entriesById.get(id))
-      .filter((entry): entry is FoodLogEntry => Boolean(entry))
-      .map((entry) => ({
-        ...entry,
-        basketId: createLocalId(),
-        analysisDate,
-      }));
-
-    if (restoredItems.length === 0) {
-      return;
-    }
-
-    setAnalysisBasket((current) => {
-      const others = current.filter((item) => item.analysisDate !== analysisDate);
-      return [...others, ...restoredItems];
-    });
-  }, [analysisDate, orderedEntries, currentUserId]);
-
-  /**
-   * When entering via Insights with defaultToAnalysisView, if there is no
-   * saved selection for this date, fall back to using the provided
-   * initialAnalysisEntries (all Food Log entries).
-   */
-  useEffect(() => {
-    if (!defaultToAnalysisView) {
-      return;
-    }
-    if (analysisBasket.length > 0) {
-      return;
-    }
-    if (!initialAnalysisEntries || initialAnalysisEntries.length === 0) {
-      return;
-    }
-
-    const userKey = currentUserId != null ? String(currentUserId).trim() : '';
-    const hasSavedForDate = Boolean(
-      userKey
-      && typeof window !== 'undefined'
-      && loadSavedAnalysisSelections(userKey)[analysisDate]
-      && loadSavedAnalysisSelections(userKey)[analysisDate]!.length > 0,
-    );
-    if (hasSavedForDate) {
-      return;
-    }
-
-    const today = analysisDate || getLocalDateKey();
-    setAnalysisBasket(
-      initialAnalysisEntries.map((entry) => ({
-        ...entry,
-        basketId: createLocalId(),
-        analysisDate: today,
-      })),
-    );
-  }, [
-    defaultToAnalysisView,
-    initialAnalysisEntries,
-    analysisBasket.length,
-    analysisDate,
-    currentUserId,
-  ]);
 
   const collectionStats = buildFoodLogCollectionStats(orderedEntries);
 
@@ -1199,14 +1111,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                     <tr className="border-b border-[#4A453E]/08 text-[9px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/35">
                       <th className="pb-2.5 pr-2">食材</th>
                       <th className="pb-2.5 px-2">份量</th>
-                      <th className="pb-2.5 px-2 text-right">热量</th>
-                      {hasAnyIngredientMacro(entry.breakdown) && (
-                        <>
-                          <th className="pb-2.5 px-2 text-right">蛋白质</th>
-                          <th className="pb-2.5 px-2 text-right">碳水</th>
-                          <th className="pb-2.5 pl-2 text-right">脂肪</th>
-                        </>
-                      )}
+                      <th className="pb-2.5 pl-2 text-right">热量</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#4A453E]/05">
@@ -1218,22 +1123,9 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                         <td className="py-2.5 px-2 text-[10px] font-bold uppercase tracking-wider text-[#4A453E]/40">
                           {item.portion}
                         </td>
-                        <td className="py-2.5 px-2 text-right text-[11px] font-bold text-[#4A453E]/80">
+                        <td className="py-2.5 pl-2 text-right text-[11px] font-bold text-[#4A453E]/80">
                           {item.energy}
                         </td>
-                        {hasAnyIngredientMacro(entry.breakdown) && (
-                          <>
-                            <td className="py-2.5 px-2 text-right text-[11px] text-[#4A453E]/60">
-                              {item.protein || '—'}
-                            </td>
-                            <td className="py-2.5 px-2 text-right text-[11px] text-[#4A453E]/60">
-                              {item.carbs || '—'}
-                            </td>
-                            <td className="py-2.5 pl-2 text-right text-[11px] text-[#4A453E]/60">
-                              {item.fat || '—'}
-                            </td>
-                          </>
-                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -1265,7 +1157,6 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
             ) ?? 0;
             return (
               <NutritionFactsLabel
-                calories={totalCalories}
                 protein={isEditing && editDraft ? `${formatNumber(draftProtein)} g` : entry.protein}
                 carbs={isEditing && editDraft ? `${formatNumber(draftCarbs)} g` : entry.carbs}
                 fat={isEditing && editDraft ? `${formatNumber(draftFat)} g` : entry.fat}
@@ -1389,19 +1280,16 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, unit, accent = 
 );
 
 interface NutritionFactsLabelProps {
-  calories: string | number;
   protein?: string | null;
   carbs?: string | null;
   fat?: string | null;
 }
 
 const NutritionFactsLabel: React.FC<NutritionFactsLabelProps> = ({
-  calories,
   protein,
   carbs,
   fat,
 }) => {
-  const calNum = extractCaloriesValue(String(calories));
   const proteinNum = extractNutritionValue(protein);
   const carbsNum = extractNutritionValue(carbs);
   const fatNum = extractNutritionValue(fat);
@@ -1430,16 +1318,6 @@ const NutritionFactsLabel: React.FC<NutritionFactsLabelProps> = ({
       </div>
 
       <div className="px-5 py-4">
-        <div className="mb-4 flex items-baseline justify-between">
-          <span className="text-xs font-bold text-[#4A453E]/50">热量</span>
-          <div className="flex items-baseline gap-1">
-            <span className="font-serif-brand text-[26px] font-bold italic leading-none text-[#4A453E]">
-              {formatNumber(calNum)}
-            </span>
-            <span className="text-[10px] font-bold uppercase text-[#4A453E]/25">kcal</span>
-          </div>
-        </div>
-
         <div className="mb-4 flex h-2.5 w-full overflow-hidden rounded-full bg-[#F5F2ED]">
           {macros.map((m) => m.pct > 0 && (
             <div
