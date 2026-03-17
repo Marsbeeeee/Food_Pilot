@@ -675,58 +675,72 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
-                    <div className="mb-4 flex items-center justify-between gap-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
                       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
                         Total Energy
                       </p>
                     </div>
                     <div className="flex flex-col items-center justify-center pt-2">
-                      <div className="relative flex h-56 w-56 items-center justify-center rounded-full bg-[#FFF7F2]">
+                      <div className="relative flex h-48 w-48 items-center justify-center rounded-full bg-[#FFF7F2]">
                         <svg
-                          className="h-48 w-48 -rotate-90"
-                          viewBox="0 0 160 160"
+                          className="h-40 w-40 -rotate-90"
+                          viewBox="0 0 140 140"
                         >
                           {(() => {
-                            const radius = 72;
+                            const radius = 60;
                             const circumference = 2 * Math.PI * radius;
-                            const offset = circumference * (1 - progressRatio);
-                            const ringColor = isExceeded ? '#EF4444' : '#FF8A65';
-                            const bgColor = isExceeded ? '#FEE2E2' : '#F5E7DD';
+                            const baseOffset = isExceeded ? 0 : circumference * (1 - progressRatio);
+                            const overRatio = isExceeded ? Math.min((intake - targetCalories) / targetCalories, 1) : 0;
+                            const overOffset = circumference * (1 - overRatio);
+                            
                             return (
                               <>
                                 <circle
-                                  cx="80"
-                                  cy="80"
+                                  cx="70"
+                                  cy="70"
                                   r={radius}
                                   fill="none"
-                                  stroke={bgColor}
-                                  strokeWidth="12"
+                                  stroke="#F5E7DD"
+                                  strokeWidth="10"
                                 />
                                 <circle
-                                  cx="80"
-                                  cy="80"
+                                  cx="70"
+                                  cy="70"
                                   r={radius}
                                   fill="none"
-                                  stroke={ringColor}
-                                  strokeWidth="12"
+                                  stroke="#FF8A65"
+                                  strokeWidth="10"
                                   strokeDasharray={circumference}
-                                  strokeDashoffset={isExceeded ? 0 : offset}
+                                  strokeDashoffset={baseOffset}
                                   strokeLinecap="round"
                                 />
+                                {isExceeded && (
+                                  <circle
+                                    cx="70"
+                                    cy="70"
+                                    r={radius}
+                                    fill="none"
+                                    stroke="#EF4444"
+                                    strokeWidth="10"
+                                    strokeDasharray={circumference}
+                                    strokeDashoffset={overOffset}
+                                    strokeLinecap="round"
+                                  />
+                                )}
                               </>
                             );
                           })()}
                         </svg>
                         <div className="absolute flex flex-col items-center justify-center text-[#4A453E]">
-                          <span className={`font-serif-brand text-5xl font-bold ${isExceeded ? 'text-red-500' : ''}`}>
+                          <span className={`font-serif-brand text-4xl font-bold ${isExceeded ? 'text-red-500' : ''}`}>
                             {formatNumber(intake)}
                           </span>
-                          <span className="mt-1 text-sm font-semibold text-[#4A453E]/50">
+                          <span className="mt-1 text-xs font-semibold text-[#4A453E]/50">
                             / {targetCalories} kcal
                           </span>
                         </div>
                       </div>
-                      <p className={`mt-6 text-sm font-semibold ${isExceeded ? 'text-red-500' : 'text-[#4A453E]/55'}`}>
+                      <p className={`mt-5 text-sm font-semibold ${isExceeded ? 'text-red-500' : 'text-[#4A453E]/55'}`}>
                         {isExceeded 
                           ? `${formatNumber(exceededCalories)} kcal over limit` 
                           : `${formatNumber(remainingCalories)} kcal remaining`}
@@ -734,30 +748,30 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
-                    <p className="mb-5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
+                  <div className="flex flex-col rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
                       Macro Distribution
                     </p>
 
-                    <div className="space-y-8 pt-4">
+                    <div className="flex flex-1 flex-col justify-evenly pt-2">
                       {[
                         {
                           label: 'Protein',
                           value: totalProtein,
                           icon: 'protein',
-                          color: '#1D4ED8',
+                          color: '#FF9A76',
                         },
                         {
                           label: 'Carbs',
                           value: totalCarbs,
                           icon: 'carbs',
-                          color: '#F59E0B',
+                          color: '#FFD166',
                         },
                         {
                           label: 'Fat',
                           value: totalFat,
                           icon: 'fat',
-                          color: '#DB2777',
+                          color: '#A1887F',
                         },
                       ].map((macro) => {
                         const macroTotal = totalProtein + totalCarbs + totalFat;
@@ -1305,9 +1319,9 @@ const NutritionFactsLabel: React.FC<NutritionFactsLabelProps> = ({
   const fatPct = macroKcalTotal > 0 ? Math.round((fatKcal / macroKcalTotal) * 100) : 0;
 
   const macros = [
-    { label: '蛋白质', sub: 'Protein', value: proteinNum, pct: proteinPct, color: '#1D4ED8' },
-    { label: '碳水化合物', sub: 'Carbs', value: carbsNum, pct: carbsPct, color: '#F59E0B' },
-    { label: '脂肪', sub: 'Fat', value: fatNum, pct: fatPct, color: '#DB2777' },
+    { label: '蛋白质', sub: 'Protein', value: proteinNum, pct: proteinPct, color: '#FF9A76' },
+    { label: '碳水化合物', sub: 'Carbs', value: carbsNum, pct: carbsPct, color: '#FFD166' },
+    { label: '脂肪', sub: 'Fat', value: fatNum, pct: fatPct, color: '#A1887F' },
   ];
 
   return (
