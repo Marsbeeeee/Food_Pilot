@@ -573,6 +573,8 @@ interface AnalysisViewProps {
   onAnalysisDateChange?: (date: string) => void;
 }
 
+type AnalysisMode = 'day' | 'week';
+
 const AnalysisView: React.FC<AnalysisViewProps> = ({
   items,
   onBack,
@@ -581,13 +583,27 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   onAnalysisDateChange,
 }) => {
   const [currentDate, setCurrentDate] = useState(analysisDate);
+  const [mode, setMode] = useState<AnalysisMode>('day');
   const [analysisState, setAnalysisState] = useState<AnalysisState>({ status: 'idle' });
+  const [cache, setCache] = useState<Record<string, AnalysisState>>({});
+  const abortControllerRef = React.useRef<AbortController | null>(null);
 
   useEffect(() => {
     setCurrentDate(analysisDate);
   }, [analysisDate]);
 
-  const filteredItems = items.filter((item) => item.analysisDate === currentDate);
+  const { start: weekStart, end: weekEnd } = getWeekRange(currentDate);
+  const dateRange = mode === 'day' 
+    ? { start: currentDate, end: currentDate }
+    : { start: weekStart, end: weekEnd };
+
+  const filteredItems = items.filter((item) => {
+    if (mode === 'day') {
+      return item.analysisDate === currentDate;
+    } else {
+      return item.analysisDate >= weekStart && item.analysisDate <= weekEnd;
+    }
+  });
 
   const clientTotalCalories = filteredItems.reduce(
     (sum, item) => sum + extractCaloriesValue(item.calories),
@@ -619,25 +635,57 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const exceededCalories = Math.max(intake - targetCalories, 0);
   const isExceeded = intake > targetCalories;
 
-  const handleAnalyze = async () => {
-    if (filteredItems.length === 0 || analysisState.status === 'loading') {
+  const handleAnalyze = async (
+    analyzeMode = mode,
+    analyzeStart = dateRange.start,
+    analyzeEnd = dateRange.end,
+    analyzeItems = filteredItems
+  ) => {
+    if (analyzeItems.length === 0) {
+      setAnalysisState({ status: 'idle' });
       return;
     }
 
-    setAnalysisState({ status: 'loading' });
+    const cacheKey = getCacheKey(analyzeMode, analyzeStart, analyzeEnd, analyzeItems);
+    if (cache[cacheKey]) {
+      setAnalysisState(cache[cacheKey]);
+      return;
+    }
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    const loadingTimeout = setTimeout(() => {
+      if (!abortController.signal.aborted) {
+        setAnalysisState((prev) => ({
+          ...prev,
+          status: 'loading'
+        }));
+      }
+    }, 300);
+
     try {
-      const selectedLogIds = filteredItems
+      const selectedLogIds = analyzeItems
         .map((item) => Number(item.id))
         .filter((id) => Number.isFinite(id) && id > 0);
 
       const response = await analyzeInsights({
-        mode: 'day',
+        mode: analyzeMode,
         selectedLogIds: selectedLogIds.length > 0 ? selectedLogIds : undefined,
-        dateRange: { start: currentDate, end: currentDate },
-      });
+        dateRange: { start: analyzeStart, end: analyzeEnd },
+      }, abortController.signal);
+
+      clearTimeout(loadingTimeout);
+
+      if (abortController.signal.aborted) return;
 
       if (response.data) {
-        setAnalysisState({ status: 'success', data: response.data });
+        const newState: AnalysisState = { status: 'success', data: response.data };
+        setCache((prev) => ({ ...prev, [cacheKey]: newState }));
+        setAnalysisState(newState);
       } else {
         setAnalysisState({
           status: 'error',
@@ -646,6 +694,10 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
         });
       }
     } catch (error) {
+      clearTimeout(loadingTimeout);
+
+      if (abortController.signal.aborted) return;
+
       if (error instanceof InsightsApiError) {
         setAnalysisState({
           status: 'error',
@@ -663,39 +715,107 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   };
 
   useEffect(() => {
-    setAnalysisState({ status: 'idle' });
-  }, [currentDate]);
+    if (filteredItems.length === 0) {
+      setAnalysisState({ status: 'idle' });
+      return;
+    }
+    
+    // Auto-analyze when mode or date changes
+    void handleAnalyze(mode, dateRange.start, dateRange.end, filteredItems);
+  }, [mode, dateRange.start, dateRange.end, filteredItems.length]); // Use filteredItems.length to avoid deep equality issues, or just rely on items changes
+
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   return (
     <div className="flex h-full min-h-0 flex-1 overflow-hidden bg-[#FFFDF5]">
       <main className="flex min-h-0 flex-1 overflow-hidden">
         <section className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-6 md:px-8 md:py-8">
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-            {/* 标题行：Nutrition Analysis + 副标题文案 + 日期选择器 */}
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="flex-1">
-                <h1 className="font-serif-brand text-3xl font-bold text-[#4A453E] md:text-4xl">
-                  每日营养分析
-                </h1>
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-[#4A453E]/60 md:text-base">
-                  从 Food Log 中选择已保存的菜品，汇总为当日摄入概览，并可生成 AI 饮食建议。
-                </p>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div className="flex-1">
+                  <h1 className="font-serif-brand text-3xl font-bold text-[#4A453E] md:text-4xl">
+                    Insights
+                  </h1>
+                  <p className="mt-3 max-w-2xl text-sm leading-7 text-[#4A453E]/60 md:text-base">
+                    基于所选 Food Log 条目，生成营养摄入分析与改善建议。
+                  </p>
+                </div>
               </div>
-              <div className="mt-1 flex items-center gap-3 md:mt-12">
-                <input
-                  type="date"
-                  value={currentDate}
-                  onChange={(event) => {
-                    const nextDate = event.target.value;
-                    setCurrentDate(nextDate);
-                    onAnalysisDateChange?.(nextDate);
-                  }}
-                  className="rounded-full border border-[#FF8A65]/25 bg-[#FFF7F2] px-3 py-2 text-[11px] font-bold text-[#FF8A65] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
-                />
+
+              <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                <div className="inline-flex items-center gap-1 rounded-full border border-[#4A453E]/10 bg-[#FFFDF9] p-1 shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setMode('day')}
+                    className={`rounded-full px-4 py-1.5 text-sm font-bold transition-all ${
+                      mode === 'day' ? 'bg-[#4A453E] text-white shadow-md' : 'text-[#4A453E]/60 hover:bg-[#4A453E]/5'
+                    }`}
+                  >
+                    日分析
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode('week')}
+                    className={`rounded-full px-4 py-1.5 text-sm font-bold transition-all ${
+                      mode === 'week' ? 'bg-[#4A453E] text-white shadow-md' : 'text-[#4A453E]/60 hover:bg-[#4A453E]/5'
+                    }`}
+                  >
+                    周分析
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="date"
+                    value={currentDate}
+                    onChange={(event) => {
+                      const nextDate = event.target.value;
+                      if (nextDate) {
+                        setCurrentDate(nextDate);
+                        onAnalysisDateChange?.(nextDate);
+                      }
+                    }}
+                    className="rounded-full border border-[#FF8A65]/25 bg-[#FFF7F2] px-3 py-2 text-[11px] font-bold text-[#FF8A65] outline-none transition-all focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15"
+                  />
+                  {mode === 'week' && (
+                    <span className="text-xs font-bold text-[#4A453E]/60">
+                      {weekStart} 至 {weekEnd}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {filteredItems.length === 0 ? (
+              <div className="mt-8 flex flex-col items-center justify-center rounded-[32px] border border-dashed border-[#4A453E]/10 bg-white/40 py-20 text-center">
+                <div className="mb-4 inline-flex size-16 items-center justify-center rounded-full bg-white">
+                  <span className="material-symbols-outlined text-4xl text-[#4A453E]/20">
+                    restaurant_menu
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-[#4A453E]">暂无可分析的饮食记录</h3>
+                <p className="mt-2 max-w-sm text-sm text-[#4A453E]/50">
+                  在当前时间段内没有找到饮食记录，先去 Assistant 记录你的第一餐吧！
+                </p>
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="mt-6 rounded-full bg-[#FF8A65] px-6 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:bg-[#FF8A65]/90"
+                >
+                  返回 Food Log
+                </button>
+              </div>
+            ) : (
+              <div className={`transition-opacity duration-300 ${analysisState.status === 'loading' ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
@@ -891,7 +1011,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   </div>
             </div>
 
-            <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
+            <div className="mt-4 rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
               <div className="mb-5 flex items-center justify-between">
                 <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
                   已选菜品
@@ -948,6 +1068,8 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                 </div>
               )}
             </div>
+            </div>
+            )}
           </div>
         </section>
 
@@ -970,7 +1092,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   </span>
                 </div>
                 <p className="text-sm leading-7 text-[#4A453E]/50">
-                  点击下方按钮，分析当日已选菜品的营养摄入情况。
+                  {filteredItems.length === 0 ? '添加饮食记录后，即可生成 AI 营养摄入分析。' : '正在准备生成 AI 分析...'}
                 </p>
               </div>
             )}
@@ -1635,6 +1757,38 @@ function formatCalories(value: string | number): string {
 function formatEnergyString(energy: string): string {
   const num = extractCaloriesValue(energy);
   return `${Math.round(num)} kcal`;
+}
+
+function getWeekRange(dateString: string): { start: string; end: string } {
+  const [y, m, d] = dateString.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const day = date.getDay();
+  const diffToMonday = date.getDate() - day + (day === 0 ? -6 : 1);
+  
+  const monday = new Date(y, m - 1, diffToMonday);
+  const sunday = new Date(y, m - 1, diffToMonday + 6);
+
+  const format = (dt: Date) => {
+    const yy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getDate()).padStart(2, '0');
+    return `${yy}-${mm}-${dd}`;
+  };
+
+  return { start: format(monday), end: format(sunday) };
+}
+
+function getCacheKey(
+  mode: string,
+  start: string,
+  end: string,
+  items: AnalysisSelectionItem[]
+) {
+  const itemsHash = items
+    .map((i) => `${i.id}-${i.savedAt}`)
+    .sort()
+    .join(',');
+  return `${mode}_${start}_${end}_${itemsHash}`;
 }
 
 type SavedAnalysisSelections = Record<string, string[]>;

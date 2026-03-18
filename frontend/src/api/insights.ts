@@ -17,6 +17,7 @@ export class InsightsApiError extends Error {
 
 export async function analyzeInsights(
   payload: InsightsAnalyzeRequest,
+  signal?: AbortSignal,
 ): Promise<InsightsAnalyzeResponse> {
   const token = getStoredToken();
   if (!token) {
@@ -32,8 +33,12 @@ export async function analyzeInsights(
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
+      signal,
     });
-  } catch {
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw err;
+    }
     throw new InsightsApiError(
       '无法连接到分析服务，请检查网络后重试。',
       0,
