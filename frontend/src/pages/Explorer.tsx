@@ -56,9 +56,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
   profileKcalTarget,
 }) => {
   const orderedEntries = sortFoodLogEntries(logEntries);
-  const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(
-    orderedEntries[0] ?? null,
-  );
+  const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(null);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
@@ -111,10 +109,10 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
     setSelectedEntry((current) => {
       if (!current) {
-        return orderedEntries[0];
+        return null;
       }
 
-      return orderedEntries.find((entry) => entry.id === current.id) ?? orderedEntries[0];
+      return orderedEntries.find((entry) => entry.id === current.id) ?? null;
     });
   }, [logEntries]);
 
