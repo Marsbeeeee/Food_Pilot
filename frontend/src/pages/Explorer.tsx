@@ -281,6 +281,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
         onRemove={handleRemoveFromAnalysis}
         analysisDate={analysisDate}
         onAnalysisDateChange={onAnalysisDateChange}
+        currentUserId={currentUserId}
       />
     );
   }
@@ -571,6 +572,7 @@ interface AnalysisViewProps {
   onRemove: (basketId: string) => void;
   analysisDate: string;
   onAnalysisDateChange?: (date: string) => void;
+  currentUserId?: string | number;
 }
 
 type AnalysisMode = 'day' | 'week';
@@ -581,12 +583,14 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   onRemove,
   analysisDate,
   onAnalysisDateChange,
+  currentUserId,
 }) => {
   const [currentDate, setCurrentDate] = useState(analysisDate);
   const [mode, setMode] = useState<AnalysisMode>('day');
   const [analysisState, setAnalysisState] = useState<AnalysisState>({ status: 'idle' });
   const [cache, setCache] = useState<Record<string, AnalysisState>>({});
   const abortControllerRef = React.useRef<AbortController | null>(null);
+  const userKey = currentUserId != null ? String(currentUserId).trim() : '';
 
   useEffect(() => {
     setCurrentDate(analysisDate);
@@ -621,6 +625,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     (sum, item) => sum + extractNutritionValue(item.fat),
     0,
   );
+  const currentCacheKey = getCacheKey(mode, dateRange.start, dateRange.end, filteredItems);
 
   const agg = analysisState.status === 'success' ? analysisState.data.aggregation : null;
   const totalCalories = agg ? agg.totalCalories : clientTotalCalories;
@@ -636,10 +641,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const isExceeded = intake > targetCalories;
 
   const handleAnalyze = async (
+    force = false,
     analyzeMode = mode,
     analyzeStart = dateRange.start,
     analyzeEnd = dateRange.end,
-    analyzeItems = filteredItems
+    analyzeItems = filteredItems,
   ) => {
     if (analyzeItems.length === 0) {
       setAnalysisState({ status: 'idle' });
@@ -647,7 +653,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     }
 
     const cacheKey = getCacheKey(analyzeMode, analyzeStart, analyzeEnd, analyzeItems);
-    if (cache[cacheKey]) {
+    if (!force && cache[cacheKey]) {
       setAnalysisState(cache[cacheKey]);
       return;
     }
@@ -715,14 +721,32 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   };
 
   useEffect(() => {
+    if (!userKey) {
+      setCache({});
+      return;
+    }
+    setCache(loadSavedAnalysisReports(userKey));
+  }, [userKey]);
+
+  useEffect(() => {
+    if (!userKey) {
+      return;
+    }
+    persistSavedAnalysisReports(userKey, cache);
+  }, [userKey, cache]);
+
+  useEffect(() => {
     if (filteredItems.length === 0) {
       setAnalysisState({ status: 'idle' });
       return;
     }
-    
-    // Auto-analyze when mode or date changes
-    void handleAnalyze(mode, dateRange.start, dateRange.end, filteredItems);
-  }, [mode, dateRange.start, dateRange.end, filteredItems.length]); // Use filteredItems.length to avoid deep equality issues, or just rely on items changes
+    const cached = cache[currentCacheKey];
+    if (cached) {
+      setAnalysisState(cached);
+      return;
+    }
+    setAnalysisState({ status: 'idle' });
+  }, [filteredItems.length, currentCacheKey, cache]);
 
   // Cleanup abort controller on unmount
   useEffect(() => {
@@ -1092,7 +1116,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   </span>
                 </div>
                 <p className="text-sm leading-7 text-[#4A453E]/50">
-                  {filteredItems.length === 0 ? '添加饮食记录后，即可生成 AI 营养摄入分析。' : '正在准备生成 AI 分析...'}
+                  {filteredItems.length === 0 ? '添加饮食记录后，即可生成 AI 营养摄入分析。' : '点击下方按钮开始生成 AI 分析。'}
                 </p>
               </div>
             )}
@@ -1124,7 +1148,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                 {analysisState.retryable && (
                   <button
                     type="button"
-                    onClick={() => void handleAnalyze()}
+                    onClick={() => void handleAnalyze(true)}
                     className="mt-5 flex items-center gap-2 rounded-full bg-[#FF8A65] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#FF8A65]/20 transition-all hover:bg-[#FF8A65]/90"
                   >
                     <span className="material-symbols-outlined text-[16px]">refresh</span>
@@ -1188,7 +1212,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
           <div className="border-t border-[#4A453E]/05 bg-[#FFFDF8] px-6 py-6">
             <button
               type="button"
-              onClick={() => void handleAnalyze()}
+              onClick={() => void handleAnalyze(analysisState.status === 'success')}
               disabled={analysisState.status === 'loading' || filteredItems.length === 0}
               className={`flex h-12 w-full items-center justify-center gap-2 rounded-full px-5 text-sm font-bold text-white shadow-lg transition-all ${
                 analysisState.status === 'loading' || filteredItems.length === 0
@@ -1792,11 +1816,17 @@ function getCacheKey(
 }
 
 type SavedAnalysisSelections = Record<string, string[]>;
+type SavedAnalysisReports = Record<string, InsightsAnalyzeData>;
 
 const DAILY_ANALYSIS_STORAGE_PREFIX = 'foodpilot:dailyAnalysis:';
+const ANALYSIS_REPORT_STORAGE_PREFIX = 'foodpilot:analysisReports:';
 
 function getDailyAnalysisStorageKey(userId: string): string {
   return `${DAILY_ANALYSIS_STORAGE_PREFIX}${userId}`;
+}
+
+function getAnalysisReportStorageKey(userId: string): string {
+  return `${ANALYSIS_REPORT_STORAGE_PREFIX}${userId}`;
 }
 
 function loadSavedAnalysisSelections(userId: string): SavedAnalysisSelections {
@@ -1868,4 +1898,50 @@ function restoreAllAnalysisItems(
   }
 
   return result;
+}
+
+function loadSavedAnalysisReports(userId: string): Record<string, AnalysisState> {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+  try {
+    const raw = window.localStorage.getItem(getAnalysisReportStorageKey(userId));
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') {
+      return {};
+    }
+    const reports = parsed as SavedAnalysisReports;
+    const cache: Record<string, AnalysisState> = {};
+    for (const [key, data] of Object.entries(reports)) {
+      if (data && typeof data === 'object') {
+        cache[key] = { status: 'success', data };
+      }
+    }
+    return cache;
+  } catch {
+    return {};
+  }
+}
+
+function persistSavedAnalysisReports(
+  userId: string,
+  cache: Record<string, AnalysisState>,
+): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    const reports: SavedAnalysisReports = {};
+    for (const [key, state] of Object.entries(cache)) {
+      if (state.status === 'success') {
+        reports[key] = state.data;
+      }
+    }
+    window.localStorage.setItem(getAnalysisReportStorageKey(userId), JSON.stringify(reports));
+  } catch {
+    // Ignore storage failures to keep UI responsive.
+  }
 }
