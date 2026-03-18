@@ -75,7 +75,6 @@ export const Explorer: React.FC<ExplorerProps> = ({
   }, [defaultToAnalysisView]);
 
   useEffect(() => {
-    if (logEntries.length === 0) return;
     if (basketHydratedRef.current) return;
     basketHydratedRef.current = true;
 
@@ -129,8 +128,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
       setIsMobileDetailOpen(false);
       setIsEditing(false);
       setEditDraft(null);
-
-      setAnalysisBasket((current) => current.filter((item) => item.id !== selectedEntry.id));
+      // Do NOT remove from analysis basket: items in food analysis persist even after unsave.
     } catch (error) {
       const message = error instanceof Error
         ? error.message
@@ -277,6 +275,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
     return (
       <AnalysisView
         items={analysisBasket}
+        logEntries={logEntries}
         onBack={() => setShowAnalysisView(false)}
         onRemove={handleRemoveFromAnalysis}
         analysisDate={analysisDate}
@@ -569,6 +568,7 @@ type AnalysisState =
 
 interface AnalysisViewProps {
   items: AnalysisSelectionItem[];
+  logEntries: FoodLogEntry[];
   onBack: () => void;
   onRemove: (basketId: string) => void;
   analysisDate: string;
@@ -581,6 +581,7 @@ type AnalysisMode = 'day' | 'week';
 
 const AnalysisView: React.FC<AnalysisViewProps> = ({
   items,
+  logEntries,
   onBack,
   onRemove,
   analysisDate,
@@ -588,6 +589,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   currentUserId,
   profileKcalTarget,
 }) => {
+  const logEntryIds = React.useMemo(() => new Set(logEntries.map((e) => e.id)), [logEntries]);
   const [currentDate, setCurrentDate] = useState(analysisDate);
   const [mode, setMode] = useState<AnalysisMode>('day');
   const [analysisState, setAnalysisState] = useState<AnalysisState>({ status: 'idle' });
@@ -612,6 +614,8 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     }
   });
 
+  const hasOrphanedItems = filteredItems.some((item) => !logEntryIds.has(item.id));
+
   const clientTotalCalories = filteredItems.reduce(
     (sum, item) => sum + extractCaloriesValue(item.calories),
     0,
@@ -631,10 +635,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const currentCacheKey = getCacheKey(mode, dateRange.start, dateRange.end, filteredItems);
 
   const agg = analysisState.status === 'success' ? analysisState.data.aggregation : null;
-  const totalCalories = agg ? agg.totalCalories : clientTotalCalories;
-  const totalProtein = agg ? agg.totalProtein : clientTotalProtein;
-  const totalCarbs = agg ? agg.totalCarbs : clientTotalCarbs;
-  const totalFat = agg ? agg.totalFat : clientTotalFat;
+  const useClientTotals = hasOrphanedItems || !agg;
+  const totalCalories = useClientTotals ? clientTotalCalories : agg!.totalCalories;
+  const totalProtein = useClientTotals ? clientTotalProtein : agg!.totalProtein;
+  const totalCarbs = useClientTotals ? clientTotalCarbs : agg!.totalCarbs;
+  const totalFat = useClientTotals ? clientTotalFat : agg!.totalFat;
 
   const dailyTargetCalories = Math.max(extractCaloriesValue(profileKcalTarget ?? 0), 0);
   const targetCalories = mode === 'week' ? dailyTargetCalories * 7 : dailyTargetCalories;
@@ -678,7 +683,9 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     }, 300);
 
     try {
+      const validIds = new Set(analyzeItems.filter((item) => logEntryIds.has(item.id)).map((item) => item.id));
       const selectedLogIds = analyzeItems
+        .filter((item) => validIds.has(item.id))
         .map((item) => Number(item.id))
         .filter((id) => Number.isFinite(id) && id > 0);
 
@@ -1829,7 +1836,8 @@ function getCacheKey(
   return `${mode}_${start}_${end}_${itemsHash}`;
 }
 
-type SavedAnalysisSelections = Record<string, string[]>;
+/** Format: date -> array of {id, snapshot}. Snapshot allows items to persist after unsave from Food Log. */
+type SavedAnalysisSelections = Record<string, Array<{ id: string; snapshot: FoodLogEntry }>>;
 
 const DAILY_ANALYSIS_STORAGE_PREFIX = 'foodpilot:dailyAnalysis:';
 
@@ -1850,7 +1858,28 @@ function loadSavedAnalysisSelections(userId: string): SavedAnalysisSelections {
     if (!parsed || typeof parsed !== 'object') {
       return {};
     }
-    return parsed as SavedAnalysisSelections;
+    const obj = parsed as Record<string, unknown>;
+    const result: SavedAnalysisSelections = {};
+    for (const [date, val] of Object.entries(obj)) {
+      if (Array.isArray(val)) {
+        const items: Array<{ id: string; snapshot: FoodLogEntry }> = [];
+        for (const it of val) {
+          if (it && typeof it === 'object' && 'id' in it && 'snapshot' in it) {
+            const snap = (it as { snapshot: unknown }).snapshot;
+            if (snap && typeof snap === 'object') {
+              items.push({
+                id: String((it as { id: unknown }).id),
+                snapshot: snap as FoodLogEntry,
+              });
+            }
+          } else if (typeof it === 'string') {
+            items.push({ id: it, snapshot: null as unknown as FoodLogEntry });
+          }
+        }
+        result[date] = items;
+      }
+    }
+    return result;
   } catch {
     return {};
   }
@@ -1872,14 +1901,18 @@ function persistSavedAnalysisSelections(userId: string, value: SavedAnalysisSele
 
 function autoSaveAnalysisBasket(
   userId: string,
-  basket: { analysisDate: string; id: string }[],
+  basket: AnalysisSelectionItem[],
 ): void {
-  const byDate: Record<string, string[]> = {};
+  const byDate: SavedAnalysisSelections = {};
   for (const item of basket) {
     if (!byDate[item.analysisDate]) {
       byDate[item.analysisDate] = [];
     }
-    byDate[item.analysisDate].push(item.id);
+    const { basketId, analysisDate, ...snapshot } = item;
+    byDate[item.analysisDate].push({
+      id: item.id,
+      snapshot: snapshot as FoodLogEntry,
+    });
   }
   persistSavedAnalysisSelections(userId, byDate);
 }
@@ -1892,9 +1925,9 @@ function restoreAllAnalysisItems(
   const entriesById = new Map(allEntries.map((e) => [e.id, e]));
   const result: AnalysisSelectionItem[] = [];
 
-  for (const [date, ids] of Object.entries(saved)) {
-    for (const id of ids) {
-      const entry = entriesById.get(id);
+  for (const [date, items] of Object.entries(saved)) {
+    for (const { id, snapshot } of items) {
+      const entry = entriesById.get(id) ?? (snapshot && Object.keys(snapshot).length > 0 ? snapshot : null);
       if (entry) {
         result.push({
           ...entry,

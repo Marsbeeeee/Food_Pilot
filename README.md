@@ -178,6 +178,16 @@ cd frontend
 npm run dev
 npm run build
 npm test
+npm run test:e2e      # E2E 关键流程回归（需后端已启动）
+```
+
+**E2E 测试（Playwright）**
+
+覆盖登录、聊天、保存 Food Log、进入 Insights。运行前需确保**后端已启动**（`uvicorn backend.main:app --reload`）：
+
+```bash
+cd frontend
+npm run test:e2e
 ```
 
 **Backend tests**
