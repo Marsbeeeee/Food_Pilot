@@ -73,7 +73,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({
     } catch (error) {
       const message = error instanceof Error
         ? error.message
-        : 'Unable to generate today analysis right now.';
+        : '暂时无法生成分析，请稍后重试。';
       setAiAdvice(message);
     } finally {
       setIsAnalyzing(false);
@@ -98,13 +98,13 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({
           </button>
 
           <h1 className="font-serif-brand text-2xl font-bold text-[#4A453E] md:text-3xl">
-            Nutrition Analysis
+            每日营养分析
           </h1>
         </div>
 
         <div className="hidden rounded-full bg-[#FFF2EC] px-3 py-1.5 text-xs font-bold text-[#FF8A65] md:flex md:items-center md:gap-2">
           <span className="material-symbols-outlined text-[18px]">restaurant</span>
-          {filteredItems.length} items selected
+          已选 {filteredItems.length} 项
         </div>
       </header>
 
@@ -115,7 +115,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({
             <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-                  Total Energy
+                  总热量
                 </p>
                 <input
                   type="date"
@@ -186,27 +186,27 @@ function buildFallbackAnalysis(input: {
   const proteinRatio = macroTotal > 0 ? (protein / macroTotal) * 100 : 0;
   const fatRatio = macroTotal > 0 ? (fat / macroTotal) * 100 : 0;
 
-  let balanceComment = 'The macro balance is relatively neutral.';
+  let balanceComment = '三大营养素比例较为均衡。';
   if (proteinRatio >= 35) {
-    balanceComment = 'Protein is relatively strong in this selection.';
+    balanceComment = '蛋白质占比较高，适合增肌或高蛋白需求。';
   } else if (fatRatio >= 35) {
-    balanceComment = 'Fat is relatively prominent in this selection.';
+    balanceComment = '脂肪占比偏高，建议关注油脂摄入。';
   } else if (carbs > protein && carbs > fat) {
-    balanceComment = 'Carbohydrates are the main contributor in this selection.';
+    balanceComment = '碳水化合物为主要供能来源，注意搭配优质蛋白。';
   }
 
   return [
-    `Today’s analysis covers: ${itemNames.join(', ')}.`,
+    `今日分析包含：${itemNames.join('、')}。`,
     '',
-    `Total estimated intake: ${Math.round(totalCalories)} kcal.`,
-    `Protein: ${Math.round(protein)} g, Carbs: ${Math.round(carbs)} g, Fat: ${Math.round(fat)} g.`,
+    `估算总摄入：${Math.round(totalCalories)} kcal`,
+    `蛋白质：${Math.round(protein)} g　碳水：${Math.round(carbs)} g　脂肪：${Math.round(fat)} g`,
     '',
     balanceComment,
     '',
-    'General suggestion:',
-    '1. Keep protein adequate if this is meant to be a main meal window.',
-    '2. If the overall day feels heavy, reduce dense sauces or oil-heavy components in the next meal.',
-    '3. Add vegetables or fruit later in the day if fiber looks light.',
+    '改善建议：',
+    '1. 如果这是正餐，确保蛋白质摄入充足（建议每餐 20-30g）。',
+    '2. 如果整天摄入偏高，下一餐可减少酱料或高油脂配料。',
+    '3. 如果膳食纤维不足，建议当天补充蔬菜或水果。',
   ].join('\n');
 }
 

@@ -632,7 +632,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     } catch (error) {
       const message = error instanceof Error
         ? error.message
-        : 'Unable to generate today analysis right now.';
+        : '暂时无法生成分析，请稍后重试。';
       setAiAdvice(message);
     } finally {
       setIsAnalyzing(false);
@@ -652,11 +652,10 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="flex-1">
                 <h1 className="font-serif-brand text-3xl font-bold text-[#4A453E] md:text-4xl">
-                  Nutrition Analysis
+                  每日营养分析
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-[#4A453E]/60 md:text-base">
-                  Insights summarizes your selected Food Log entries into a simple daily view so
-                  that suggestions stay grounded in the same requirements.
+                  从 Food Log 中选择已保存的菜品，汇总为当日摄入概览，并可生成 AI 饮食建议。
                 </p>
               </div>
               <div className="mt-1 flex items-center gap-3 md:mt-12">
@@ -677,7 +676,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-                        Total Energy
+                        总热量
                       </p>
                     </div>
                     <div className="flex flex-col items-center justify-center pt-2">
@@ -742,33 +741,33 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                       </div>
                       <p className={`mt-5 text-sm font-semibold ${isExceeded ? 'text-[#C25235]' : 'text-[#4A453E]/55'}`}>
                         {isExceeded 
-                          ? `${formatNumber(exceededCalories)} kcal over limit` 
-                          : `${formatNumber(remainingCalories)} kcal remaining`}
+                          ? `已超出 ${formatNumber(exceededCalories)} kcal` 
+                          : `剩余 ${formatNumber(remainingCalories)} kcal`}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex flex-col rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-                      Macro Distribution
+                      营养素分布
                     </p>
 
                     <div className="flex flex-1 flex-col justify-evenly pt-2">
                       {[
                         {
-                          label: 'Protein',
+                          label: '蛋白质',
                           value: totalProtein,
                           icon: 'protein',
                           color: '#FF9A76',
                         },
                         {
-                          label: 'Carbs',
+                          label: '碳水化合物',
                           value: totalCarbs,
                           icon: 'carbs',
                           color: '#FFD166',
                         },
                         {
-                          label: 'Fat',
+                          label: '脂肪',
                           value: totalFat,
                           icon: 'fat',
                           color: '#A1887F',
@@ -867,11 +866,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
             <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
               <div className="mb-5 flex items-center justify-between">
                 <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-                  Selected Items
+                  已选菜品
                 </h2>
                 <div className="inline-flex items-center gap-1 rounded-full bg-[#FFF7EF] px-3 py-1 text-[11px] font-semibold text-[#FF8A65]">
                   <span className="material-symbols-outlined text-[14px]">restaurant</span>
-                  <span>{filteredItems.length} Items</span>
+                  <span>{filteredItems.length} 项</span>
                 </div>
               </div>
 
@@ -913,10 +912,10 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
               ) : (
                 <div className="flex min-h-[120px] flex-col items-center justify-center rounded-[22px] bg-[#FFFDF9] px-4 py-6 text-center">
                   <span className="mb-2 text-sm font-semibold text-[#4A453E]">
-                    No records for this date
+                    该日期暂无记录
                   </span>
                   <p className="text-xs leading-6 text-[#4A453E]/55">
-                    Add saved entries from Food Log into today’s analysis to see them here.
+                    从 Food Log 中将已保存的菜品添加到当日分析即可在此显示。
                   </p>
                 </div>
               )}
@@ -927,10 +926,10 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
         <aside className="hidden w-[420px] shrink-0 border-l border-[#4A453E]/05 bg-white lg:flex lg:flex-col">
           <div className="border-b border-[#4A453E]/05 px-6 py-6">
             <h3 className="font-serif-brand text-2xl font-bold text-[#4A453E]">
-              AI Dietary Insights
+              AI 饮食建议
             </h3>
             <p className="mt-2 text-sm leading-6 text-[#4A453E]/50">
-              Generate a summary of today’s selected intake.
+              基于当日已选菜品，生成营养摄入分析与改善建议。
             </p>
           </div>
 
@@ -947,7 +946,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   </span>
                 </div>
                 <p className="text-sm leading-7 text-[#4A453E]/50">
-                  Click the button below to analyze your selected intake for this date.
+                  点击下方按钮，分析当日已选菜品的营养摄入情况。
                 </p>
               </div>
             )}
@@ -967,7 +966,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
               <span className="material-symbols-outlined text-[18px]">
                 {isAnalyzing ? 'progress_activity' : 'forum'}
               </span>
-              {isAnalyzing ? 'Analyzing Intake...' : 'Generate AI Analysis'}
+              {isAnalyzing ? '分析中...' : '生成 AI 分析'}
             </button>
           </div>
         </aside>
@@ -1603,28 +1602,27 @@ function buildFallbackAnalysis(input: {
   const proteinRatio = macroTotal > 0 ? (protein / macroTotal) * 100 : 0;
   const fatRatio = macroTotal > 0 ? (fat / macroTotal) * 100 : 0;
 
-  let balanceComment = 'The macro balance is relatively neutral.';
+  let balanceComment = '三大营养素比例较为均衡。';
   if (proteinRatio >= 35) {
-    balanceComment = 'Protein is relatively strong in this selection.';
+    balanceComment = '蛋白质占比较高，适合增肌或高蛋白需求。';
   } else if (fatRatio >= 35) {
-    balanceComment = 'Fat is relatively prominent in this selection.';
+    balanceComment = '脂肪占比偏高，建议关注油脂摄入。';
   } else if (carbs > protein && carbs > fat) {
-    balanceComment = 'Carbohydrates are the main contributor in this selection.';
+    balanceComment = '碳水化合物为主要供能来源，注意搭配优质蛋白。';
   }
 
   return [
-    `Today’s analysis covers: ${itemNames.join(', ')}.`,
+    `今日分析包含：${itemNames.join('、')}。`,
     '',
-    `Total estimated intake: ${formatNumber(totalCalories)} kcal.`,
-    `Protein: ${formatNumber(protein)} g, Carbs: ${formatNumber(carbs)} g, Fat: ${formatNumber(fat)} g.`,
+    `估算总摄入：${formatNumber(totalCalories)} kcal`,
+    `蛋白质：${formatNumber(protein)} g　碳水：${formatNumber(carbs)} g　脂肪：${formatNumber(fat)} g`,
     '',
     balanceComment,
     '',
-    'General suggestion:',
-    '1. Keep protein adequate if this is meant to be a main meal window.',
-    '2. If the overall day feels heavy, reduce dense sauces or oil-heavy components in the next meal.',
-    '3. Add vegetables or fruit later in the day if fiber looks light.',
-    '',
-    'This is a lightweight summary generated from saved entry data. Once your backend analysis endpoint is connected, this panel can return personalized nutrition advice.',
+    '改善建议：',
+    '1. 如果这是正餐，确保蛋白质摄入充足（建议每餐 20-30g）。',
+    '2. 如果整天摄入偏高，下一餐可减少酱料或高油脂配料。',
+    '3. 如果膳食纤维不足，建议当天补充蔬菜或水果。',
   ].join('\n');
+
 }
