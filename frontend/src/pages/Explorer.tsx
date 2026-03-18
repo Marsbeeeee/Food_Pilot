@@ -27,6 +27,9 @@ interface ExplorerProps {
   onNavigateToInsights?: () => void;
   currentUserId?: string | number;
   profileKcalTarget?: string | number;
+  insightsCache?: Record<string, { status: 'success'; data: InsightsAnalyzeData }>;
+  onInsightsCacheUpdate?: React.Dispatch<React.SetStateAction<Record<string, { status: 'success'; data: InsightsAnalyzeData }>>>;
+  insightsHistoryLoaded?: boolean;
 }
 
 interface FoodLogEditDraft {
@@ -54,6 +57,9 @@ export const Explorer: React.FC<ExplorerProps> = ({
   onNavigateToInsights,
   currentUserId,
   profileKcalTarget,
+  insightsCache: insightsCacheProp,
+  onInsightsCacheUpdate: onInsightsCacheUpdateProp,
+  insightsHistoryLoaded: insightsHistoryLoadedProp,
 }) => {
   const orderedEntries = sortFoodLogEntries(logEntries);
   const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(null);
@@ -69,6 +75,13 @@ export const Explorer: React.FC<ExplorerProps> = ({
   const [analysisBasket, setAnalysisBasket] = useState<AnalysisSelectionItem[]>([]);
   const [showAnalysisView, setShowAnalysisView] = useState(defaultToAnalysisView);
   const basketHydratedRef = React.useRef(false);
+
+  const [localInsightsCache, setLocalInsightsCache] = useState<Record<string, { status: 'success'; data: InsightsAnalyzeData }>>({});
+  const [localInsightsHistoryLoaded, setLocalInsightsHistoryLoaded] = useState(false);
+
+  const insightsCache = insightsCacheProp ?? localInsightsCache;
+  const onInsightsCacheUpdate = onInsightsCacheUpdateProp ?? setLocalInsightsCache;
+  const insightsHistoryLoaded = insightsHistoryLoadedProp ?? localInsightsHistoryLoaded;
 
   useEffect(() => {
     setShowAnalysisView(Boolean(defaultToAnalysisView));
@@ -93,6 +106,36 @@ export const Explorer: React.FC<ExplorerProps> = ({
     if (!userKey || typeof window === 'undefined') return;
     autoSaveAnalysisBasket(userKey, analysisBasket);
   }, [analysisBasket, currentUserId]);
+
+  useEffect(() => {
+    if (onInsightsCacheUpdateProp != null) return;
+    const userKey = currentUserId != null ? String(currentUserId).trim() : '';
+    if (!userKey) {
+      setLocalInsightsCache({});
+      setLocalInsightsHistoryLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    void fetchInsightsHistory().then((res) => {
+      if (cancelled) return;
+      const next: Record<string, { status: 'success'; data: InsightsAnalyzeData }> = {};
+      for (const item of res.items) {
+        if (item.data) {
+          const state = { status: 'success' as const, data: item.data };
+          next[item.cacheKey] = state;
+          const dateOnly = getDateOnlyFromCacheKey(item.cacheKey);
+          if (dateOnly && !(dateOnly in next)) {
+            next[dateOnly] = state;
+          }
+        }
+      }
+      setLocalInsightsCache(next);
+      setLocalInsightsHistoryLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId, onInsightsCacheUpdateProp]);
 
   const collectionStats = buildFoodLogCollectionStats(orderedEntries);
 
@@ -282,6 +325,9 @@ export const Explorer: React.FC<ExplorerProps> = ({
         onAnalysisDateChange={onAnalysisDateChange}
         currentUserId={currentUserId}
         profileKcalTarget={profileKcalTarget}
+        insightsCache={insightsCache}
+        onInsightsCacheUpdate={onInsightsCacheUpdate}
+        insightsHistoryLoaded={insightsHistoryLoaded}
       />
     );
   }
@@ -575,6 +621,9 @@ interface AnalysisViewProps {
   onAnalysisDateChange?: (date: string) => void;
   currentUserId?: string | number;
   profileKcalTarget?: string | number;
+  insightsCache: Record<string, { status: 'success'; data: InsightsAnalyzeData }>;
+  onInsightsCacheUpdate: React.Dispatch<React.SetStateAction<Record<string, { status: 'success'; data: InsightsAnalyzeData }>>>;
+  insightsHistoryLoaded: boolean;
 }
 
 type AnalysisMode = 'day' | 'week';
@@ -588,14 +637,15 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   onAnalysisDateChange,
   currentUserId,
   profileKcalTarget,
+  insightsCache,
+  onInsightsCacheUpdate,
+  insightsHistoryLoaded,
 }) => {
   const logEntryIds = React.useMemo(() => new Set(logEntries.map((e) => e.id)), [logEntries]);
   const [currentDate, setCurrentDate] = useState(analysisDate);
   const [mode, setMode] = useState<AnalysisMode>('day');
   const [analysisState, setAnalysisState] = useState<AnalysisState>({ status: 'idle' });
-  const [cache, setCache] = useState<Record<string, AnalysisState>>({});
   const abortControllerRef = React.useRef<AbortController | null>(null);
-  const userKey = currentUserId != null ? String(currentUserId).trim() : '';
 
   useEffect(() => {
     setCurrentDate(analysisDate);
@@ -632,7 +682,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     (sum, item) => sum + extractNutritionValue(item.fat),
     0,
   );
-  const currentCacheKey = getCacheKey(mode, dateRange.start, dateRange.end, filteredItems);
+  const currentCacheKey = getDateOnlyCacheKey(mode, dateRange.start, dateRange.end);
 
   const agg = analysisState.status === 'success' ? analysisState.data.aggregation : null;
   const useClientTotals = hasOrphanedItems || !agg;
@@ -661,9 +711,9 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       return;
     }
 
-    const cacheKey = getCacheKey(analyzeMode, analyzeStart, analyzeEnd, analyzeItems);
-    if (!force && cache[cacheKey]) {
-      setAnalysisState(cache[cacheKey]);
+    const cacheKey = getDateOnlyCacheKey(analyzeMode, analyzeStart, analyzeEnd);
+    if (!force && insightsCache[cacheKey]) {
+      setAnalysisState(insightsCache[cacheKey]);
       return;
     }
 
@@ -702,7 +752,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
 
       if (response.data) {
         const newState: AnalysisState = { status: 'success', data: response.data };
-        setCache((prev) => ({ ...prev, [cacheKey]: newState }));
+        onInsightsCacheUpdate((prev) => ({ ...prev, [cacheKey]: newState }));
         setAnalysisState(newState);
       } else {
         setAnalysisState({
@@ -736,38 +786,20 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   };
 
   useEffect(() => {
-    if (!userKey) {
-      setCache({});
-      return;
-    }
-    let cancelled = false;
-    void fetchInsightsHistory().then((res) => {
-      if (cancelled) return;
-      const next: Record<string, AnalysisState> = {};
-      for (const item of res.items) {
-        if (item.data) {
-          next[item.cacheKey] = { status: 'success', data: item.data };
-        }
-      }
-      setCache(next);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [userKey]);
-
-  useEffect(() => {
     if (filteredItems.length === 0) {
       setAnalysisState({ status: 'idle' });
       return;
     }
-    const cached = cache[currentCacheKey];
+    if (!insightsHistoryLoaded) {
+      return;
+    }
+    const cached = insightsCache[currentCacheKey];
     if (cached) {
       setAnalysisState(cached);
       return;
     }
     setAnalysisState({ status: 'idle' });
-  }, [filteredItems.length, currentCacheKey, cache]);
+  }, [filteredItems.length, currentCacheKey, insightsCache, insightsHistoryLoaded]);
 
   // Cleanup abort controller on unmount
   useEffect(() => {
@@ -1129,7 +1161,19 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
           </div>
 
           <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-6">
-            {analysisState.status === 'idle' && (
+            {!insightsHistoryLoaded && analysisState.status !== 'loading' && analysisState.status !== 'success' && (
+              <div className="flex h-full flex-col items-center justify-center px-4 text-center">
+                <div className="mb-5 flex size-16 items-center justify-center rounded-full bg-[#FFF2EC]">
+                  <span className="material-symbols-outlined animate-spin text-3xl text-[#FF8A65]/70">
+                    progress_activity
+                  </span>
+                </div>
+                <p className="text-sm font-semibold leading-7 text-[#4A453E]/60">
+                  正在加载已保存的分析…
+                </p>
+              </div>
+            )}
+            {insightsHistoryLoaded && analysisState.status === 'idle' && (
               <div className="flex h-full flex-col items-center justify-center px-4 text-center">
                 <div className="mb-5 flex size-16 items-center justify-center rounded-full bg-[#FFF2EC]">
                   <span className="material-symbols-outlined text-3xl text-[#FF8A65]/50">
@@ -1823,17 +1867,18 @@ function getWeekRange(dateString: string): { start: string; end: string } {
   return { start: format(monday), end: format(sunday) };
 }
 
-function getCacheKey(
-  mode: string,
-  start: string,
-  end: string,
-  items: AnalysisSelectionItem[]
-) {
-  const itemsHash = items
-    .map((i) => `${i.id}-${i.savedAt}`)
-    .sort()
-    .join(',');
-  return `${mode}_${start}_${end}_${itemsHash}`;
+/** Date-only cache key: analysis persists by date/week, not by selected items. */
+function getDateOnlyCacheKey(mode: string, start: string, end: string): string {
+  return `${mode}_${start}_${end}`;
+}
+
+/** Extract date-only key from a full cache key (for backwards compatibility with history). */
+function getDateOnlyFromCacheKey(cacheKey: string): string | null {
+  const parts = cacheKey.split('_');
+  if (parts.length >= 3) {
+    return `${parts[0]}_${parts[1]}_${parts[2]}`;
+  }
+  return null;
 }
 
 /** Format: date -> array of {id, snapshot}. Snapshot allows items to persist after unsave from Food Log. */

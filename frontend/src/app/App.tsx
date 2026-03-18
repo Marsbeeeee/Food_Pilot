@@ -9,6 +9,7 @@ import {
   restoreFoodLogEntry,
   updateFoodLogEntry,
 } from '../api/foodLog';
+import { fetchInsightsHistory } from '../api/insights';
 import { clearStoredProfile, loadStoredProfile, ProfileApiError, toProfileForm } from '../api/profile';
 import { Header } from '../components/Header';
 import { AuthPage } from '../pages/Auth';
@@ -23,6 +24,7 @@ import {
   ChatSession,
   FoodLogEntry,
   FoodLogPatchInput,
+  InsightsAnalyzeData,
   UserProfileForm,
 } from '../types/types';
 
@@ -52,6 +54,10 @@ const App: React.FC = () => {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
   const [currentAnalysisDate, setCurrentAnalysisDate] = useState<string>(getTodayKey());
+  const [insightsCache, setInsightsCache] = useState<
+    Record<string, { status: 'success'; data: InsightsAnalyzeData }>
+  >({});
+  const [insightsHistoryLoaded, setInsightsHistoryLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -155,6 +161,35 @@ const App: React.FC = () => {
 
     hydrateUserData();
 
+    return () => {
+      cancelled = true;
+    };
+  }, [authStatus, session]);
+
+  useEffect(() => {
+    if (authStatus !== 'authenticated' || !session) {
+      setInsightsCache({});
+      setInsightsHistoryLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    void fetchInsightsHistory().then((res) => {
+      if (cancelled) return;
+      const next: Record<string, { status: 'success'; data: InsightsAnalyzeData }> = {};
+      for (const item of res.items) {
+        if (item.data) {
+          const state = { status: 'success' as const, data: item.data };
+          next[item.cacheKey] = state;
+          const parts = item.cacheKey.split('_');
+          const dateOnly = parts.length >= 3 ? `${parts[0]}_${parts[1]}_${parts[2]}` : null;
+          if (dateOnly && !(dateOnly in next)) {
+            next[dateOnly] = state;
+          }
+        }
+      }
+      setInsightsCache(next);
+      setInsightsHistoryLoaded(true);
+    });
     return () => {
       cancelled = true;
     };
@@ -328,6 +363,9 @@ const App: React.FC = () => {
             onNavigateToInsights={() => setCurrentView(AppView.INSIGHTS)}
             currentUserId={String(session.user.id)}
             profileKcalTarget={profile.kcalTarget}
+            insightsCache={insightsCache}
+            onInsightsCacheUpdate={setInsightsCache}
+            insightsHistoryLoaded={insightsHistoryLoaded}
           />
         );
       case AppView.INSIGHTS:
@@ -343,6 +381,9 @@ const App: React.FC = () => {
             onAnalysisDateChange={setCurrentAnalysisDate}
             currentUserId={String(session.user.id)}
             profileKcalTarget={profile.kcalTarget}
+            insightsCache={insightsCache}
+            onInsightsCacheUpdate={setInsightsCache}
+            insightsHistoryLoaded={insightsHistoryLoaded}
           />
         );
       case AppView.PROFILE:
