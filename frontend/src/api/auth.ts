@@ -1,5 +1,5 @@
 import { AuthSession, AuthUser } from '../types/types';
-import { API_BASE_URL } from './config';
+import { API_BASE_URL } from '../config/api';
 
 const AUTH_BASE_URL = `${API_BASE_URL}/auth`;
 const AUTH_TOKEN_STORAGE_KEY = 'foodpilot.authToken';

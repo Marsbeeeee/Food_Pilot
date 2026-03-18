@@ -3,6 +3,21 @@
 Food Pilot calls Gemini from the backend only.
 Do not expose the Gemini API key to the frontend bundle.
 
+## Frontend API base URL
+
+The frontend reads `VITE_API_BASE_URL` from environment files. If unset, it defaults to `http://localhost:8000`.
+
+- **Development**: Set in `frontend/.env.local` or leave unset for localhost.
+- **Production**: Set in `frontend/.env.production` before `npm run build`.
+
+Example:
+
+```env
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+For production, use your deployed API URL (e.g. `https://api.your-domain.com`).
+
 ## Files the backend reads
 
 The backend checks these files in order:

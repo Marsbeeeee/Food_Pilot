@@ -1,6 +1,6 @@
 import { getStoredToken } from './auth';
 import { UserProfile, UserProfileForm, UserProfileInput } from '../types/types';
-import { API_BASE_URL } from './config';
+import { API_BASE_URL } from '../config/api';
 
 const PROFILE_ENDPOINT = `${API_BASE_URL}/profile`;
 const MY_PROFILE_ENDPOINT = `${PROFILE_ENDPOINT}/me`;

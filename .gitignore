@@ -3,7 +3,4 @@ frontend-page.png
 tmp*/
 .env
 .env.local
-.env.production
-frontend/.env
 frontend/.env.local
-frontend/.env.production

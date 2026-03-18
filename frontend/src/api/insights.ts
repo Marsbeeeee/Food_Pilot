@@ -4,7 +4,7 @@ import {
   InsightsAnalyzeResponse,
   InsightsHistoryResponse,
 } from '../types/types';
-import { API_BASE_URL } from './config';
+import { API_BASE_URL } from '../config/api';
 
 const INSIGHTS_BASE_URL = `${API_BASE_URL}/api/insights`;
 

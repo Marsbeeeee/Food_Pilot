@@ -7,7 +7,7 @@ import {
   FoodLogPatchInput,
   FoodLogSaveInput,
 } from '../types/types';
-import { API_BASE_URL } from './config';
+import { API_BASE_URL } from '../config/api';
 
 const FOOD_LOG_BASE_URL = `${API_BASE_URL}/food-logs`;
 

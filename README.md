@@ -149,8 +149,6 @@ npm install
 npm run dev
 ```
 
-前端 API 地址默认指向 `http://localhost:8000`。如需修改，在 `frontend/` 下复制 `.env.example` 为 `.env` 并设置 `VITE_API_BASE_URL`，修改后需重启开发服务器。生产构建时使用 `.env.production` 或参考 `.env.production.example`。
-
 默认地址：
 
 - Frontend: `http://localhost:3000`

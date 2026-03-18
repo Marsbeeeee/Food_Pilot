@@ -6,7 +6,7 @@ import {
   IngredientResult,
   Message,
 } from '../types/types';
-import { API_BASE_URL } from './config';
+import { API_BASE_URL } from '../config/api';
 
 const CHAT_BASE_URL = `${API_BASE_URL}/chat`;
 
