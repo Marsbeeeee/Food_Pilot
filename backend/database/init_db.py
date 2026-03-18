@@ -14,6 +14,7 @@ def init_db():
     _ensure_chat_sessions_table(cursor)
     _ensure_messages_table(cursor)
     _ensure_food_logs_table(cursor)
+    _ensure_insights_analysis_table(cursor)
 
     conn.commit()
     conn.close()
@@ -526,6 +527,44 @@ def _ensure_food_logs_table(cursor) -> None:
             SET updated_at = CURRENT_TIMESTAMP
             WHERE id = NEW.id;
         END;
+        """
+    )
+
+
+def _ensure_insights_analysis_table(cursor) -> None:
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS insights_analysis (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            cache_key TEXT NOT NULL,
+            mode TEXT NOT NULL,
+            date_start TEXT NOT NULL,
+            date_end TEXT NOT NULL,
+            selected_log_ids_json TEXT NOT NULL,
+            result_json TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CHECK (mode IN ('day', 'week')),
+            CHECK (length(trim(cache_key)) > 0)
+        );
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_insights_analysis_user_id
+        ON insights_analysis(user_id);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_insights_analysis_user_created_at
+        ON insights_analysis(user_id, created_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_insights_analysis_user_cache_key
+        ON insights_analysis(user_id, cache_key);
         """
     )
 

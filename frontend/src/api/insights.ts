@@ -1,5 +1,9 @@
 import { clearSession, getStoredToken } from './auth';
-import { InsightsAnalyzeRequest, InsightsAnalyzeResponse } from '../types/types';
+import {
+  InsightsAnalyzeRequest,
+  InsightsAnalyzeResponse,
+  InsightsHistoryResponse,
+} from '../types/types';
 
 const INSIGHTS_BASE_URL = 'http://localhost:8000/api/insights';
 
@@ -80,6 +84,44 @@ export async function analyzeInsights(
   }
 
   return result;
+}
+
+export async function fetchInsightsHistory(): Promise<InsightsHistoryResponse> {
+  const token = getStoredToken();
+  if (!token) {
+    return { items: [] };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${INSIGHTS_BASE_URL}/history`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch {
+    return { items: [] };
+  }
+
+  if (response.status === 401) {
+    clearSession();
+    return { items: [] };
+  }
+
+  if (!response.ok) {
+    return { items: [] };
+  }
+
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return { items: [] };
+  }
+
+  const result = body as InsightsHistoryResponse;
+  return result ?? { items: [] };
 }
 
 function extractErrorMessage(payload: unknown): string | null {

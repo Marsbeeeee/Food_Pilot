@@ -6,7 +6,7 @@ import {
   formatSavedMoment,
   sortFoodLogEntries,
 } from '../app/foodLogFavorites';
-import { analyzeInsights, InsightsApiError } from '../api/insights';
+import { analyzeInsights, fetchInsightsHistory, InsightsApiError } from '../api/insights';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import {
   FoodLogEntry,
@@ -686,6 +686,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
         mode: analyzeMode,
         selectedLogIds: selectedLogIds.length > 0 ? selectedLogIds : undefined,
         dateRange: { start: analyzeStart, end: analyzeEnd },
+        cacheKey,
       }, abortController.signal);
 
       clearTimeout(loadingTimeout);
@@ -729,15 +730,21 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       setCache({});
       return;
     }
-    setCache(loadSavedAnalysisReports(userKey));
+    let cancelled = false;
+    void fetchInsightsHistory().then((res) => {
+      if (cancelled) return;
+      const next: Record<string, AnalysisState> = {};
+      for (const item of res.items) {
+        if (item.data) {
+          next[item.cacheKey] = { status: 'success', data: item.data };
+        }
+      }
+      setCache(next);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [userKey]);
-
-  useEffect(() => {
-    if (!userKey) {
-      return;
-    }
-    persistSavedAnalysisReports(userKey, cache);
-  }, [userKey, cache]);
 
   useEffect(() => {
     if (filteredItems.length === 0) {
@@ -1820,17 +1827,11 @@ function getCacheKey(
 }
 
 type SavedAnalysisSelections = Record<string, string[]>;
-type SavedAnalysisReports = Record<string, InsightsAnalyzeData>;
 
 const DAILY_ANALYSIS_STORAGE_PREFIX = 'foodpilot:dailyAnalysis:';
-const ANALYSIS_REPORT_STORAGE_PREFIX = 'foodpilot:analysisReports:';
 
 function getDailyAnalysisStorageKey(userId: string): string {
   return `${DAILY_ANALYSIS_STORAGE_PREFIX}${userId}`;
-}
-
-function getAnalysisReportStorageKey(userId: string): string {
-  return `${ANALYSIS_REPORT_STORAGE_PREFIX}${userId}`;
 }
 
 function loadSavedAnalysisSelections(userId: string): SavedAnalysisSelections {
@@ -1904,48 +1905,3 @@ function restoreAllAnalysisItems(
   return result;
 }
 
-function loadSavedAnalysisReports(userId: string): Record<string, AnalysisState> {
-  if (typeof window === 'undefined') {
-    return {};
-  }
-  try {
-    const raw = window.localStorage.getItem(getAnalysisReportStorageKey(userId));
-    if (!raw) {
-      return {};
-    }
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object') {
-      return {};
-    }
-    const reports = parsed as SavedAnalysisReports;
-    const cache: Record<string, AnalysisState> = {};
-    for (const [key, data] of Object.entries(reports)) {
-      if (data && typeof data === 'object') {
-        cache[key] = { status: 'success', data };
-      }
-    }
-    return cache;
-  } catch {
-    return {};
-  }
-}
-
-function persistSavedAnalysisReports(
-  userId: string,
-  cache: Record<string, AnalysisState>,
-): void {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    const reports: SavedAnalysisReports = {};
-    for (const [key, state] of Object.entries(cache)) {
-      if (state.status === 'success') {
-        reports[key] = state.data;
-      }
-    }
-    window.localStorage.setItem(getAnalysisReportStorageKey(userId), JSON.stringify(reports));
-  } catch {
-    // Ignore storage failures to keep UI responsive.
-  }
-}

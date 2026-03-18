@@ -35,6 +35,11 @@ class InsightsAnalyzeRequest(BaseModel):
         validation_alias=AliasChoices("date_range", "dateRange"),
         serialization_alias="dateRange",
     )
+    cache_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("cache_key", "cacheKey"),
+        serialization_alias="cacheKey",
+    )
 
     @field_validator("user_id")
     @classmethod
@@ -107,3 +112,16 @@ class InsightsAnalyzeResponse(BaseModel):
     success: bool
     data: InsightsAnalyzeData | None = None
     error: InsightsError | None = None
+
+
+class InsightsHistoryItem(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    cache_key: str = Field(validation_alias=AliasChoices("cache_key", "cacheKey"), serialization_alias="cacheKey")
+    data: InsightsAnalyzeData
+
+
+class InsightsHistoryResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    items: list[InsightsHistoryItem]

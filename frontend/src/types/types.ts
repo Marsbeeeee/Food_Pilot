@@ -222,6 +222,16 @@ export interface InsightsAnalyzeRequest {
   mode: 'day' | 'week';
   selectedLogIds?: number[];
   dateRange: InsightsDateRange;
+  cacheKey?: string;
+}
+
+export interface InsightsHistoryItem {
+  cacheKey: string;
+  data: InsightsAnalyzeData;
+}
+
+export interface InsightsHistoryResponse {
+  items: InsightsHistoryItem[];
 }
 
 export interface NutritionAggregation {
