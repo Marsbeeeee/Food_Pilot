@@ -65,7 +65,7 @@ Food Pilot 解决“营养建议难落地、记录难复用”的问题：
 
 - **Frontend**: React 19 + TypeScript + Vite
 - **Backend**: FastAPI + SQLite
-- **AI**: Gemini (backend-only call)
+- **AI**: Qwen-plus (backend-only call)
 - **Auth**: Token-based session auth
 
 ---
@@ -87,7 +87,7 @@ docs/         Product and setup documentation
 - Python 3.10+
 - Node.js 18+
 - npm 9+
-- 可用的 Gemini API Key
+- 可用的 Qwen API Key（阿里云 DashScope）
 - 推荐系统：Windows 10+/macOS/Linux
 
 > 说明：后端依赖来自 `requirements.txt`，前端依赖来自 `frontend/package.json`。
@@ -108,9 +108,9 @@ cd Food_Pilot
 在项目根目录创建 `.env`：
 
 ```env
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-3-flash-preview
-GEMINI_TIMEOUT_SECONDS=20
+DASHSCOPE_API_KEY=sk-xxx
+AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+AI_MODEL=qwen-plus
 ```
 
 可选认证配置（不填则走默认）：
@@ -301,7 +301,7 @@ curl -X POST http://localhost:8000/estimate \
 
 - FastAPI
 - React / Vite
-- Gemini API
+- 阿里云千问 API（Qwen）
 - 所有测试与文档贡献者
 
 ---
