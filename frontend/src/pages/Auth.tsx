@@ -231,7 +231,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ eyebrow, title, body }) => {
   return (
     <article className="rounded-[28px] border border-[#4A453E]/8 bg-white/75 p-5">
       <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#4A453E]/32">{eyebrow}</p>
-      <h3 className="mt-3 text-lg font-bold text-[#4A453E]">{title}</h3>
+      <h3 className="mt-3 text-lg font-bold text-[#4A453E] break-words">{title}</h3>
       <p className="mt-2 text-sm leading-7 text-[#4A453E]/55">{body}</p>
     </article>
   );
