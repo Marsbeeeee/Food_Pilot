@@ -587,7 +587,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                   <tr key={itemIndex} className="transition-colors hover:bg-[#F7F3E9]/10">
                                     <td className="px-6 py-4 font-bold text-[#4A453E]">{item.name}</td>
                                     <td className="px-4 py-4 font-medium text-[#4A453E]/50">{item.portion}</td>
-                                    <td className="px-4 py-4 text-right font-bold text-[#4A453E]">{item.energy}</td>
+                                    <td className="px-4 py-4 text-right font-bold text-[#4A453E]">{formatEnergyInteger(item.energy)}</td>
                                     <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.protein || '—'}</td>
                                     <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.carbs || '—'}</td>
                                     <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.fat || '—'}</td>
@@ -603,7 +603,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                   return (
                                     <tr>
                                       <td className="px-6 py-6 text-lg text-[#4A453E]" colSpan={2}>{messagePresentation.totalLabel}</td>
-                                      <td className="px-4 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{messagePresentation.total}</td>
+                                      <td className="px-4 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{formatEnergyInteger(messagePresentation.total)}</td>
                                       <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tPro > 0 ? `${fmtNum(tPro)} g` : '—'}</td>
                                       <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tCarb > 0 ? `${fmtNum(tCarb)} g` : '—'}</td>
                                       <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tFat > 0 ? `${fmtNum(tFat)} g` : '—'}</td>
@@ -985,6 +985,11 @@ function extractMacroNum(value?: string | null): number {
 
 function fmtNum(v: number): string {
   return Number.isInteger(v) ? String(v) : v.toFixed(1);
+}
+
+function formatEnergyInteger(energy: string): string {
+  const num = extractMacroNum(energy);
+  return `${Math.round(num)} kcal`;
 }
 
 function getMessageType(message: Message): ChatMessageType {

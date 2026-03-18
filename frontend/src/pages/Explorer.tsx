@@ -203,7 +203,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
       const updatedIngredient: IngredientResult = {
         ...original,
         portion: newGramsInput ? `${newGramsInput} ${unit}` : '',
-        energy: ratio > 0 ? `${Math.ceil(extractCaloriesValue(original.energy) * ratio)} kcal` : '0 kcal',
+        energy: ratio > 0 ? `${Math.round(extractCaloriesValue(original.energy) * ratio)} kcal` : '0 kcal',
         protein: original.protein ? `${formatNumber(extractNutritionValue(original.protein) * ratio)} g` : undefined,
         carbs: original.carbs ? `${formatNumber(extractNutritionValue(original.carbs) * ratio)} g` : undefined,
         fat: original.fat ? `${formatNumber(extractNutritionValue(original.fat) * ratio)} g` : undefined,
@@ -378,7 +378,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                       <div className="flex flex-col items-start md:items-end">
                         <div className="flex items-baseline gap-1">
                           <span className="font-serif-brand text-2xl font-bold text-[#4A453E]">
-                            {entry.calories}
+                            {formatCalories(entry.calories)}
                           </span>
                           <span className="text-[10px] font-bold uppercase text-[#4A453E]/30">
                             kcal
@@ -755,7 +755,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                         </svg>
                         <div className="absolute flex flex-col items-center justify-center text-[#4A453E]">
                           <span className={`font-serif-brand text-4xl font-bold ${isExceeded ? 'text-[#C25235]' : ''}`}>
-                            {formatNumber(intake)}
+                            {formatCalories(intake)}
                           </span>
                           <span className="mt-1 text-xs font-semibold text-[#4A453E]/50">
                             / {targetCalories} kcal
@@ -764,8 +764,8 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                       </div>
                       <p className={`mt-5 text-sm font-semibold ${isExceeded ? 'text-[#C25235]' : 'text-[#4A453E]/55'}`}>
                         {isExceeded 
-                          ? `已超出 ${formatNumber(exceededCalories)} kcal` 
-                          : `剩余 ${formatNumber(remainingCalories)} kcal`}
+                          ? `已超出 ${formatCalories(exceededCalories)} kcal` 
+                          : `剩余 ${formatCalories(remainingCalories)} kcal`}
                       </p>
                     </div>
                   </div>
@@ -801,7 +801,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                       ].map((macro) => {
                         const macroTotal = totalProtein + totalCarbs + totalFat;
                         const percent = macro.backendRatio != null
-                          ? Number((macro.backendRatio * 100).toFixed(2))
+                          ? macro.backendRatio
                           : macroTotal > 0 ? getPercent(macro.value, macroTotal) : 0;
 
                         return (
@@ -922,7 +922,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                         <div className="min-w-0">
                           <h4 className="truncate text-sm font-bold text-[#4A453E]">{item.name}</h4>
                           <p className="mt-1 text-xs text-[#4A453E]/50">
-                            {item.calories} kcal
+                            {formatCalories(item.calories)} kcal
                           </p>
                         </div>
                       </div>
@@ -1204,7 +1204,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                 Nutrition Details
               </h5>
               <span className="font-serif-brand text-[26px] font-bold italic leading-none text-[#4A453E] md:text-[28px]">
-                {totalCalories}{' '}
+                {formatCalories(totalCalories)}{' '}
                 <span className="font-sans text-xs font-bold not-italic uppercase tracking-wide text-[#4A453E]/20">
                   kcal
                 </span>
@@ -1228,7 +1228,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                       >
                         <div className="mb-2 flex items-center justify-between gap-3">
                           <span className="text-[13px] font-bold text-[#4A453E]">{item.name}</span>
-                          <span className="shrink-0 text-[11px] font-bold text-[#FF8A65]">{item.energy}</span>
+                          <span className="shrink-0 text-[11px] font-bold text-[#FF8A65]">{formatEnergyString(item.energy)}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-bold text-[#4A453E]/35">份量</span>
@@ -1275,7 +1275,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                           {item.portion}
                         </td>
                         <td className="py-2.5 pl-2 text-right text-[11px] font-bold text-[#4A453E]/80">
-                          {item.energy}
+                          {formatEnergyString(item.energy)}
                         </td>
                       </tr>
                     ))}
@@ -1623,6 +1623,18 @@ function formatNumber(value: number): string {
     return String(value);
   }
   return value.toFixed(1);
+}
+
+function formatCalories(value: string | number): string {
+  if (typeof value === 'number') {
+    return String(Math.round(value));
+  }
+  return String(Math.round(extractCaloriesValue(value)));
+}
+
+function formatEnergyString(energy: string): string {
+  const num = extractCaloriesValue(energy);
+  return `${Math.round(num)} kcal`;
 }
 
 type SavedAnalysisSelections = Record<string, string[]>;
