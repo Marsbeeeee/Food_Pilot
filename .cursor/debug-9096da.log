@@ -1,0 +1,3 @@
+{"sessionId":"9096da","location":"Explorer.tsx:handleAnalyze","message":"Insights API error","data":{"msg":"AI 分析服务暂时不可用，请稍后重试。","status":200,"retryable":true},"timestamp":1773843324304}
+{"sessionId":"9096da","location":"Explorer.tsx:handleAnalyze","message":"Insights API error","data":{"msg":"AI 分析服务暂时不可用，请稍后重试。","status":200,"retryable":true},"timestamp":1773843329256}
+{"sessionId":"9096da","location":"Explorer.tsx:handleAnalyze","message":"Insights API error","data":{"msg":"API 配额已用完，请检查 Gemini 计划与账单，或稍后重试。","status":200,"retryable":true},"timestamp":1773843378050}

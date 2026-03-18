@@ -1,10 +1,13 @@
 import json
 import re
+import time
 from datetime import date
+from pathlib import Path
 from typing import Any
-from urllib import error, parse, request
+from urllib import error, request
 
 from backend.config.estimate import get_estimate_ai_config
+from backend.services.ai_client import call_ai
 from backend.database.connection import get_db_connection
 from backend.repositories.food_log_repository import (
     get_food_log_by_id as get_food_log_by_id_record,
@@ -21,6 +24,18 @@ from backend.services.insights_contract import (
     INSIGHTS_RESPONSE_SCHEMA,
     INSIGHTS_SYSTEM_PROMPT,
 )
+
+# #region agent log
+def _dbg_log(msg: str, data: dict, hyp: str = "") -> None:
+    try:
+        p = Path(__file__).resolve().parents[2] / "debug-9096da.log"
+        entry = {"sessionId": "9096da", "location": "insights_service.py", "message": msg, "data": data, "timestamp": int(time.time() * 1000)}
+        if hyp:
+            entry["hypothesisId"] = hyp
+        p.open("a", encoding="utf-8").write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+# #endregion
 
 
 class InsightsServiceError(Exception):
@@ -75,12 +90,18 @@ class AIConfigMissingError(InsightsServiceError):
 
 
 class AIUpstreamError(InsightsServiceError):
-    def __init__(self, message: str, *, retryable: bool) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        retryable: bool,
+        user_message: str | None = None,
+    ) -> None:
         super().__init__(
             code="AI_UPSTREAM_ERROR",
             status_code=503,
             message=message,
-            user_message="AI 分析服务暂时不可用，请稍后重试。",
+            user_message=user_message or "AI 分析服务暂时不可用，请稍后重试。",
             retryable=retryable,
         )
 
@@ -267,11 +288,14 @@ def _generate_ai_insights(
     mode: str,
 ) -> AIInsights:
     config = get_estimate_ai_config()
+    # #region agent log
+    _dbg_log("AI config before call", {"api_key_present": bool(config.api_key), "model": config.model, "timeout": config.timeout_seconds}, "H1")
+    # #endregion
     if not config.api_key:
         raise AIConfigMissingError()
 
     user_prompt = _build_insights_user_prompt(aggregation, entries, mode=mode)
-    raw = _call_gemini_for_insights(config, user_prompt)
+    raw = _call_ai_for_insights(config, user_prompt)
 
     summary = str(raw.get("summary") or "").strip()
     risks_raw = raw.get("risks")
@@ -324,39 +348,17 @@ def _build_insights_user_prompt(
     return "\n".join(lines)
 
 
-def _call_gemini_for_insights(config: Any, user_prompt: str) -> dict[str, Any]:
-    endpoint = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{config.model}:generateContent?key={parse.quote(config.api_key)}"
-    )
-
-    payload = {
-        "system_instruction": {
-            "parts": [{"text": INSIGHTS_SYSTEM_PROMPT}],
-        },
-        "contents": [
-            {
-                "role": "user",
-                "parts": [{"text": user_prompt}],
-            }
-        ],
-        "generationConfig": {
-            "responseMimeType": "application/json",
-            "responseSchema": INSIGHTS_RESPONSE_SCHEMA,
-        },
-    }
-
-    body = json.dumps(payload).encode("utf-8")
-    req = request.Request(
-        endpoint,
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-
+def _call_ai_for_insights(config: Any, user_prompt: str) -> dict[str, Any]:
+    # #region agent log
+    _dbg_log("AI request start", {"model": config.model}, "H5")
+    # #endregion
     try:
-        with request.urlopen(req, timeout=config.timeout_seconds) as response:
-            response_data = json.load(response)
+        return call_ai(
+            config,
+            INSIGHTS_SYSTEM_PROMPT,
+            user_prompt,
+            response_schema=INSIGHTS_RESPONSE_SCHEMA,
+        )
     except error.HTTPError as exc:
         body = exc.read()
         detail = ""
@@ -364,40 +366,36 @@ def _call_gemini_for_insights(config: Any, user_prompt: str) -> dict[str, Any]:
             detail = body.decode("utf-8", errors="replace")[:500]
         except Exception:
             pass
+        # #region agent log
+        _dbg_log("AI HTTPError", {"code": exc.code, "detail_snippet": detail[:200]}, "H2" if exc.code in (401, 403) else "H3")
+        # #endregion
         if exc.code in {401, 403}:
             raise AIUpstreamError(
                 f"AI provider authentication failed. {detail}",
                 retryable=False,
             ) from exc
+        if exc.code == 429:
+            raise AIUpstreamError(
+                f"AI provider request failed ({exc.code}). {detail}",
+                retryable=True,
+                user_message="API 配额已用完，请检查计划与账单，或稍后重试。",
+            ) from exc
         raise AIUpstreamError(
             f"AI provider request failed ({exc.code}). {detail}",
-            retryable=exc.code >= 500 or exc.code == 429,
+            retryable=exc.code >= 500,
         ) from exc
     except error.URLError as exc:
+        # #region agent log
+        _dbg_log("AI URLError", {"reason": str(getattr(exc, "reason", exc))}, "H4")
+        # #endregion
         raise AIUpstreamError(
             "AI provider is temporarily unavailable.",
             retryable=True,
         ) from exc
-
-    try:
-        text = response_data["candidates"][0]["content"]["parts"][0]["text"]
-    except (KeyError, IndexError, TypeError) as exc:
-        raise AIResponseInvalidError(
-            "AI provider did not return parseable content"
-        ) from exc
-
-    try:
-        parsed = json.loads(text)
     except json.JSONDecodeError as exc:
         raise AIResponseInvalidError(
             "AI provider did not return valid JSON"
         ) from exc
-
-    if not isinstance(parsed, dict):
-        raise AIResponseInvalidError(
-            "AI provider returned JSON that is not an object"
-        )
-    return parsed
 
 
 def _coerce_string_list(value: Any) -> list[str]:

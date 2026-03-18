@@ -1,8 +1,9 @@
 import json
 from typing import Any
-from urllib import error, parse, request
+from urllib import error, request
 
 from backend.config.estimate import get_estimate_ai_config
+from backend.services.ai_client import call_ai
 from backend.schemas.profile import ProfileOut
 from backend.schemas.recommendation import GuidanceReply
 from backend.services.profile_service import get_profile
@@ -134,7 +135,7 @@ def _generate_guidance(
     # 统一在入口尝试加载 Profile：如果有 profile_id，则始终加载 Profile 对象；
     # 若未设置或加载失败，则使用显式的占位（profile=None），但仍以一致的方式向下传递。
     _, profile_context = _load_profile_and_context(profile_id, user_id)
-    raw_response = _call_gemini_api(query, response_mode=response_mode, profile_context=profile_context)
+    raw_response = _call_ai_api(query, response_mode=response_mode, profile_context=profile_context)
     try:
         return _parse_guidance_payload(raw_response, response_mode=response_mode)
     except ValueError as exc:
@@ -143,7 +144,7 @@ def _generate_guidance(
         raise InvalidAIResponseError(str(exc)) from exc
 
 
-def _call_gemini_api(
+def _call_ai_api(
     query: str,
     *,
     response_mode: str,
@@ -153,44 +154,17 @@ def _call_gemini_api(
     if not config.api_key:
         raise MissingAPIKeyError()
 
-    endpoint = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{config.model}:generateContent?key={parse.quote(config.api_key)}"
+    system_prompt = _build_guidance_system_instruction(
+        response_mode=response_mode,
+        profile_context=profile_context,
     )
-
-    payload = {
-        "system_instruction": {
-            "parts": [
-                {
-                    "text": _build_guidance_system_instruction(
-                        response_mode=response_mode,
-                        profile_context=profile_context,
-                    )
-                }
-            ],
-        },
-        "contents": [
-            {
-                "role": "user",
-                "parts": [{"text": query}],
-            }
-        ],
-        "generationConfig": {
-            "responseMimeType": "application/json",
-            "responseSchema": GUIDANCE_RESPONSE_SCHEMA,
-        },
-    }
-    body = json.dumps(payload).encode("utf-8")
-    req = request.Request(
-        endpoint,
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-
     try:
-        with request.urlopen(req, timeout=config.timeout_seconds) as response:
-            response_data = json.load(response)
+        return call_ai(
+            config,
+            system_prompt,
+            query,
+            response_schema=GUIDANCE_RESPONSE_SCHEMA,
+        )
     except error.HTTPError as exc:
         exc.read()
         if exc.code in {401, 403}:
@@ -201,20 +175,8 @@ def _call_gemini_api(
         ) from exc
     except error.URLError as exc:
         raise UpstreamAIError("AI provider is temporarily unavailable.", retryable=True) from exc
-
-    try:
-        text = response_data["candidates"][0]["content"]["parts"][0]["text"]
-    except (KeyError, IndexError, TypeError) as exc:
-        raise InvalidAIResponseError("AI provider did not return parseable content") from exc
-
-    try:
-        parsed = json.loads(text)
     except json.JSONDecodeError as exc:
         raise InvalidAIResponseError("AI provider did not return valid JSON") from exc
-
-    if not isinstance(parsed, dict):
-        raise InvalidAIResponseError("AI provider returned JSON that is not an object")
-    return parsed
 
 
 def _load_profile_and_context(

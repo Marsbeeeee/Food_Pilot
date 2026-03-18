@@ -710,6 +710,9 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       if (abortController.signal.aborted) return;
 
       if (error instanceof InsightsApiError) {
+        // #region agent log
+        fetch('http://127.0.0.1:7693/ingest/2b8ec8af-3a30-41dc-a691-2ee12f18fa1a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9096da'},body:JSON.stringify({sessionId:'9096da',location:'Explorer.tsx:handleAnalyze',message:'Insights API error',data:{msg:error.message,status:error.status,retryable:error.retryable},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         setAnalysisState({
           status: 'error',
           message: error.message,
