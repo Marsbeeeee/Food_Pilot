@@ -26,6 +26,7 @@ interface ExplorerProps {
   onAnalysisDateChange?: (date: string) => void;
   onNavigateToInsights?: () => void;
   currentUserId?: string | number;
+  profileKcalTarget?: string | number;
 }
 
 interface FoodLogEditDraft {
@@ -52,9 +53,12 @@ export const Explorer: React.FC<ExplorerProps> = ({
   onAnalysisDateChange,
   onNavigateToInsights,
   currentUserId,
+  profileKcalTarget,
 }) => {
   const orderedEntries = sortFoodLogEntries(logEntries);
-  const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(
+    orderedEntries[0] ?? null,
+  );
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
@@ -107,10 +111,10 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
     setSelectedEntry((current) => {
       if (!current) {
-        return null;
+        return orderedEntries[0];
       }
 
-      return orderedEntries.find((entry) => entry.id === current.id) ?? null;
+      return orderedEntries.find((entry) => entry.id === current.id) ?? orderedEntries[0];
     });
   }, [logEntries]);
 
@@ -280,6 +284,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
         analysisDate={analysisDate}
         onAnalysisDateChange={onAnalysisDateChange}
         currentUserId={currentUserId}
+        profileKcalTarget={profileKcalTarget}
       />
     );
   }
@@ -571,6 +576,7 @@ interface AnalysisViewProps {
   analysisDate: string;
   onAnalysisDateChange?: (date: string) => void;
   currentUserId?: string | number;
+  profileKcalTarget?: string | number;
 }
 
 type AnalysisMode = 'day' | 'week';
@@ -582,6 +588,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   analysisDate,
   onAnalysisDateChange,
   currentUserId,
+  profileKcalTarget,
 }) => {
   const [currentDate, setCurrentDate] = useState(analysisDate);
   const [mode, setMode] = useState<AnalysisMode>('day');
@@ -631,7 +638,8 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const totalCarbs = agg ? agg.totalCarbs : clientTotalCarbs;
   const totalFat = agg ? agg.totalFat : clientTotalFat;
 
-  const targetCalories = 2000;
+  const dailyTargetCalories = Math.max(extractCaloriesValue(profileKcalTarget ?? 0), 0);
+  const targetCalories = mode === 'week' ? dailyTargetCalories * 7 : dailyTargetCalories;
   const intake = totalCalories;
   const progressRatio = targetCalories > 0 ? Math.min(intake / targetCalories, 1) : 0;
   const remainingCalories = Math.max(targetCalories - intake, 0);
