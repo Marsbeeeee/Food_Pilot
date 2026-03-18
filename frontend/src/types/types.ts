@@ -212,3 +212,57 @@ export interface FoodLogPatchInput {
   assistantSuggestion?: string;
   mealOccurredAt?: string;
 }
+
+export interface InsightsDateRange {
+  start: string;
+  end: string;
+}
+
+export interface InsightsAnalyzeRequest {
+  mode: 'day' | 'week';
+  selectedLogIds?: number[];
+  dateRange: InsightsDateRange;
+}
+
+export interface NutritionAggregation {
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  proteinRatio: number;
+  carbsRatio: number;
+  fatRatio: number;
+  entryCount: number;
+}
+
+export interface InsightsEntryBrief {
+  id: string;
+  name: string;
+  calories: string;
+  date: string;
+  time: string;
+}
+
+export interface AIInsights {
+  summary: string;
+  risks: string[];
+  actions: string[];
+}
+
+export interface InsightsAnalyzeData {
+  aggregation: NutritionAggregation;
+  entries: InsightsEntryBrief[];
+  ai: AIInsights;
+}
+
+export interface InsightsError {
+  code: string;
+  message: string;
+  retryable: boolean;
+}
+
+export interface InsightsAnalyzeResponse {
+  success: boolean;
+  data: InsightsAnalyzeData | null;
+  error: InsightsError | null;
+}

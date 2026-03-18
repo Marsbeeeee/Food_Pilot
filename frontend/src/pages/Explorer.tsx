@@ -6,8 +6,14 @@ import {
   formatSavedMoment,
   sortFoodLogEntries,
 } from '../app/foodLogFavorites';
+import { analyzeInsights, InsightsApiError } from '../api/insights';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { FoodLogEntry, FoodLogPatchInput, IngredientResult } from '../types/types';
+import {
+  FoodLogEntry,
+  FoodLogPatchInput,
+  IngredientResult,
+  InsightsAnalyzeData,
+} from '../types/types';
 
 interface ExplorerProps {
   logEntries: FoodLogEntry[];
@@ -15,7 +21,6 @@ interface ExplorerProps {
   onDeleteFoodLog: (entryId: string) => Promise<void>;
   onRestoreFoodLog: (entryId: string) => Promise<void>;
   onUpdateFoodLog: (entryId: string, payload: FoodLogPatchInput) => Promise<void>;
-  onAnalyzeSelection?: (entries: FoodLogEntry[], date: string) => Promise<string>;
   defaultToAnalysisView?: boolean;
   analysisDate: string;
   onAnalysisDateChange?: (date: string) => void;
@@ -42,7 +47,6 @@ export const Explorer: React.FC<ExplorerProps> = ({
   onDeleteFoodLog,
   onRestoreFoodLog,
   onUpdateFoodLog,
-  onAnalyzeSelection,
   defaultToAnalysisView = false,
   analysisDate,
   onAnalysisDateChange,
@@ -275,7 +279,6 @@ export const Explorer: React.FC<ExplorerProps> = ({
         items={analysisBasket}
         onBack={() => setShowAnalysisView(false)}
         onRemove={handleRemoveFromAnalysis}
-        onAnalyzeSelection={onAnalyzeSelection}
         analysisDate={analysisDate}
         onAnalysisDateChange={onAnalysisDateChange}
       />
@@ -556,11 +559,16 @@ export const Explorer: React.FC<ExplorerProps> = ({
   );
 };
 
+type AnalysisState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; data: InsightsAnalyzeData }
+  | { status: 'error'; message: string; retryable: boolean };
+
 interface AnalysisViewProps {
   items: AnalysisSelectionItem[];
   onBack: () => void;
   onRemove: (basketId: string) => void;
-  onAnalyzeSelection?: (entries: FoodLogEntry[], date: string) => Promise<string>;
   analysisDate: string;
   onAnalysisDateChange?: (date: string) => void;
 }
@@ -569,13 +577,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   items,
   onBack,
   onRemove,
-  onAnalyzeSelection,
   analysisDate,
   onAnalysisDateChange,
 }) => {
   const [currentDate, setCurrentDate] = useState(analysisDate);
-  const [aiAdvice, setAiAdvice] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisState, setAnalysisState] = useState<AnalysisState>({ status: 'idle' });
 
   useEffect(() => {
     setCurrentDate(analysisDate);
@@ -583,25 +589,28 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
 
   const filteredItems = items.filter((item) => item.analysisDate === currentDate);
 
-  const totalCalories = filteredItems.reduce(
+  const clientTotalCalories = filteredItems.reduce(
     (sum, item) => sum + extractCaloriesValue(item.calories),
     0,
   );
-
-  const totalProtein = filteredItems.reduce(
+  const clientTotalProtein = filteredItems.reduce(
     (sum, item) => sum + extractNutritionValue(item.protein),
     0,
   );
-
-  const totalCarbs = filteredItems.reduce(
+  const clientTotalCarbs = filteredItems.reduce(
     (sum, item) => sum + extractNutritionValue(item.carbs),
     0,
   );
-
-  const totalFat = filteredItems.reduce(
+  const clientTotalFat = filteredItems.reduce(
     (sum, item) => sum + extractNutritionValue(item.fat),
     0,
   );
+
+  const agg = analysisState.status === 'success' ? analysisState.data.aggregation : null;
+  const totalCalories = agg ? agg.totalCalories : clientTotalCalories;
+  const totalProtein = agg ? agg.totalProtein : clientTotalProtein;
+  const totalCarbs = agg ? agg.totalCarbs : clientTotalCarbs;
+  const totalFat = agg ? agg.totalFat : clientTotalFat;
 
   const targetCalories = 2000;
   const intake = totalCalories;
@@ -611,36 +620,50 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const isExceeded = intake > targetCalories;
 
   const handleAnalyze = async () => {
-    if (filteredItems.length === 0 || isAnalyzing) {
+    if (filteredItems.length === 0 || analysisState.status === 'loading') {
       return;
     }
 
-    setIsAnalyzing(true);
+    setAnalysisState({ status: 'loading' });
     try {
-      if (onAnalyzeSelection) {
-        const result = await onAnalyzeSelection(filteredItems, currentDate);
-        setAiAdvice(result);
+      const selectedLogIds = filteredItems
+        .map((item) => Number(item.id))
+        .filter((id) => Number.isFinite(id) && id > 0);
+
+      const response = await analyzeInsights({
+        mode: 'day',
+        selectedLogIds: selectedLogIds.length > 0 ? selectedLogIds : undefined,
+        dateRange: { start: currentDate, end: currentDate },
+      });
+
+      if (response.data) {
+        setAnalysisState({ status: 'success', data: response.data });
       } else {
-        setAiAdvice(buildFallbackAnalysis({
-          totalCalories,
-          protein: totalProtein,
-          carbs: totalCarbs,
-          fat: totalFat,
-          itemNames: filteredItems.map((item) => item.name),
-        }));
+        setAnalysisState({
+          status: 'error',
+          message: '分析服务返回了空数据，请稍后重试。',
+          retryable: true,
+        });
       }
     } catch (error) {
-      const message = error instanceof Error
-        ? error.message
-        : '暂时无法生成分析，请稍后重试。';
-      setAiAdvice(message);
-    } finally {
-      setIsAnalyzing(false);
+      if (error instanceof InsightsApiError) {
+        setAnalysisState({
+          status: 'error',
+          message: error.message,
+          retryable: error.retryable,
+        });
+      } else {
+        setAnalysisState({
+          status: 'error',
+          message: error instanceof Error ? error.message : '暂时无法生成分析，请稍后重试。',
+          retryable: true,
+        });
+      }
     }
   };
 
   useEffect(() => {
-    setAiAdvice(null);
+    setAnalysisState({ status: 'idle' });
   }, [currentDate]);
 
   return (
@@ -759,22 +782,27 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                           value: totalProtein,
                           icon: 'protein',
                           color: '#FF9A76',
+                          backendRatio: agg?.proteinRatio,
                         },
                         {
                           label: '碳水化合物',
                           value: totalCarbs,
                           icon: 'carbs',
                           color: '#FFD166',
+                          backendRatio: agg?.carbsRatio,
                         },
                         {
                           label: '脂肪',
                           value: totalFat,
                           icon: 'fat',
                           color: '#A1887F',
+                          backendRatio: agg?.fatRatio,
                         },
                       ].map((macro) => {
                         const macroTotal = totalProtein + totalCarbs + totalFat;
-                        const percent = macroTotal > 0 ? getPercent(macro.value, macroTotal) : 0;
+                        const percent = macro.backendRatio != null
+                          ? Number((macro.backendRatio * 100).toFixed(2))
+                          : macroTotal > 0 ? getPercent(macro.value, macroTotal) : 0;
 
                         return (
                           <div
@@ -934,11 +962,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
           </div>
 
           <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-6">
-            {aiAdvice ? (
-              <div className="whitespace-pre-wrap text-sm leading-7 text-[#4A453E]/75">
-                {aiAdvice}
-              </div>
-            ) : (
+            {analysisState.status === 'idle' && (
               <div className="flex h-full flex-col items-center justify-center px-4 text-center">
                 <div className="mb-5 flex size-16 items-center justify-center rounded-full bg-[#FFF2EC]">
                   <span className="material-symbols-outlined text-3xl text-[#FF8A65]/50">
@@ -950,23 +974,114 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                 </p>
               </div>
             )}
+
+            {analysisState.status === 'loading' && (
+              <div className="flex h-full flex-col items-center justify-center px-4 text-center">
+                <div className="mb-5 flex size-16 items-center justify-center rounded-full bg-[#FFF2EC]">
+                  <span className="material-symbols-outlined animate-spin text-3xl text-[#FF8A65]">
+                    progress_activity
+                  </span>
+                </div>
+                <p className="text-sm font-semibold leading-7 text-[#4A453E]/60">
+                  正在分析中，请稍候…
+                </p>
+              </div>
+            )}
+
+            {analysisState.status === 'error' && (
+              <div className="flex h-full flex-col items-center justify-center px-4 text-center">
+                <div className="mb-5 flex size-16 items-center justify-center rounded-full bg-red-50">
+                  <span className="material-symbols-outlined text-3xl text-red-400">
+                    error
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-[#4A453E]">分析失败</p>
+                <p className="mt-2 text-sm leading-7 text-[#4A453E]/55">
+                  {analysisState.message}
+                </p>
+                {analysisState.retryable && (
+                  <button
+                    type="button"
+                    onClick={() => void handleAnalyze()}
+                    className="mt-5 flex items-center gap-2 rounded-full bg-[#FF8A65] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#FF8A65]/20 transition-all hover:bg-[#FF8A65]/90"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">refresh</span>
+                    重试
+                  </button>
+                )}
+              </div>
+            )}
+
+            {analysisState.status === 'success' && (
+              <div className="space-y-6">
+                <div>
+                  <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#4A453E]/35">
+                    <span className="material-symbols-outlined text-[16px] text-[#FF8A65]">summarize</span>
+                    综合评估
+                  </h4>
+                  <p className="text-sm leading-7 text-[#4A453E]/75">
+                    {analysisState.data.ai.summary}
+                  </p>
+                </div>
+
+                {analysisState.data.ai.risks.length > 0 && (
+                  <div>
+                    <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#4A453E]/35">
+                      <span className="material-symbols-outlined text-[16px] text-[#C25235]">warning</span>
+                      风险提示
+                    </h4>
+                    <ul className="space-y-2">
+                      {analysisState.data.ai.risks.map((risk, i) => (
+                        <li key={i} className="flex items-start gap-2.5 text-sm leading-7 text-[#4A453E]/70">
+                          <span className="mt-1.5 inline-block size-1.5 shrink-0 rounded-full bg-[#C25235]/50" />
+                          {risk}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {analysisState.data.ai.actions.length > 0 && (
+                  <div>
+                    <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#4A453E]/35">
+                      <span className="material-symbols-outlined text-[16px] text-[#4CAF50]">task_alt</span>
+                      改善建议
+                    </h4>
+                    <ol className="space-y-2">
+                      {analysisState.data.ai.actions.map((action, i) => (
+                        <li key={i} className="flex items-start gap-2.5 text-sm leading-7 text-[#4A453E]/70">
+                          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#4CAF50]/10 text-[10px] font-bold text-[#4CAF50]">
+                            {i + 1}
+                          </span>
+                          {action}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="border-t border-[#4A453E]/05 bg-[#FFFDF8] px-6 py-6">
             <button
               type="button"
               onClick={() => void handleAnalyze()}
-              disabled={isAnalyzing || filteredItems.length === 0}
+              disabled={analysisState.status === 'loading' || filteredItems.length === 0}
               className={`flex h-12 w-full items-center justify-center gap-2 rounded-full px-5 text-sm font-bold text-white shadow-lg transition-all ${
-                isAnalyzing || filteredItems.length === 0
+                analysisState.status === 'loading' || filteredItems.length === 0
                   ? 'cursor-not-allowed bg-[#4A453E]/20 shadow-none'
                   : 'bg-[#FF8A65] shadow-[#FF8A65]/20 hover:bg-[#FF8A65]/90'
               }`}
             >
               <span className="material-symbols-outlined text-[18px]">
-                {isAnalyzing ? 'progress_activity' : 'forum'}
+                {analysisState.status === 'loading' ? 'progress_activity' : 'forum'}
               </span>
-              {isAnalyzing ? '分析中...' : '生成 AI 分析'}
+              {analysisState.status === 'loading'
+                ? '分析中...'
+                : analysisState.status === 'success'
+                  ? '重新分析'
+                  : '生成 AI 分析'}
             </button>
           </div>
         </aside>
@@ -1587,42 +1702,4 @@ function restoreAllAnalysisItems(
   }
 
   return result;
-}
-
-function buildFallbackAnalysis(input: {
-  totalCalories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  itemNames: string[];
-}): string {
-  const { totalCalories, protein, carbs, fat, itemNames } = input;
-
-  const macroTotal = protein + carbs + fat;
-  const proteinRatio = macroTotal > 0 ? (protein / macroTotal) * 100 : 0;
-  const fatRatio = macroTotal > 0 ? (fat / macroTotal) * 100 : 0;
-
-  let balanceComment = '三大营养素比例较为均衡。';
-  if (proteinRatio >= 35) {
-    balanceComment = '蛋白质占比较高，适合增肌或高蛋白需求。';
-  } else if (fatRatio >= 35) {
-    balanceComment = '脂肪占比偏高，建议关注油脂摄入。';
-  } else if (carbs > protein && carbs > fat) {
-    balanceComment = '碳水化合物为主要供能来源，注意搭配优质蛋白。';
-  }
-
-  return [
-    `今日分析包含：${itemNames.join('、')}。`,
-    '',
-    `估算总摄入：${formatNumber(totalCalories)} kcal`,
-    `蛋白质：${formatNumber(protein)} g　碳水：${formatNumber(carbs)} g　脂肪：${formatNumber(fat)} g`,
-    '',
-    balanceComment,
-    '',
-    '改善建议：',
-    '1. 如果这是正餐，确保蛋白质摄入充足（建议每餐 20-30g）。',
-    '2. 如果整天摄入偏高，下一餐可减少酱料或高油脂配料。',
-    '3. 如果膳食纤维不足，建议当天补充蔬菜或水果。',
-  ].join('\n');
-
 }

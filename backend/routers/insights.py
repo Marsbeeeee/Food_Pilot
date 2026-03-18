@@ -1,5 +1,3 @@
-import logging
-
 from fastapi import APIRouter, Depends
 
 from backend.dependencies.auth import get_current_user
@@ -13,8 +11,6 @@ from backend.services.insights_service import (
     InsightsServiceError,
     analyze_insights,
 )
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/insights", tags=["insights"])
 
@@ -43,7 +39,6 @@ def insights_analyze(
             date_end=body.date_range.end,
         )
     except InsightsServiceError as exc:
-        logger.warning("Insights analysis failed: %s [%s]", exc.message, exc.code)
         return InsightsAnalyzeResponse(
             success=False,
             error=InsightsError(
@@ -53,7 +48,6 @@ def insights_analyze(
             ),
         )
     except Exception:
-        logger.exception("Unexpected error in insights analysis")
         return InsightsAnalyzeResponse(
             success=False,
             error=InsightsError(
