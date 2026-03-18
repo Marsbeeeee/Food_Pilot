@@ -7,8 +7,9 @@ import {
   FoodLogPatchInput,
   FoodLogSaveInput,
 } from '../types/types';
+import { API_BASE_URL } from './config';
 
-const FOOD_LOG_BASE_URL = 'http://localhost:8000/food-logs';
+const FOOD_LOG_BASE_URL = `${API_BASE_URL}/food-logs`;
 
 export class FoodLogApiError extends Error {
   status: number;

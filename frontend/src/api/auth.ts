@@ -1,6 +1,7 @@
 import { AuthSession, AuthUser } from '../types/types';
+import { API_BASE_URL } from './config';
 
-const AUTH_BASE_URL = 'http://localhost:8000/auth';
+const AUTH_BASE_URL = `${API_BASE_URL}/auth`;
 const AUTH_TOKEN_STORAGE_KEY = 'foodpilot.authToken';
 const AUTH_USER_STORAGE_KEY = 'foodpilot.authUser';
 

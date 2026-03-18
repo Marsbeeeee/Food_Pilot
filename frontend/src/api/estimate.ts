@@ -1,7 +1,8 @@
 import { clearSession, getStoredToken } from './auth';
 import { EstimateApiResponse, EstimateRequestInput } from '../types/types';
+import { API_BASE_URL } from './config';
 
-const ESTIMATE_BASE_URL = 'http://localhost:8000/estimate';
+const ESTIMATE_BASE_URL = `${API_BASE_URL}/estimate`;
 
 export class EstimateApiError extends Error {
   status: number;

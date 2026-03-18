@@ -6,8 +6,9 @@ import {
   IngredientResult,
   Message,
 } from '../types/types';
+import { API_BASE_URL } from './config';
 
-const CHAT_BASE_URL = 'http://localhost:8000/chat';
+const CHAT_BASE_URL = `${API_BASE_URL}/chat`;
 
 export class ChatApiError extends Error {
   status: number;

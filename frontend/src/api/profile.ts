@@ -1,7 +1,8 @@
 import { getStoredToken } from './auth';
 import { UserProfile, UserProfileForm, UserProfileInput } from '../types/types';
+import { API_BASE_URL } from './config';
 
-const PROFILE_ENDPOINT = 'http://localhost:8000/profile';
+const PROFILE_ENDPOINT = `${API_BASE_URL}/profile`;
 const MY_PROFILE_ENDPOINT = `${PROFILE_ENDPOINT}/me`;
 const PROFILE_STORAGE_KEY = 'foodpilot.profileId';
 

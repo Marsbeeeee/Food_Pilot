@@ -4,8 +4,9 @@ import {
   InsightsAnalyzeResponse,
   InsightsHistoryResponse,
 } from '../types/types';
+import { API_BASE_URL } from './config';
 
-const INSIGHTS_BASE_URL = 'http://localhost:8000/api/insights';
+const INSIGHTS_BASE_URL = `${API_BASE_URL}/api/insights`;
 
 export class InsightsApiError extends Error {
   status: number;
