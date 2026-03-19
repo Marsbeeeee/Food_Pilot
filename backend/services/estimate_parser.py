@@ -2,7 +2,30 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from backend.schemas.estimate import EstimateResult
+from backend.schemas.estimate import EstimateItem, EstimateResult
+
+
+def split_estimate_by_items(estimate: EstimateResult) -> list[EstimateResult]:
+    """
+    When the estimate contains multiple food items, split into separate EstimateResult
+    objects so each food can be displayed individually.
+    """
+    if len(estimate.items) <= 1:
+        return [estimate]
+
+    results: list[EstimateResult] = []
+    for item in estimate.items:
+        item_desc = (item.description or "").strip() or f"{item.name}（{item.portion}）的营养估算"
+        single = EstimateResult(
+            title=item.name,
+            description=item_desc,
+            confidence=estimate.confidence,
+            items=[item],
+            total_calories=item.energy,
+            suggestion=estimate.suggestion,
+        )
+        results.append(single)
+    return results
 
 
 DEFAULT_TITLE = "餐食营养估算"
@@ -97,6 +120,11 @@ def _normalize_items(raw_items: Any) -> list[dict[str, str]]:
             raw_item.get("fat")
             or raw_item.get("脂肪")
         )
+        description = _coerce_text(
+            raw_item.get("description")
+            or raw_item.get("desc")
+            or raw_item.get("summary")
+        )
 
         item: dict[str, str] = {
             "name": name,
@@ -109,6 +137,8 @@ def _normalize_items(raw_items: Any) -> list[dict[str, str]]:
             item["carbs"] = carbs
         if fat:
             item["fat"] = fat
+        if description:
+            item["description"] = description
 
         normalized_items.append(item)
 

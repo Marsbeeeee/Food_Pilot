@@ -1,6 +1,7 @@
 import unittest
 
-from backend.services.estimate_parser import parse_estimate_payload
+from backend.schemas.estimate import EstimateItem, EstimateResult
+from backend.services.estimate_parser import parse_estimate_payload, split_estimate_by_items
 
 
 class EstimateParserTests(unittest.TestCase):
@@ -76,6 +77,41 @@ class EstimateParserTests(unittest.TestCase):
             )
 
         self.assertEqual(str(context.exception), "AI response is missing item details")
+
+    def test_split_estimate_by_items_returns_single_when_one_item(self) -> None:
+        estimate = EstimateResult(
+            title="包子",
+            description="常见中式早餐",
+            confidence="中",
+            items=[EstimateItem(name="猪肉白菜包子", portion="2个", energy="360 kcal", protein="14.0 g", carbs="52.0 g", fat="12.0 g")],
+            total_calories="360 kcal",
+            suggestion="补充份量更准确。",
+        )
+        results = split_estimate_by_items(estimate)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].title, "包子")
+        self.assertEqual(len(results[0].items), 1)
+
+    def test_split_estimate_by_items_splits_multiple_foods(self) -> None:
+        estimate = EstimateResult(
+            title="中式早餐",
+            description="常见中式早餐组合",
+            confidence="中",
+            items=[
+                EstimateItem(name="猪肉白菜包子", portion="2个", energy="360 kcal", protein="14.0 g", carbs="52.0 g", fat="12.0 g"),
+                EstimateItem(name="无糖豆浆", portion="1杯", energy="80 kcal", protein="7.5 g", carbs="4.0 g", fat="3.5 g"),
+            ],
+            total_calories="440 kcal",
+            suggestion="如果补充份量、做法或食材细节，估算会更准确。",
+        )
+        results = split_estimate_by_items(estimate)
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].title, "猪肉白菜包子")
+        self.assertEqual(results[0].total_calories, "360 kcal")
+        self.assertEqual(len(results[0].items), 1)
+        self.assertEqual(results[1].title, "无糖豆浆")
+        self.assertEqual(results[1].total_calories, "80 kcal")
+        self.assertEqual(len(results[1].items), 1)
 
 
 if __name__ == "__main__":

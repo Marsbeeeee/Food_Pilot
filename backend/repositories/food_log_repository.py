@@ -28,6 +28,9 @@ FOOD_LOG_SELECT_COLUMNS = """
     is_manual,
     idempotency_key,
     assistant_suggestion,
+    image,
+    image_source,
+    image_license,
     created_at,
     updated_at,
     deleted_at
@@ -59,6 +62,9 @@ def create_food_log(
     status: str = ACTIVE_FOOD_LOG_STATUS,
     idempotency_key: str | None = None,
     is_manual: bool | None = None,
+    image: str | None = None,
+    image_source: str | None = None,
+    image_license: str | None = None,
     auto_commit: bool = True,
 ) -> dict[str, object]:
     normalized_query = normalize_food_log_query(meal_description)
@@ -104,6 +110,9 @@ def create_food_log(
                 status=ACTIVE_FOOD_LOG_STATUS,
                 idempotency_key=resolved_idempotency_key,
                 is_manual=resolved_is_manual,
+                image=image,
+                image_source=image_source,
+                image_license=image_license,
                 auto_commit=auto_commit,
             )
         return existing
@@ -134,12 +143,15 @@ def create_food_log(
             is_manual,
             idempotency_key,
             assistant_suggestion,
+            image,
+            image_source,
+            image_license,
             created_at,
             updated_at,
             deleted_at
         ) VALUES (
             ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), COALESCE(?, CURRENT_TIMESTAMP), ?,
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), COALESCE(?, CURRENT_TIMESTAMP), ?
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), COALESCE(?, CURRENT_TIMESTAMP), ?
         )
         """,
         (
@@ -160,6 +172,9 @@ def create_food_log(
             int(resolved_is_manual),
             resolved_idempotency_key,
             assistant_suggestion,
+            image,
+            image_source,
+            image_license,
             created_at,
             created_at,
             resolved_deleted_at,
@@ -199,6 +214,9 @@ def save_food_log(
     status: str = ACTIVE_FOOD_LOG_STATUS,
     idempotency_key: str | None = None,
     is_manual: bool | None = None,
+    image: str | None = None,
+    image_source: str | None = None,
+    image_license: str | None = None,
     auto_commit: bool = True,
 ) -> dict[str, object]:
     if food_log_id is not None:
@@ -221,6 +239,9 @@ def save_food_log(
             status=status,
             idempotency_key=idempotency_key,
             is_manual=is_manual,
+            image=image,
+            image_source=image_source,
+            image_license=image_license,
             auto_commit=auto_commit,
         )
 
@@ -243,6 +264,9 @@ def save_food_log(
         status=status,
         idempotency_key=idempotency_key,
         is_manual=is_manual,
+        image=image,
+        image_source=image_source,
+        image_license=image_license,
         auto_commit=auto_commit,
     )
 
@@ -267,6 +291,9 @@ def update_food_log(
     status: str = ACTIVE_FOOD_LOG_STATUS,
     idempotency_key: str | None = None,
     is_manual: bool | None = None,
+    image: str | None = None,
+    image_source: str | None = None,
+    image_license: str | None = None,
     auto_commit: bool = True,
 ) -> dict[str, object]:
     existing = get_food_log_by_id(conn, food_log_id, user_id, include_deleted=True)
@@ -353,6 +380,9 @@ def update_food_log(
             is_manual = ?,
             idempotency_key = ?,
             assistant_suggestion = ?,
+            image = ?,
+            image_source = ?,
+            image_license = ?,
             deleted_at = ?
         WHERE id = ? AND user_id = ?
         """,
@@ -373,6 +403,9 @@ def update_food_log(
             int(resolved_is_manual),
             resolved_idempotency_key,
             resolved_assistant_suggestion,
+            image,
+            image_source,
+            image_license,
             resolved_deleted_at,
             food_log_id,
             user_id,

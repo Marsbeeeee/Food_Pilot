@@ -72,7 +72,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const persistedSavedFoodLogEntriesByMessageId = new Map<string, FoodLogEntry>(
     foodLog
       .filter((entry): entry is FoodLogEntry & { sourceMessageId: string } => Boolean(entry.sourceMessageId))
-      .map((entry) => [entry.sourceMessageId, entry]),
+      .map((entry) => [`${entry.sourceMessageId}::${entry.name}`, entry] as [string, FoodLogEntry]),
   );
 
   useEffect(() => {
@@ -302,87 +302,101 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     sessionId: string,
     message: Message,
     mealDescription: string,
+    estimateBlock?: { title: string; description?: string; total: string; items: Array<{ name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }> },
   ) => {
     if (getMessageType(message) !== 'meal_estimate') {
       return;
     }
 
-    if (!message.id || !message.title || !message.description || !message.total || !message.items?.length) {
+    const saveKey = estimateBlock
+      ? `${message.id}::${estimateBlock.title}`
+      : `${message.id}::${message.title ?? ''}`;
+    const title = estimateBlock?.title ?? message.title;
+    const description = estimateBlock?.description ?? message.description;
+    const total = estimateBlock?.total ?? message.total;
+    const items = estimateBlock?.items ?? message.items;
+    const descForSave = estimateBlock
+      ? (estimateBlock.items[0]?.portion ? `${estimateBlock.title}（${estimateBlock.items[0].portion}）` : estimateBlock.title)
+      : mealDescription;
+
+    if (!message.id || !title || !description || !total || !items?.length) {
       return;
     }
 
     setSavingFoodLogMessageIds((current) => (
-      current.includes(message.id as string) ? current : [...current, message.id as string]
+      current.includes(saveKey) ? current : [...current, saveKey]
     ));
     setFailedFoodLogSaves((current) => {
       const next = { ...current };
-      delete next[message.id as string];
+      delete next[saveKey];
       return next;
     });
 
     try {
+      const idempotencyKey = `${message.id}::${title}`;
       const savedEntry = await saveFoodLogEntry({
         sourceType: 'chat_message',
-        mealDescription,
-        resultTitle: message.title,
+        mealDescription: descForSave,
+        resultTitle: title,
         resultConfidence: message.confidence,
-        resultDescription: message.description,
-        totalCalories: message.total,
-        ingredients: message.items,
+        resultDescription: description,
+        totalCalories: total,
+        ingredients: items,
         sessionId: Number(sessionId),
         sourceMessageId: Number(message.id),
         assistantSuggestion: message.content,
+        idempotencyKey,
       });
       setSavedFoodLogMessageIds((current) => ({
         ...current,
-        [message.id as string]: savedEntry.id,
+        [saveKey]: savedEntry.id,
       }));
       setFailedFoodLogSaves((current) => {
         const next = { ...current };
-        delete next[message.id as string];
+        delete next[saveKey];
         return next;
       });
       await refreshFoodLog();
     } catch (error) {
       setFailedFoodLogSaves((current) => ({
         ...current,
-        [message.id as string]: resolveFoodLogErrorMessage(
+        [saveKey]: resolveFoodLogErrorMessage(
           error,
           '这条估算结果暂时无法保存到 Food Log，请稍后重试。',
         ),
       }));
     } finally {
-      setSavingFoodLogMessageIds((current) => current.filter((item) => item !== message.id));
+      setSavingFoodLogMessageIds((current) => current.filter((item) => item !== saveKey));
     }
   };
 
-  const handleUndoFoodLogSave = async (messageId: string) => {
-    const persistedEntry = persistedSavedFoodLogEntriesByMessageId.get(messageId);
-    const entryId = persistedEntry?.id ?? savedFoodLogMessageIds[messageId];
+  const handleUndoFoodLogSave = async (saveKey: string) => {
+    const persistedEntry = persistedSavedFoodLogEntriesByMessageId.get(saveKey);
+    const entryId = persistedEntry?.id ?? savedFoodLogMessageIds[saveKey];
     if (!entryId) {
       return;
     }
 
     setDeletingFoodLogMessageIds((current) => (
-      current.includes(messageId) ? current : [...current, messageId]
+      current.includes(saveKey) ? current : [...current, saveKey]
     ));
 
     try {
       await onDeleteFoodLog(entryId);
       setSavedFoodLogMessageIds((current) => {
         const next = { ...current };
-        delete next[messageId];
+        delete next[saveKey];
         return next;
       });
       setFailedFoodLogSaves((current) => {
         const next = { ...current };
-        delete next[messageId];
+        delete next[saveKey];
         return next;
       });
     } catch (error) {
       handleFoodLogError(error, '暂时无法撤销这条 Food Log 保存记录，请稍后重试。');
     } finally {
-      setDeletingFoodLogMessageIds((current) => current.filter((item) => item !== messageId));
+      setDeletingFoodLogMessageIds((current) => current.filter((item) => item !== saveKey));
     }
   };
 
@@ -522,26 +536,29 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 const mealDescription = isMealEstimate
                   ? resolveMealDescription(activeSession.messages, index, message)
                   : null;
-                const savedFoodLogEntryId = message.id
+                const defaultSaveKey = message.id && message.title
+                  ? `${message.id}::${message.title}`
+                  : message.id ?? '';
+                const savedFoodLogEntryId = defaultSaveKey
                   ? (
-                    savedFoodLogMessageIds[message.id]
-                    || persistedSavedFoodLogEntriesByMessageId.get(message.id)?.id
+                    savedFoodLogMessageIds[defaultSaveKey]
+                    || persistedSavedFoodLogEntriesByMessageId.get(defaultSaveKey)?.id
                     || null
                   )
                   : null;
-                const saveFailureMessage = message.id
-                  ? failedFoodLogSaves[message.id]
+                const saveFailureMessage = defaultSaveKey
+                  ? failedFoodLogSaves[defaultSaveKey]
                   : undefined;
                 const isSavedToFoodLog = Boolean(savedFoodLogEntryId);
-                const isSavingToFoodLog = Boolean(message.id && savingFoodLogMessageIds.includes(message.id));
+                const isSavingToFoodLog = Boolean(defaultSaveKey && savingFoodLogMessageIds.includes(defaultSaveKey));
                 const isSaveFailedToFoodLog = Boolean(
-                  message.id
-                  && failedFoodLogSaves[message.id]
+                  defaultSaveKey
+                  && failedFoodLogSaves[defaultSaveKey]
                   && !isSavingToFoodLog
                   && !isSavedToFoodLog,
                 );
                 const isDeletingSavedFoodLog = Boolean(
-                  message.id && deletingFoodLogMessageIds.includes(message.id),
+                  defaultSaveKey && deletingFoodLogMessageIds.includes(defaultSaveKey),
                 );
                 const savePresentation = resolveFoodLogSavePresentation({
                   savedEntryId: savedFoodLogEntryId,
@@ -560,60 +577,190 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
                     <div className={`flex max-w-[95%] flex-col gap-3 ${message.role === 'user' ? 'items-end max-w-[80%]' : 'items-start'}`}>
                       {isMealEstimate ? (
-                        <div className="w-full overflow-hidden rounded-[32px] border border-[#4A453E]/5 bg-white shadow-sm">
-                          <div className="border-b border-[#4A453E]/5 p-8">
-                            <div className="mb-4 flex items-center justify-between">
-                              <h3 className="font-serif-brand text-2xl font-bold italic text-[#4A453E]">{messagePresentation.title}</h3>
-                              <span className="rounded-full border border-[#81C784]/10 bg-[#81C784]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#81C784]">
-                                {messagePresentation.confidence}
-                              </span>
-                            </div>
-                            <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">{messagePresentation.description}</p>
-                          </div>
-                          <div className="p-0">
-                            <table className="w-full text-left">
-                              <thead className="bg-[#F7F3E9]/30 text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/40">
-                                <tr>
-                                  <th className="px-6 py-4">{messagePresentation.ingredientColumnLabel}</th>
-                                  <th className="px-4 py-4">{messagePresentation.portionColumnLabel}</th>
-                                  <th className="px-4 py-4 text-right">{messagePresentation.energyColumnLabel}</th>
-                                  <th className="px-4 py-4 text-right">{messagePresentation.proteinColumnLabel}</th>
-                                  <th className="px-4 py-4 text-right">{messagePresentation.carbsColumnLabel}</th>
-                                  <th className="px-4 py-4 text-right">{messagePresentation.fatColumnLabel}</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-[#4A453E]/5 text-[14px]">
-                                {messagePresentation.items?.map((item: { name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }, itemIndex: number) => (
-                                  <tr key={itemIndex} className="transition-colors hover:bg-[#F7F3E9]/10">
-                                    <td className="px-6 py-4 font-bold text-[#4A453E]">{item.name}</td>
-                                    <td className="px-4 py-4 font-medium text-[#4A453E]/50">{item.portion}</td>
-                                    <td className="px-4 py-4 text-right font-bold text-[#4A453E]">{formatEnergyInteger(item.energy)}</td>
-                                    <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.protein || '—'}</td>
-                                    <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.carbs || '—'}</td>
-                                    <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.fat || '—'}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                              <tfoot className="border-t border-[#4A453E]/10 bg-[#FFFDF5] font-bold">
-                                {(() => {
-                                  const allItems = messagePresentation.items ?? [];
-                                  const tPro = allItems.reduce((s: number, it: { protein?: string }) => s + extractMacroNum(it.protein), 0);
-                                  const tCarb = allItems.reduce((s: number, it: { carbs?: string }) => s + extractMacroNum(it.carbs), 0);
-                                  const tFat = allItems.reduce((s: number, it: { fat?: string }) => s + extractMacroNum(it.fat), 0);
-                                  return (
+                        <div className="flex w-full flex-col gap-4">
+                          {(messagePresentation.estimates as Array<{ title: string; confidence?: string; description?: string; items: Array<{ name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }>; total: string }> | null)?.length ? (
+                            messagePresentation.estimates.map((est: { title: string; confidence?: string; description?: string; items: Array<{ name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }>; total: string }, estIdx: number) => {
+                              const estSaveKey = message.id ? `${message.id}::${est.title}` : '';
+                              const estSavedId = estSaveKey ? (savedFoodLogMessageIds[estSaveKey] || persistedSavedFoodLogEntriesByMessageId.get(estSaveKey)?.id || null) : null;
+                              const estSaveFailed = estSaveKey ? failedFoodLogSaves[estSaveKey] : undefined;
+                              const estIsSaved = Boolean(estSavedId);
+                              const estIsSaving = Boolean(estSaveKey && savingFoodLogMessageIds.includes(estSaveKey));
+                              const estIsSaveFailed = Boolean(estSaveKey && estSaveFailed && !estIsSaving && !estIsSaved);
+                              const estIsDeleting = Boolean(estSaveKey && deletingFoodLogMessageIds.includes(estSaveKey));
+                              const estSavePresentation = resolveFoodLogSavePresentation({
+                                savedEntryId: estSavedId,
+                                isSaving: estIsSaving,
+                                failedMessage: estIsSaveFailed ? estSaveFailed : undefined,
+                              });
+                              return (
+                              <div key={estIdx} className="overflow-hidden rounded-[32px] border border-[#4A453E]/5 bg-white shadow-sm">
+                                <div className="border-b border-[#4A453E]/5 p-8">
+                                  <div className="mb-4 flex items-center justify-between">
+                                    <h3 className="font-serif-brand text-2xl font-bold italic text-[#4A453E]">{est.title}</h3>
+                                    {est.confidence && (
+                                      <span className="rounded-full border border-[#81C784]/10 bg-[#81C784]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#81C784]">
+                                        {est.confidence}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {est.description && (
+                                    <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">{est.description}</p>
+                                  )}
+                                </div>
+                                <div className="p-0">
+                                  <table className="w-full text-left">
+                                    <thead className="bg-[#F7F3E9]/30 text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/40">
+                                      <tr>
+                                        <th className="px-6 py-4">{messagePresentation.ingredientColumnLabel}</th>
+                                        <th className="px-4 py-4">{messagePresentation.portionColumnLabel}</th>
+                                        <th className="px-4 py-4 text-right">{messagePresentation.energyColumnLabel}</th>
+                                        <th className="px-4 py-4 text-right">{messagePresentation.proteinColumnLabel}</th>
+                                        <th className="px-4 py-4 text-right">{messagePresentation.carbsColumnLabel}</th>
+                                        <th className="px-4 py-4 text-right">{messagePresentation.fatColumnLabel}</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#4A453E]/5 text-[14px]">
+                                      {est.items?.map((item: { name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }, itemIndex: number) => (
+                                        <tr key={itemIndex} className="transition-colors hover:bg-[#F7F3E9]/10">
+                                          <td className="px-6 py-4 font-bold text-[#4A453E]">{item.name}</td>
+                                          <td className="px-4 py-4 font-medium text-[#4A453E]/50">{item.portion}</td>
+                                          <td className="px-4 py-4 text-right font-bold text-[#4A453E]">{formatEnergyInteger(item.energy)}</td>
+                                          <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.protein || '—'}</td>
+                                          <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.carbs || '—'}</td>
+                                          <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.fat || '—'}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                    <tfoot className="border-t border-[#4A453E]/10 bg-[#FFFDF5] font-bold">
+                                      {(() => {
+                                        const allItems = est.items ?? [];
+                                        const tPro = allItems.reduce((s: number, it: { protein?: string }) => s + extractMacroNum(it.protein), 0);
+                                        const tCarb = allItems.reduce((s: number, it: { carbs?: string }) => s + extractMacroNum(it.carbs), 0);
+                                        const tFat = allItems.reduce((s: number, it: { fat?: string }) => s + extractMacroNum(it.fat), 0);
+                                        return (
+                                          <tr>
+                                            <td className="px-6 py-6 text-lg text-[#4A453E]" colSpan={2}>{messagePresentation.totalLabel}</td>
+                                            <td className="px-4 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{formatEnergyInteger(est.total)}</td>
+                                            <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tPro > 0 ? `${fmtNum(tPro)} g` : '—'}</td>
+                                            <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tCarb > 0 ? `${fmtNum(tCarb)} g` : '—'}</td>
+                                            <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tFat > 0 ? `${fmtNum(tFat)} g` : '—'}</td>
+                                          </tr>
+                                        );
+                                      })()}
+                                    </tfoot>
+                                  </table>
+                                </div>
+                                <div className="flex flex-col items-end gap-2 border-t border-[#4A453E]/5 px-8 py-5">
+                                  <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                    <div className={`inline-flex items-center gap-2 self-end rounded-full border px-4 py-2 text-sm font-bold md:self-auto ${
+                                      estSavePresentation.state === 'saved'
+                                        ? 'border-[#81C784]/20 bg-[#81C784]/10 text-[#4E9E63]'
+                                        : estSavePresentation.state === 'saving'
+                                          ? 'border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/55'
+                                          : estSavePresentation.state === 'failed'
+                                            ? 'border-red-200 bg-red-50 text-red-500'
+                                            : 'border-[#4A453E]/10 bg-[#FFFDF5] text-[#4A453E]/60'
+                                    }`}>
+                                      <span className="material-symbols-outlined text-[18px]">{estSavePresentation.badgeIcon}</span>
+                                      <span>{estSavePresentation.badgeLabel}</span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center justify-end gap-2 text-[11px] font-semibold">
+                                      {estIsSaved ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => estSaveKey && void handleUndoFoodLogSave(estSaveKey)}
+                                          disabled={estIsDeleting}
+                                          className={`rounded-full border px-3 py-1.5 transition-all ${
+                                            estIsDeleting ? 'cursor-wait border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/40' : 'border-red-200 bg-red-50 text-red-500 hover:bg-red-100'
+                                          }`}
+                                        >
+                                          {estIsDeleting ? '撤销中...' : '撤销保存'}
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => void handleSaveFoodLogEntry(activeSession.id, message, mealDescription ?? '', est)}
+                                          disabled={estIsSaving}
+                                          className={`inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-bold transition-all ${
+                                            estIsSaving
+                                              ? 'cursor-wait border border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/50'
+                                              : estSavePresentation.state === 'failed'
+                                                ? 'border border-red-200 bg-red-50 text-red-500 hover:bg-red-100'
+                                                : 'border border-[#FF8A65]/15 bg-[#FF8A65] text-white shadow-lg shadow-[#FF8A65]/15 hover:bg-[#FF8A65]/90'
+                                          }`}
+                                        >
+                                          <span className="material-symbols-outlined text-[18px]">{estSavePresentation.saveActionIcon}</span>
+                                          <span>{estSavePresentation.saveActionLabel}</span>
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <p className="w-full text-right text-[11px] leading-5 text-[#4A453E]/40">{estSavePresentation.helperText}</p>
+                                </div>
+                              </div>
+                              );
+                            })
+                          ) : (
+                            <div className="overflow-hidden rounded-[32px] border border-[#4A453E]/5 bg-white shadow-sm">
+                              <div className="border-b border-[#4A453E]/5 p-8">
+                                <div className="mb-4 flex items-center justify-between">
+                                  <h3 className="font-serif-brand text-2xl font-bold italic text-[#4A453E]">{messagePresentation.title}</h3>
+                                  <span className="rounded-full border border-[#81C784]/10 bg-[#81C784]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#81C784]">
+                                    {messagePresentation.confidence}
+                                  </span>
+                                </div>
+                                <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">{messagePresentation.description}</p>
+                              </div>
+                              <div className="p-0">
+                                <table className="w-full text-left">
+                                  <thead className="bg-[#F7F3E9]/30 text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/40">
                                     <tr>
-                                      <td className="px-6 py-6 text-lg text-[#4A453E]" colSpan={2}>{messagePresentation.totalLabel}</td>
-                                      <td className="px-4 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{formatEnergyInteger(messagePresentation.total)}</td>
-                                      <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tPro > 0 ? `${fmtNum(tPro)} g` : '—'}</td>
-                                      <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tCarb > 0 ? `${fmtNum(tCarb)} g` : '—'}</td>
-                                      <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tFat > 0 ? `${fmtNum(tFat)} g` : '—'}</td>
+                                      <th className="px-6 py-4">{messagePresentation.ingredientColumnLabel}</th>
+                                      <th className="px-4 py-4">{messagePresentation.portionColumnLabel}</th>
+                                      <th className="px-4 py-4 text-right">{messagePresentation.energyColumnLabel}</th>
+                                      <th className="px-4 py-4 text-right">{messagePresentation.proteinColumnLabel}</th>
+                                      <th className="px-4 py-4 text-right">{messagePresentation.carbsColumnLabel}</th>
+                                      <th className="px-4 py-4 text-right">{messagePresentation.fatColumnLabel}</th>
                                     </tr>
-                                  );
-                                })()}
-                              </tfoot>
-                            </table>
-                          </div>
-                          <div className="flex flex-col items-end gap-2 border-t border-[#4A453E]/5 bg-white px-8 py-5">
+                                  </thead>
+                                  <tbody className="divide-y divide-[#4A453E]/5 text-[14px]">
+                                    {messagePresentation.items?.map((item: { name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }, itemIndex: number) => (
+                                      <tr key={itemIndex} className="transition-colors hover:bg-[#F7F3E9]/10">
+                                        <td className="px-6 py-4 font-bold text-[#4A453E]">{item.name}</td>
+                                        <td className="px-4 py-4 font-medium text-[#4A453E]/50">{item.portion}</td>
+                                        <td className="px-4 py-4 text-right font-bold text-[#4A453E]">{formatEnergyInteger(item.energy)}</td>
+                                        <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.protein || '—'}</td>
+                                        <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.carbs || '—'}</td>
+                                        <td className="px-4 py-4 text-right text-[#4A453E]/70">{item.fat || '—'}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                  <tfoot className="border-t border-[#4A453E]/10 bg-[#FFFDF5] font-bold">
+                                    {(() => {
+                                      const allItems = messagePresentation.items ?? [];
+                                      const tPro = allItems.reduce((s: number, it: { protein?: string }) => s + extractMacroNum(it.protein), 0);
+                                      const tCarb = allItems.reduce((s: number, it: { carbs?: string }) => s + extractMacroNum(it.carbs), 0);
+                                      const tFat = allItems.reduce((s: number, it: { fat?: string }) => s + extractMacroNum(it.fat), 0);
+                                      return (
+                                        <tr>
+                                          <td className="px-6 py-6 text-lg text-[#4A453E]" colSpan={2}>{messagePresentation.totalLabel}</td>
+                                          <td className="px-4 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{formatEnergyInteger(messagePresentation.total)}</td>
+                                          <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tPro > 0 ? `${fmtNum(tPro)} g` : '—'}</td>
+                                          <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tCarb > 0 ? `${fmtNum(tCarb)} g` : '—'}</td>
+                                          <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tFat > 0 ? `${fmtNum(tFat)} g` : '—'}</td>
+                                        </tr>
+                                      );
+                                    })()}
+                                  </tfoot>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                          {!(messagePresentation.estimates as unknown[] | null)?.length ? (
+                          <div className="flex flex-col items-end gap-2 rounded-[32px] border border-[#4A453E]/5 bg-white px-8 py-5 shadow-sm">
+                            {(messagePresentation.suggestion ?? message.content) && (
+                              <p className="w-full text-[14px] leading-relaxed text-[#4A453E]/70">{messagePresentation.suggestion ?? message.content}</p>
+                            )}
                             <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
                               <div className={`inline-flex items-center gap-2 self-end rounded-full border px-4 py-2 text-sm font-bold md:self-auto ${
                                 saveState === 'saved'
@@ -634,7 +781,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                 {isSavedToFoodLog ? (
                                   <button
                                     type="button"
-                                    onClick={() => message.id && void handleUndoFoodLogSave(message.id)}
+                                    onClick={() => defaultSaveKey && void handleUndoFoodLogSave(defaultSaveKey)}
                                     disabled={isDeletingSavedFoodLog}
                                     className={`rounded-full border px-3 py-1.5 transition-all ${
                                       isDeletingSavedFoodLog
@@ -647,7 +794,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                 ) : (
                                   <button
                                     type="button"
-                                    onClick={() => mealDescription && void handleSaveFoodLogEntry(activeSession.id, message, mealDescription)}
+                                    onClick={() => mealDescription && void handleSaveFoodLogEntry(activeSession.id, message, mealDescription, undefined)}
                                     disabled={!mealDescription || isSavingToFoodLog}
                                     className={`inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-bold transition-all ${
                                       isSavingToFoodLog
@@ -669,6 +816,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                               {savePresentation.helperText}
                             </p>
                           </div>
+                          ) : (messagePresentation.suggestion ?? message.content) ? (
+                          <div className="rounded-[32px] border border-[#4A453E]/5 bg-white px-8 py-5 shadow-sm">
+                            <p className="w-full text-[14px] leading-relaxed text-[#4A453E]/70">{messagePresentation.suggestion ?? message.content}</p>
+                          </div>
+                          ) : null}
                         </div>
                       ) : isMealRecommendation ? (
                         <div className="w-full overflow-hidden rounded-[28px] border border-[#4A453E]/5 bg-white shadow-sm">

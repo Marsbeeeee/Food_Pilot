@@ -14,6 +14,7 @@ Each item in items must contain:
 - protein
 - carbs
 - fat
+- description (optional: brief description of this specific food in Chinese, e.g. "猪肉白菜馅的中式包子，含碳水、蛋白质和适量脂肪")
 All human-readable values should be written in Simplified Chinese.
 Use "高" / "中" / "低" for confidence when possible.
 Keep energy and total_calories in a readable format such as "320 kcal".
@@ -40,6 +41,7 @@ ESTIMATE_RESPONSE_SCHEMA = {
                     "protein": {"type": "STRING"},
                     "carbs": {"type": "STRING"},
                     "fat": {"type": "STRING"},
+                    "description": {"type": "STRING"},
                 },
                 "required": ["name", "portion", "energy", "protein", "carbs", "fat"],
             },

@@ -12,6 +12,7 @@ from backend.repositories.message_repository import (
     create_message as create_message_record,
     list_messages_by_session as list_messages_by_session_record,
 )
+from backend.services.estimate_parser import split_estimate_by_items
 from backend.services.recommendation import (
     generate_meal_recommendation,
     generate_text_reply,
@@ -30,11 +31,14 @@ DEFAULT_RESOLVED_MESSAGE_TYPE = "meal_estimate"
 RECOMMENDATION_MESSAGE_TYPE = "meal_recommendation"
 TEXT_MESSAGE_TYPE = "text"
 MEAL_ESTIMATE_MESSAGE_TYPE = "meal_estimate"
+CLARIFICATION_NEEDED = "_clarification"
 RECOMMENDATION_ROUTE_PHRASES = (
+    "推荐",  # 单独「推荐」即可触发，覆盖「推荐训练后吃什么」「推荐减脂晚餐」等
     "推荐吃什么",
     "推荐一个",
     "推荐一下",
     "适合吃什么",
+    "训练后吃什么",
     "吃什么比较合适",
     "吃什么更合适",
     "午饭吃什么",
@@ -88,6 +92,27 @@ TEXT_ROUTE_PHRASES = (
     "详细说说",
     "详细讲讲",
     "看不懂",
+)
+# 当输入既无推荐关键词也无估算关键词，且包含以下模糊表述时，触发澄清提问
+AMBIGUOUS_PHRASES = (
+    "吃什么",
+    "吃什么好",
+    "吃啥",
+    "吃点什么",
+    "帮我看看",
+    "看看这顿",
+    "这顿怎么样",
+)
+# 澄清提问的固定回复
+CLARIFICATION_MESSAGE = (
+    "您是想让我推荐餐食，还是想估算已吃的食物营养？\n\n"
+    "· 推荐：告诉我你的需求（如「减脂晚餐」「训练后吃什么」），我会给出建议；\n"
+    "· 估算：描述你已吃的食物（如「一碗牛肉面」「两个包子一杯豆浆」），我会帮你算热量和营养。"
+)
+# 食物描述常见量词，用于区分「模糊提问」与「食物描述」
+FOOD_QUANTITY_PATTERNS = (
+    "一碗", "两碗", "一份", "两份", "一杯", "两杯",
+    "一个", "两个", "半个", "一根", "两根",
 )
 
 
@@ -388,6 +413,15 @@ def resolve_message_type(
     if _matches_recommendation_request(normalized_content):
         return RECOMMENDATION_MESSAGE_TYPE
 
+    if _matches_estimate_request(normalized_content):
+        return DEFAULT_RESOLVED_MESSAGE_TYPE
+
+    # 无明确推荐/估算信号，且包含模糊表述，且不像食物描述 -> 澄清提问
+    if _contains_any_phrase(normalized_content, AMBIGUOUS_PHRASES) and not _looks_like_food_description(
+        normalized_content
+    ):
+        return CLARIFICATION_NEEDED
+
     return DEFAULT_RESOLVED_MESSAGE_TYPE
 
 
@@ -400,6 +434,13 @@ def build_response_by_type(
     profile_id: int | None,
     message_type: str,
 ) -> dict[str, object]:
+    if message_type == CLARIFICATION_NEEDED:
+        return _create_text_message_with_conn(
+            conn,
+            user_id,
+            session_id,
+            content=CLARIFICATION_MESSAGE,
+        )
     if message_type == MEAL_ESTIMATE_MESSAGE_TYPE:
         return _build_meal_estimate_response_with_conn(
             conn,
@@ -437,11 +478,13 @@ def _build_meal_estimate_response_with_conn(
     profile_id: int | None,
 ) -> dict[str, object]:
     estimate = estimate_meal(content, profile_id, user_id)
+    estimates = split_estimate_by_items(estimate)
     return _create_estimate_result_message_with_conn(
         conn,
         user_id,
         session_id,
         estimate=estimate,
+        estimates=estimates,
     )
 
 
@@ -524,9 +567,30 @@ def _create_estimate_result_message_with_conn(
     session_id: int,
     *,
     estimate,
+    estimates: list | None = None,
 ) -> dict[str, object]:
     # Chat analysis results stay in the conversation only. Food Log is an explicit
     # save action and must not be created automatically from successful analysis.
+    # When multiple foods: store estimates array in payload for per-item display;
+    # keep result_* as combined for Food Log save compatibility.
+    estimates_list = estimates if estimates is not None else [estimate]
+    payload_json: str | None = None
+    if len(estimates_list) > 1:
+        payload_obj = {
+            "estimates": [
+                {
+                    "title": e.title,
+                    "confidence": e.confidence,
+                    "description": e.description,
+                    "items": [item.model_dump() for item in e.items],
+                    "total": e.total_calories,
+                }
+                for e in estimates_list
+            ],
+            "suggestion": estimate.suggestion,
+        }
+        payload_json = json.dumps(payload_obj, ensure_ascii=False)
+
     assistant_message = create_message_record(
         conn,
         session_id,
@@ -542,6 +606,7 @@ def _create_estimate_result_message_with_conn(
             ensure_ascii=False,
         ),
         result_total=estimate.total_calories,
+        payload_json=payload_json,
         auto_commit=False,
     )
     conn.commit()
@@ -638,6 +703,11 @@ def _matches_estimate_request(value: str) -> bool:
 
 def _contains_any_phrase(value: str, phrases: tuple[str, ...]) -> bool:
     return any(phrase in value for phrase in phrases)
+
+
+def _looks_like_food_description(value: str) -> bool:
+    """输入是否像食物描述（含量词或典型食物词），用于避免将「一碗面吃什么」误判为需澄清。"""
+    return _contains_any_phrase(value, FOOD_QUANTITY_PATTERNS)
 
 
 def estimate_meal(query: str, profile_id: int | None, user_id: int):

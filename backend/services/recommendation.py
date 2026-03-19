@@ -2,6 +2,8 @@ import json
 from typing import Any
 from urllib import error, request
 
+from pydantic import ValidationError
+
 from backend.config.estimate import get_estimate_ai_config
 from backend.services.ai_client import call_ai
 from backend.schemas.profile import ProfileOut
@@ -138,10 +140,14 @@ def _generate_guidance(
     raw_response = _call_ai_api(query, response_mode=response_mode, profile_context=profile_context)
     try:
         return _parse_guidance_payload(raw_response, response_mode=response_mode)
+    except (InvalidAIResponseError, IncompleteAIResponseError):
+        raise
     except ValueError as exc:
         if str(exc) == "AI response is missing response":
             raise IncompleteAIResponseError(str(exc)) from exc
         raise InvalidAIResponseError(str(exc)) from exc
+    except Exception as exc:
+        raise InvalidAIResponseError(f"Unexpected error: {exc!s}") from exc
 
 
 def _call_ai_api(
@@ -191,6 +197,61 @@ def _load_profile_and_context(
         return None, None
 
     return profile, _build_profile_context(profile)
+
+
+def _build_guidance_system_instruction(
+    response_mode: str,
+    profile_context: str | None = None,
+) -> str:
+    """构建推荐/文本回复的系统指令。"""
+    instructions = GUIDANCE_RESPONSE_INSTRUCTIONS.get(
+        response_mode,
+        GUIDANCE_RESPONSE_INSTRUCTIONS["meal_recommendation"],
+    )
+    parts = [DEFAULT_RECOMMENDATION_SYSTEM_PROMPT, instructions]
+    if profile_context:
+        parts.append(profile_context)
+    return "\n\n".join(parts)
+
+
+def _parse_guidance_payload(
+    payload: dict[str, Any],
+    *,
+    response_mode: str,
+) -> GuidanceReply:
+    """解析 AI 返回的 JSON，支持常见别名，填充默认值。"""
+    if not isinstance(payload, dict):
+        raise InvalidAIResponseError("AI response is not a valid JSON object")
+    defaults = DEFAULT_GUIDANCE_COPY.get(
+        response_mode,
+        DEFAULT_GUIDANCE_COPY["meal_recommendation"],
+    )
+    title = _coerce_text(
+        payload.get("title")
+        or payload.get("name")
+        or payload.get("meal_title")
+    ) or defaults["title"]
+    description = _coerce_text(
+        payload.get("description")
+        or payload.get("reason")
+        or payload.get("summary")
+    ) or defaults["description"]
+    response = _coerce_text(
+        payload.get("response")
+        or payload.get("choice")
+        or payload.get("content")
+        or payload.get("answer")
+    )
+    if not response:
+        raise ValueError("AI response is missing response")
+    try:
+        return GuidanceReply(
+            title=title,
+            description=description,
+            response=response,
+        )
+    except ValidationError as exc:
+        raise InvalidAIResponseError("AI response failed schema validation") from exc
 
 
 def _build_profile_context(profile: ProfileOut) -> str:

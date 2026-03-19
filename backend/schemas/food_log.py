@@ -42,6 +42,16 @@ class FoodLogEntryOut(BaseModel):
     time: str
     breakdown: list[EstimateItem]
     image: str | None = None
+    image_source: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("image_source", "imageSource"),
+        serialization_alias="imageSource",
+    )
+    image_license: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("image_license", "imageLicense"),
+        serialization_alias="imageLicense",
+    )
     protein: str | None = None
     carbs: str | None = None
     fat: str | None = None
@@ -196,6 +206,21 @@ class FoodLogSaveRequest(BaseModel):
         validation_alias=AliasChoices("is_manual", "isManual"),
         serialization_alias="isManual",
     )
+    image: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("image"),
+        serialization_alias="image",
+    )
+    image_source: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("image_source", "imageSource"),
+        serialization_alias="imageSource",
+    )
+    image_license: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("image_license", "imageLicense"),
+        serialization_alias="imageLicense",
+    )
 
     @field_validator(
         "source_type",
@@ -249,6 +274,21 @@ class FoodLogSaveRequest(BaseModel):
 class FoodLogPatchRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
+    image: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("image"),
+        serialization_alias="image",
+    )
+    image_source: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("image_source", "imageSource"),
+        serialization_alias="imageSource",
+    )
+    image_license: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("image_license", "imageLicense"),
+        serialization_alias="imageLicense",
+    )
     meal_description: str | None = Field(
         default=None,
         validation_alias=AliasChoices("meal_description", "mealDescription"),
@@ -313,6 +353,9 @@ class FoodLogPatchRequest(BaseModel):
         if not any(
             getattr(self, field_name) is not None
             for field_name in (
+                "image",
+                "image_source",
+                "image_license",
                 "meal_description",
                 "result_title",
                 "result_confidence",
@@ -335,6 +378,21 @@ class FoodLogFromEstimateRequest(BaseModel):
         serialization_alias="mealDescription",
     )
     estimate: EstimateResult
+    image: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("image"),
+        serialization_alias="image",
+    )
+    image_source: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("image_source", "imageSource"),
+        serialization_alias="imageSource",
+    )
+    image_license: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("image_license", "imageLicense"),
+        serialization_alias="imageLicense",
+    )
     client_request_id: str = Field(
         validation_alias=AliasChoices(
             "client_request_id",
@@ -412,6 +470,9 @@ def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
             "date": _format_entry_date(timestamp),
             "time": _format_entry_time(timestamp),
             "breakdown": breakdown,
+            "image": entry.get("image"),
+            "image_source": entry.get("image_source"),
+            "image_license": entry.get("image_license"),
             "protein": protein,
             "carbs": carbs,
             "fat": fat,

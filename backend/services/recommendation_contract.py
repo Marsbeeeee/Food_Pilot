@@ -18,6 +18,7 @@ Use exactly these top-level keys:
 - response
 The response should provide a practical recommendation, comparison, swap, or optimization suggestion.
 The response must clearly tell the user what to choose, eat, replace, or prioritize.
+For comparison questions (e.g. "米饭和红薯哪个更适合减脂期？", "A和B哪个更好？"), directly answer which option fits better and why.
 The description should briefly explain why this direction fits.
 Do not output calorie tables, ingredient breakdown arrays, or estimate-style sections.
 Do not add markdown, code fences, tables, or extra keys.

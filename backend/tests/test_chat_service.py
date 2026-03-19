@@ -9,6 +9,7 @@ from backend.database.init_db import init_db
 from backend.schemas.recommendation import GuidanceReply
 from backend.services.food_log_service import save_food_log
 from backend.services.chat_service import (
+    CLARIFICATION_MESSAGE,
     DEFAULT_SESSION_TITLE,
     DEFAULT_ASSISTANT_ERROR_MESSAGE,
     DEFAULT_RECOMMENDATION_ERROR_MESSAGE,
@@ -194,6 +195,32 @@ class ChatServiceTests(unittest.TestCase):
 
         self.assertEqual(resolved, "meal_estimate")
 
+    def test_resolve_message_type_returns_clarification_for_ambiguous_input(self) -> None:
+        """不确定输入时返回澄清提问，而非默认估算。"""
+        ambiguous_inputs = [
+            "帮我看看这顿",
+            "吃什么好",
+            "吃啥",
+            "今天中午吃什么",
+        ]
+        for content in ambiguous_inputs:
+            with self.subTest(content=content):
+                resolved = resolve_message_type(
+                    content,
+                    profile_id=12,
+                    user_id=self.user_id,
+                )
+                self.assertEqual(resolved, "_clarification")
+
+    def test_resolve_message_type_does_not_clarify_when_food_description_present(self) -> None:
+        """含食物量词的描述仍走估算，不触发澄清。"""
+        resolved = resolve_message_type(
+            "一碗面吃什么",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+        self.assertEqual(resolved, "meal_estimate")
+
     def test_resolve_message_type_routes_typical_estimate_question_to_estimate(self) -> None:
         resolved = resolve_message_type(
             "这碗麻辣烫大概有多少蛋白质和碳水？",
@@ -309,6 +336,19 @@ class ChatServiceTests(unittest.TestCase):
         self.assertIsNotNone(exchange)
         self.assertEqual(exchange["assistant_message"]["message_type"], "text")
         self.assertEqual(exchange["assistant_message"]["content"], DEFAULT_RECOMMENDATION_ERROR_MESSAGE)
+
+    def test_send_message_in_session_returns_clarification_for_ambiguous_input(self) -> None:
+        """不确定输入时返回澄清提问（text 类型），不调用估算或推荐。"""
+        exchange = create_session_and_reply(
+            self.user_id,
+            "帮我看看这顿",
+            profile_id=12,
+        )
+        self.assertIsNotNone(exchange)
+        self.assertEqual(exchange["assistant_message"]["message_type"], "text")
+        self.assertIn("推荐", exchange["assistant_message"]["content"])
+        self.assertIn("估算", exchange["assistant_message"]["content"])
+        self.assertEqual(exchange["assistant_message"]["content"], CLARIFICATION_MESSAGE)
 
     def test_send_message_in_session_persists_text_reply_for_explanatory_follow_up(self) -> None:
         session = create_empty_session(self.user_id)

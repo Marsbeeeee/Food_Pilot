@@ -34,6 +34,9 @@ def create_food_log(
     status: str = "active",
     idempotency_key: str | None = None,
     is_manual: bool | None = None,
+    image: str | None = None,
+    image_source: str | None = None,
+    image_license: str | None = None,
     conn: sqlite3.Connection | None = None,
     auto_commit: bool = True,
 ) -> dict[str, object]:
@@ -68,6 +71,9 @@ def create_food_log(
             status=status,
             idempotency_key=idempotency_key,
             is_manual=is_manual,
+            image=image,
+            image_source=image_source,
+            image_license=image_license,
             auto_commit=auto_commit,
         )
     except Exception:
@@ -99,6 +105,9 @@ def save_food_log(
     status: str = "active",
     idempotency_key: str | None = None,
     is_manual: bool | None = None,
+    image: str | None = None,
+    image_source: str | None = None,
+    image_license: str | None = None,
     conn: sqlite3.Connection | None = None,
     auto_commit: bool = True,
 ) -> dict[str, object]:
@@ -147,6 +156,9 @@ def save_food_log(
             status=status,
             idempotency_key=idempotency_key,
             is_manual=is_manual,
+            image=image,
+            image_source=image_source,
+            image_license=image_license,
             auto_commit=auto_commit,
         )
     except Exception:
@@ -171,6 +183,9 @@ def create_food_log_from_estimate(
     created_at: str | None = None,
     idempotency_key: str | None = None,
     is_manual: bool | None = None,
+    image: str | None = None,
+    image_source: str | None = None,
+    image_license: str | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> dict[str, object]:
     # Successful chat analysis and `/estimate` responses must not create Food Log
@@ -195,6 +210,9 @@ def create_food_log_from_estimate(
             created_at=created_at,
             idempotency_key=idempotency_key,
             is_manual=is_manual,
+            image=image,
+            image_source=image_source,
+            image_license=image_license,
             conn=active_conn,
             auto_commit=False,
         )
@@ -279,6 +297,9 @@ def update_food_log_entry(
     ingredients: str | list[dict[str, object]] | None = None,
     assistant_suggestion: str | None = None,
     meal_occurred_at: str | None = None,
+    image: str | None = None,
+    image_source: str | None = None,
+    image_license: str | None = None,
     conn: sqlite3.Connection | None = None,
     auto_commit: bool = True,
 ) -> dict[str, object]:
@@ -352,6 +373,21 @@ def update_food_log_entry(
                 else None
             ),
             is_manual=bool(existing["is_manual"]),
+            image=(
+                existing.get("image")
+                if image is None
+                else image
+            ),
+            image_source=(
+                existing.get("image_source")
+                if image_source is None
+                else image_source
+            ),
+            image_license=(
+                existing.get("image_license")
+                if image_license is None
+                else image_license
+            ),
             auto_commit=auto_commit,
         )
     except Exception:

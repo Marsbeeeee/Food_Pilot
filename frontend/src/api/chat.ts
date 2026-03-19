@@ -194,6 +194,7 @@ function mapMessage(message: ChatMessageResponse): Message {
     description: payload?.description ?? message.resultDescription ?? undefined,
     items: payload?.items ? payload.items.map((item) => ({ ...item })) : undefined,
     total: payload?.total ?? message.resultTotal ?? undefined,
+    estimates: payload?.estimates,
   };
 }
 
@@ -245,6 +246,13 @@ function normalizePayload(
     payload.total = message.payload.total;
   } else if (message.resultTotal) {
     payload.total = message.resultTotal;
+  }
+
+  if (message.payload?.estimates?.length) {
+    payload.estimates = message.payload.estimates;
+  }
+  if (message.payload?.suggestion) {
+    payload.suggestion = message.payload.suggestion;
   }
 
   return Object.keys(payload).length > 0 ? payload : null;

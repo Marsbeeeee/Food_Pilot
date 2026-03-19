@@ -448,6 +448,27 @@ def _ensure_food_logs_table(cursor) -> None:
             ADD COLUMN idempotency_key TEXT
             """
         )
+    if "image" not in food_log_columns:
+        cursor.execute(
+            """
+            ALTER TABLE food_logs
+            ADD COLUMN image TEXT
+            """
+        )
+    if "image_source" not in food_log_columns:
+        cursor.execute(
+            """
+            ALTER TABLE food_logs
+            ADD COLUMN image_source TEXT
+            """
+        )
+    if "image_license" not in food_log_columns:
+        cursor.execute(
+            """
+            ALTER TABLE food_logs
+            ADD COLUMN image_license TEXT
+            """
+        )
 
     cursor.execute(
         """

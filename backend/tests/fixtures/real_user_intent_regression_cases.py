@@ -17,6 +17,7 @@ REAL_USER_CASES = [
     ("帮我推荐一个减脂晚餐", RECOMMENDATION),
     ("早餐想吃得清淡一点，推荐一下", RECOMMENDATION),
     ("我训练后适合吃什么？", RECOMMENDATION),
+    ("推荐训练后吃什么", RECOMMENDATION),
     ("汉堡和鸡肉沙拉哪个更适合我今天晚饭？", RECOMMENDATION),
     ("米饭和红薯哪个更适合减脂期？", RECOMMENDATION),
     ("麻辣烫和黄焖鸡哪个更值得选？", RECOMMENDATION),

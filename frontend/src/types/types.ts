@@ -106,6 +106,14 @@ export interface UserProfileForm {
 
 export type ChatMessageType = 'text' | 'meal_estimate' | 'meal_recommendation';
 
+export interface EstimateBlock {
+  title: string;
+  confidence?: string;
+  description?: string;
+  items: IngredientResult[];
+  total: string;
+}
+
 export interface ChatMessagePayload {
   text?: string;
   title?: string;
@@ -113,6 +121,9 @@ export interface ChatMessagePayload {
   description?: string;
   items?: IngredientResult[];
   total?: string;
+  /** When multiple foods: each food as a separate estimate block */
+  estimates?: EstimateBlock[];
+  suggestion?: string;
 }
 
 export interface Message {
@@ -129,6 +140,8 @@ export interface Message {
   description?: string;
   items?: IngredientResult[];
   total?: string;
+  /** When multiple foods: each food as a separate estimate block */
+  estimates?: EstimateBlock[];
 }
 
 export interface ChatSession {
@@ -155,6 +168,8 @@ export interface FoodLogEntry {
   idempotencyKey?: string;
   breakdown: IngredientResult[];
   image?: string;
+  imageSource?: string;
+  imageLicense?: string;
   protein?: string;
   carbs?: string;
   fat?: string;
@@ -186,6 +201,9 @@ export interface FoodLogSaveInput {
   status?: 'active' | 'deleted';
   idempotencyKey?: string;
   isManual?: boolean;
+  image?: string;
+  imageSource?: string;
+  imageLicense?: string;
 }
 
 export interface FoodLogFromEstimateInput {
@@ -193,6 +211,9 @@ export interface FoodLogFromEstimateInput {
   estimate: EstimateResult;
   clientRequestId: string;
   mealOccurredAt?: string;
+  image?: string;
+  imageSource?: string;
+  imageLicense?: string;
 }
 
 export interface FoodLogFromEstimateResponse {
@@ -211,6 +232,9 @@ export interface FoodLogPatchInput {
   ingredients?: IngredientResult[];
   assistantSuggestion?: string;
   mealOccurredAt?: string;
+  image?: string;
+  imageSource?: string;
+  imageLicense?: string;
 }
 
 export interface InsightsDateRange {

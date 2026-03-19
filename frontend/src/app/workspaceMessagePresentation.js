@@ -27,6 +27,8 @@ export function buildWorkspaceMessagePresentation(message) {
       description: message.description,
       items: message.items ?? [],
       total: message.total,
+      estimates: message.estimates ?? null,
+      suggestion: message.payload?.suggestion ?? null,
       ...ESTIMATE_COPY,
     };
   }

@@ -1391,6 +1391,16 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
               alt={entry.name}
               className="h-full w-full object-cover"
             />
+            {entry.image && (entry.imageSource || entry.imageLicense) && (
+              <div
+                className="absolute bottom-2 right-2 rounded-lg bg-[#4A453E]/60 px-2 py-1 text-[10px] font-medium text-white/90 backdrop-blur-sm"
+                title={
+                  [entry.imageSource, entry.imageLicense].filter(Boolean).join(' · ')
+                }
+              >
+                {entry.imageSource || entry.imageLicense}
+              </div>
+            )}
           </div>
 
           <div className="rounded-[24px] border border-[#4A453E]/8 bg-white p-5 shadow-sm md:rounded-[28px] md:p-6">

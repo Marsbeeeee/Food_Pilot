@@ -145,7 +145,7 @@ Food Pilot 是以对话为主入口的营养助手，主链路为：
 当前状态：
 
 1. Food Log 条目可带 `image`，UI 有占位图兜底。
-2. 暂无图片来源字段（如 `imageSource`/`imageLicense`）与授权审计链路。
+2. 已支持 `imageSource`/`imageLicense` 元信息，保存时可追溯来源；无图场景一致兜底。
 3. 中文饮食知识库与 RAG 尚未成体系，属于后续能力。
 
 ---
@@ -200,9 +200,8 @@ Food Pilot 是以对话为主入口的营养助手，主链路为：
 3. ~~**前端关键流程自动化测试**~~（已完成）
    - 已通过 Playwright E2E（`frontend/e2e/critical-flow.spec.ts`）覆盖登录、聊天、保存 Food Log、进入 Insights 分析。
    - 验收：`npm run test:e2e` 可一键执行并稳定回归。
-4. **图片来源治理最小闭环**
-   - 目标：为 Food Log 图片增加来源与授权元信息。
-   - 验收：新增条目图片可追溯来源；无图场景一致兜底。
+4. ~~**图片来源治理最小闭环**~~（已完成）
+   - 已为 Food Log 增加 `image`、`imageSource`、`imageLicense` 字段，保存时自动推断来源；无图场景一致兜底。
 
 ## 6.2 P1（应尽快）
 
@@ -226,7 +225,7 @@ Food Pilot 是以对话为主入口的营养助手，主链路为：
 
 | 优先级 | 数量 | 事项 |
 |--------|------|------|
-| P0     | 2    | Insights 选择篮后端同步 + 按日期回查 API；图片来源治理最小闭环 |
+| P0     | 1    | Insights 选择篮后端同步 + 按日期回查 API |
 | P1     | 3    | 意图路由澄清问答；Food Log 筛选增强；Insights 趋势面板 |
 | P2     | 3    | 中文饮食 RAG；导出报告；长周期 coaching |
 
@@ -235,7 +234,7 @@ Food Pilot 是以对话为主入口的营养助手，主链路为：
 | 模块 | 未完成项 |
 |------|----------|
 | **Insights** | ① 分析选择篮仍依赖 localStorage，换设备需重新勾选；② 历史分析无按日期回查 API；③ 7/30 天趋势与目标差异可视化（P1） |
-| **Food Log / 数据层** | ① 图片仅有 `image` 字段和占位图，缺 `imageSource`/`imageLicense` 与授权审计；② 时间段、来源、关键词等高级筛选（P1） |
+| **Food Log / 数据层** | ① 已支持 `imageSource`/`imageLicense` 元信息；② 时间段、来源、关键词等高级筛选（P1） |
 | **Assistant** | ① 意图分流为规则关键词优先，未实现不确定场景澄清问答（P1） |
 | **数据与内容** | ① 中文饮食知识库与 RAG 尚未成体系（P2） |
 | **非功能** | ① 可观测性：缺统一日志追踪、请求链路指标和错误聚合；② 数据合规：图片与营养数据来源审计机制不完整 |
@@ -246,7 +245,7 @@ Food Pilot 是以对话为主入口的营养助手，主链路为：
 
 - [ ] Insights 分析选择篮后端同步（跨设备可复用已选条目）
 - [ ] Insights 历史分析按日期回查 API
-- [ ] Food Log 图片来源治理：新增 `imageSource`/`imageLicense` 等元信息，可追溯来源
+- [x] Food Log 图片来源治理：新增 `imageSource`/`imageLicense` 等元信息，可追溯来源
 
 **P1**
 

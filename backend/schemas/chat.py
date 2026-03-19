@@ -59,6 +59,18 @@ class RenameSessionRequest(BaseModel):
         return normalized
 
 
+class EstimateBlockPayload(BaseModel):
+    """Single food estimate block when multiple foods are present."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str
+    confidence: str | None = None
+    description: str | None = None
+    items: list[EstimateItem]
+    total: str
+
+
 class ChatMessagePayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -68,6 +80,8 @@ class ChatMessagePayload(BaseModel):
     description: str | None = None
     items: list[EstimateItem] | None = None
     total: str | None = None
+    estimates: list[EstimateBlockPayload] | None = None
+    suggestion: str | None = None
 
 
 class ChatMessageOut(BaseModel):
