@@ -1,477 +1,441 @@
-# Food Pilot 产品规范书（基于当前程序实现）
+# Food Pilot Product Specification
 
 ## 文档信息
 
-- 状态：生效中（覆盖旧版）
-- 适用代码基线：当前仓库 `main`（2026-03-18）
-- 最后更新：2026-03-19
-- 目标：用“代码已实现事实”更新产品规范，明确下一阶段优先级
+- 文档状态：已更新，基于当前仓库实现
+- 更新时间：2026-03-19
+- 代码基线：`main` 工作区当前内容
+- 更新原则：以代码、路由、数据结构、前端实际可达交互为准；旧文档与实现冲突时，以本文件为准
 
 ---
 
-## 0. 覆盖声明
+## 1. 产品定位
 
-本文件以当前前后端代码为准。若旧文档与实现不一致，以本版本为准。
+Food Pilot 是一个以对话为主入口的饮食分析助手，当前版本的主链路是：
 
----
+`注册/登录 -> Chat 中提问 -> 获得估算或推荐 -> 显式保存到 Food Log -> 在 Insights 做日/周分析 -> 回到 Profile 或 Chat 调整`
 
-## 1. 当前完成度（按代码核对）
-
-### 1.1 模块完成度
-
-- `Auth / Session`：高（注册、登录、会话恢复、删除账号可用）
-- `Assistant`：高（会话管理 + 三类消息类型 + 核心两条营养路径可用）
-- `Food Log`：高（保存、编辑、软删除、恢复、来源聊天关联可用）
-- `Profile`：高（个人目标与过敏原约束已接入推荐/估算链路）
-- `Insights`：中高（后端分析接口 + 日/周模式 + AI 建议已落地）
-- `工程化`：中高（后端测试较完整，前端 E2E 已覆盖关键流程）
-- `数据层（图片来源、中文营养知识库）`：低（仍缺稳定数据治理能力）
-
-### 1.2 已落地能力（事实）
-
-1. 支持账号体系：
-   - 注册：`POST /auth/register`
-   - 登录：`POST /auth/login`
-   - 会话恢复：`GET /auth/me`
-   - 删除账号：`DELETE /auth/me`
-2. 支持聊天主流程：
-   - 会话新建、列表、详情、重命名、删除
-   - 发送消息到新会话或指定会话
-3. Assistant 已稳定输出三种类型消息：
-   - `text`
-   - `meal_recommendation`
-   - `meal_estimate`（后端内部兼容 `estimate_result`）
-4. Food Log 支持：
-   - 显式保存（不会自动入库）
-   - 仅允许“结构化估算结果”保存
-   - 编辑（含食材克重重算）、软删除、恢复
-   - 来源聊天关联与回跳
-5. Profile 参与个性化：
-   - 推荐与估算 prompt 使用 profile 上下文
-   - 推荐结果存在过敏原命中时会被拦截
-6. Insights 已具备真实后端闭环入口：
-   - 后端接口：`POST /api/insights/analyze`、`GET /api/insights/history`
-   - 支持 `day/week` 模式与日期范围
-   - 支持按 `selectedLogIds` 定向分析
-   - 返回聚合营养 + 条目列表 + AI summary/risks/actions
-   - 分析结果已后端持久化（`insights_analysis` 表），跨设备可复用缓存
-
-### 1.3 当前主要缺口
-
-1. Insights 分析选择篮（已选条目）仍为前端 `localStorage`，换设备需重新勾选；历史分析当前通过 `GET /api/insights/history` 全量拉取 + 前端缓存命中实现回查，用户可通过日期选择器完成历史查看。
-说明：服务端暂未提供按日期过滤 API，该能力属于性能优化与扩展性增强，
-当前不构成功能阻塞。
-2. ~~前端测试当前仅有少量 Node 测试文件，关键 UI 流程覆盖不足。~~（已补齐：Playwright E2E 覆盖登录-聊天-保存-Insights 关键流程）
-3. 图片仅有 `image` 字段和占位图兜底，未实现来源追踪/授权元数据。
-4. 聊天意图分流是规则关键词优先，未实现不确定场景澄清问答。
-5. 中文饮食知识库/RAG 尚未接入，主要依赖通用模型与 prompt 约束。
+当前产品不是完整的饮食日记系统，也不是医疗诊断工具。它更接近“对话式营养助手 + 可复用结果库 + 基础分析面板”。
 
 ---
 
-## 2. 产品定位与边界（当前版本）
+## 2. 当前版本总览
 
-Food Pilot 是以对话为主入口的营养助手，主链路为：
+### 2.1 模块完成度
 
-`Assistant -> 显式保存到 Food Log -> 进入 Insights 做日/周分析 -> 获取可执行建议`
+| 模块 | 当前状态 | 说明 |
+| --- | --- | --- |
+| Auth | 已实现 | 注册、登录、会话恢复、删除账号均已接入真实后端 |
+| Chat / Assistant | 已实现 | 聊天会话管理、意图分流、AI 推荐/估算、澄清提问均已落地 |
+| Food Log | 已实现 | 显式保存、编辑、软删除、恢复、来源回跳已落地 |
+| Profile | 已实现 | 个人目标、饮食风格、过敏原、运动等字段可维护，并参与个性化 |
+| Insights | 部分实现 | 后端分析与历史持久化已落地，但选择篮子与缓存策略仍有明显边界 |
+| 独立 `/estimate` API | 后端已实现，前端未主用 | API 和前端 client 已存在，但主 UI 入口仍以 Chat 估算为主 |
+| 工程化 / 测试 | 部分实现 | 有较多后端单测、前端单测和 Playwright E2E，但当前测试基线并非全绿 |
 
-### 2.1 范围内做什么
+### 2.2 当前主链路是否可用
 
-- 推荐吃什么（`meal_recommendation`）
-- 估算热量与营养（`meal_estimate`）
-- 将高价值结果保存为可复用条目（Food Log）
-- 基于 Profile 做个性化约束
-- 对已选条目进行日/周分析并生成建议
-
-### 2.2 当前不做什么
-
-- 医疗诊断或治疗建议
-- 自动记录全部饮食行为的“全量日记”
-- 未经授权的数据抓取或来源不明内容复用
-
----
-
-## 3. 功能规范（按模块）
-
-### 3.1 Assistant
-
-当前规范：
-
-1. 核心营养业务意图为两条：
-   - 推荐：`meal_recommendation`
-   - 估算：`meal_estimate`
-2. 同时支持 `text` 型解释/闲聊回复。
-3. 路由规则：文本说明 > 推荐关键词 > 默认估算。
-4. 推荐路径启用过敏原冲突拦截（当请求带 `profileId` 且 profile 含过敏原）。
-5. 估算成功后不会自动写入 Food Log，必须由用户显式保存。
-
-### 3.2 Food Log
-
-当前规范：
-
-1. 定位是“主动保存的可复用结果集”，不是全量饮食流水账。
-2. 保存来源支持 `estimate_api` / `chat_message` / `manual`。
-3. 对 `chat_message` 来源执行可保存校验：仅结构化估算结果可保存。
-4. 支持编辑、软删除、恢复、详情查询、按条件筛选。
-5. 支持 `idempotencyKey`，避免重复保存。
-6. 删除聊天会话后，Food Log 保留，但来源会话链接可能失效。
-
-### 3.3 Insights
-
-当前规范：
-
-1. 已接入后端分析接口（非前端 mock）。
-2. 支持日分析、周分析切换。
-3. 支持按已选 Food Log 条目和日期范围分析。
-4. 返回内容包括：
-   - 聚合营养（热量/蛋白/碳水/脂肪与占比）
-   - 分析使用条目列表
-   - AI 综合评估、风险提示、改善建议
-5. 前端支持按用户维度缓存"已选条目"和"分析结果"，用于回访体验。
-6. 分析结果已后端持久化：`POST /api/insights/analyze` 成功后写入 `insights_analysis`，`GET /api/insights/history` 拉取历史用于缓存预填。
-
-当前限制：
-
-- 分析选择篮（已选条目）仍依赖 `localStorage`，换设备需重新勾选。
-- 历史分析无按日期筛选 API，仅通过缓存命中复用。日期选择器可满足查看历史需求。
-
-设计说明：
-- 当前历史回查策略为“全量拉取 + 前端缓存匹配”，优先保证实现简单与用户体验一致性。
-- 按日期过滤的服务端 API 未实现，不影响用户按日期查看历史的核心能力。
-- 随历史数据增长或趋势分析需求增强，可演进为按日期/范围查询的服务端接口。
-
-### 3.4 Profile
-
-当前规范：
-
-1. 存储并维护目标、热量目标、饮食风格、过敏原等字段。
-2. 估算与推荐调用均可携带 `profileId` 参与个性化。
-3. 推荐内容命中过敏原时，系统返回拦截说明而非原推荐。
-
-### 3.5 数据与内容（图片/营养知识）
-
-当前状态：
-
-1. Food Log 条目可带 `image`，UI 有占位图兜底。
-2. 已支持 `imageSource`/`imageLicense` 元信息，保存时可追溯来源；无图场景一致兜底。
-3. 中文饮食知识库与 RAG 尚未成体系，属于后续能力。
+- 可用：账号登录后进入 `Chat / Food Log / Insights / Profile`
+- 可用：在聊天中发送问题并获得估算或推荐结果
+- 可用：从聊天估算结果显式保存到 Food Log
+- 可用：从 Food Log 选择条目后进入 Insights 做分析
+- 可用：Profile 数据会影响推荐和估算上下文
 
 ---
 
-## 4. 接口与数据契约（当前口径）
+## 3. 用户可见功能规格
 
-### 4.1 后端核心 API
+### 3.1 Auth
 
-- 健康检查：`GET /health`
-- 认证：`/auth/*`
-- 聊天：`/chat/*`
-- 估算：`POST /estimate`
-- Food Log：`/food-logs/*`
-- Insights：`POST /api/insights/analyze`、`GET /api/insights/history`
-- Profile：`/profile/*`
+当前实现：
 
-### 4.2 关键一致性约束
+- `POST /auth/register` 注册账号
+- `POST /auth/login` 登录账号
+- `GET /auth/me` 恢复当前会话
+- `DELETE /auth/me` 删除当前账号
 
-1. 前后端统一消息类型：`text | meal_estimate | meal_recommendation`。
-2. 后端内部遗留 `estimate_result` 由路由层统一映射为 `meal_estimate` 返回前端。
-3. Food Log 保存规则与消息类型严格绑定，推荐/文本消息不可直接保存。
-4. Insights 分析返回结构固定为：`success/data/error`，前端按契约消费。
+行为约束：
 
-### 4.3 接口演进策略（Insights）
+- 注册要求邮箱合法、密码至少 8 位、`displayName` 非空
+- 前端将 token 和当前用户信息保存在 `localStorage`
+- 认证方式为 Bearer Token
+- Token 为后端自签名 HMAC JWT，带 `sub / iat / exp`
 
-当前 `GET /api/insights/history` 返回全量历史数据，用于前端缓存与回查。
+数据生命周期：
 
-未来演进方向：
+- 数据库层对 `users -> profiles / chat_sessions / messages / food_logs / insights_analysis` 使用级联删除
+- 产品层面，删除账号应清理该用户相关数据
 
-- 支持 `date_start` / `date_end` 参数，实现按时间范围查询
-- 支持分页（cursor / limit），避免大数据量全量加载
-- 统一以时间维度作为查询主语义，而非缓存键（cacheKey）
+### 3.2 Chat / Assistant
 
-该演进不影响现有前端逻辑，可平滑兼容。
+当前实现：
+
+- 新建空聊天会话
+- 获取聊天列表
+- 获取单个聊天详情
+- 重命名聊天
+- 永久删除聊天
+- 在新会话或已有会话中发送消息
+
+消息类型契约：
+
+- 对外统一为 `text`
+- 对外统一为 `meal_estimate`
+- 对外统一为 `meal_recommendation`
+
+兼容行为：
+
+- 数据库内部仍保留 `estimate_result`
+- Router / Schema 层会统一映射为 `meal_estimate`
+
+意图分流规则：
+
+- `meal_recommendation`：关键词命中“推荐/替代/选哪个/训练后吃什么”等
+- `meal_estimate`：关键词命中“多少热量/多少蛋白质/营养怎么样”等
+- `text`：解释、补充说明、寒暄类输入
+- `_clarification`：当输入模糊且不像具体食物描述时，先返回澄清提问
+
+当前实现特征：
+
+- 分流规则是关键词优先，不是 LLM 分类器
+- 已实现“澄清提问”分支，不应再被视为未实现
+- 真实回归测试中，意图分流仍存在误判样本，稳定性不是 100%
+
+AI 输出行为：
+
+- 推荐请求调用推荐链路，返回标题、说明、正文
+- 估算请求调用估算链路，返回标题、置信度、描述、分项食材、总热量、建议
+- 多食物估算时，消息 `payload.estimates[]` 会保留每个子估算块
+
+显式边界：
+
+- Chat 内的估算结果不会自动写入 Food Log
+- Chat 内的推荐结果不能直接保存到 Food Log
+
+### 3.3 Recommendation 安全约束
+
+当前实现：
+
+- 当请求携带 `profileId`，推荐链路会读取 Profile
+- 若 Profile 中存在 `allergies`，推荐结果会做关键词级过敏原拦截
+- 命中过敏原时，不返回原推荐，而是返回“推荐已拦截”的安全提示消息
+
+当前边界：
+
+- 拦截是字符串关键词级别，不是结构化配料理解
+
+### 3.4 独立 Estimate API
+
+当前实现：
+
+- `POST /estimate` 已存在
+- 请求支持 `query / clientRequestId / profileId / sessionId`
+- 返回 `success / data / error / clientRequestId / foodLogId / saveStatus`
+
+当前边界：
+
+- 该 API 只返回估算结果，不自动保存 Food Log
+- 前端存在 `src/api/estimate.ts` client
+- 当前主 UI 没有独立 estimate 页面或按钮直接走这条 API；主链路仍是 Chat 中估算
+
+### 3.5 Food Log
+
+产品定位：
+
+- Food Log 是“显式保存的可复用结果库”
+- 不是自动记录全部饮食行为的流水账
+
+当前实现：
+
+- 列表查询
+- 单条详情
+- 保存
+- 从独立 estimate 结果保存
+- 编辑
+- 软删除
+- 恢复
+
+支持来源：
+
+- `estimate_api`
+- `chat_message`
+- `manual`
+
+保存规则：
+
+- 只有用户主动保存时才创建 Food Log
+- `chat_message` 来源必须携带 `session_id`
+- `chat_message` 只能保存结构化估算结果
+- 文本回复与推荐回复不能直接保存到 Food Log
+
+去重 / 幂等规则：
+
+- Food Log 支持 `idempotencyKey`
+- 数据库对 `(user_id, idempotency_key)` 做唯一约束
+- Chat 保存按钮默认使用 `message.id::title` 作为幂等键
+- 独立 estimate 保存默认使用 `estimate_api:{clientRequestId}`
+
+编辑与删除规则：
+
+- 删除为软删除，记录保留生命周期状态
+- 支持恢复已删除条目
+- 前端允许编辑食材克重，并按比例重算热量和三大营养素展示
+
+来源关联：
+
+- Food Log 条目可保留 `sessionId` 与 `sourceMessageId`
+- 删除聊天后，Food Log 记录保留，但关联聊天会被解除
+- 前端会把这种状态展示为 `Source Chat Deleted`
+
+过滤能力：
+
+- 后端列表支持 `sessionId / dateFrom / dateTo / meal / limit`
+- 当前不支持按 `sourceType` 的高级筛选
+
+图片与来源元数据：
+
+- Food Log 已支持 `image / imageSource / imageLicense`
+- 有图片但未传来源时，后端会给默认值
+- 前端对无图场景提供占位图
+- 前端在详情页会展示 `imageSource / imageLicense`
+
+### 3.6 Profile
+
+当前实现字段：
+
+- `age`
+- `height`
+- `weight`
+- `sex`
+- `activityLevel`
+- `exerciseType`
+- `goal`
+- `pace`
+- `kcalTarget`
+- `dietStyle`
+- `allergies`
+
+当前实现：
+
+- `POST /profile` 创建
+- `GET /profile/me` 获取当前用户 Profile
+- `GET /profile/{profile_id}` 获取指定 Profile
+- `PUT /profile/{profile_id}` 更新 Profile
+
+业务规则：
+
+- 一个用户只允许一个 Profile
+- 前端有完整 Profile 页面
+- 前端会根据年龄、身高、体重、性别、活动水平、目标、节奏自动计算推荐热量并回填 `kcalTarget`
+- 前端将 `profileId` 本地缓存，后续作为个性化上下文传给 Chat
+
+Profile 对其他模块的影响：
+
+- 推荐链路使用目标、热量目标、饮食风格、过敏原、活动信息
+- 估算链路会把 Profile 作为建议文案的上下文
+
+### 3.7 Insights
+
+当前实现：
+
+- `POST /api/insights/analyze`
+- `GET /api/insights/history`
+
+分析输入：
+
+- `mode`: `day | week`
+- `selectedLogIds`: 可选
+- `dateRange.start / dateRange.end`
+- `cacheKey`: 可选
+
+分析输出：
+
+- `aggregation`
+- `entries`
+- `ai.summary`
+- `ai.risks`
+- `ai.actions`
+
+后端分析能力：
+
+- 根据 `selectedLogIds` 精确分析指定 Food Log
+- 若未指定 `selectedLogIds`，按日期范围查询用户 Food Log
+- 聚合总热量、总蛋白、总碳水、总脂肪、三大营养素比例、条目数
+- 基于聚合结果和条目摘要调用 AI 生成总结、风险、行动建议
+
+历史持久化：
+
+- 若请求传入 `cacheKey`，分析结果会写入 `insights_analysis`
+- 以 `(user_id, cache_key)` 做 upsert
+- `GET /api/insights/history` 返回该用户最近历史记录
+
+前端当前实现：
+
+- Insights 视图复用 `Explorer` 页面中的 `AnalysisView`
+- 支持按日和按周切换
+- 支持从 Food Log 把条目加入分析篮子
+- 分析篮子按 `userId + date` 保存在 `localStorage`
+- 篮子保存的是条目快照，因此即使 Food Log 后续取消保存，分析篮子仍可保留该快照
+
+当前重要边界：
+
+- 分析篮子没有后端同步接口，换设备不会同步“待分析条目”
+- 只有分析结果历史可以跨设备回看，分析篮子本身不行
+- 前端缓存 key 目前只按 `mode + dateRange` 生成，不包含 `selectedLogIds`
+- 这意味着同一天/同一周切换不同条目集合时，存在复用旧分析结果的风险
+- 当前没有 `/api/insights/selection` 之类的后端选择同步接口
 
 ---
 
-## 5. 非功能要求（当前已达成 vs 未达成）
+## 4. 数据与存储规格
 
-### 5.1 已达成
+### 4.1 主要数据表
 
-1. 后端鉴权：主要业务接口要求 Bearer Token。
-2. 后端测试：`backend/tests` 已覆盖认证、聊天、估算、Food Log、Profile 等关键逻辑。
-3. 错误处理：前后端有基础错误映射与用户提示。
-4. 前端 API 环境化：`VITE_API_BASE_URL` 支持开发/测试/生产切换，无需改源码。
+- `users`
+- `profiles`
+- `chat_sessions`
+- `messages`
+- `food_logs`
+- `insights_analysis`
 
-### 5.2 未达成（需补齐）
+### 4.2 关键数据约束
 
-1. ~~前端自动化：缺少覆盖登录-提问-保存-Insights 的端到端/集成测试。~~（已达成：Playwright E2E 覆盖关键流程）
-2. 可观测性：缺统一日志追踪、请求链路指标和错误聚合方案。
-3. 数据合规：图片与营养数据来源审计机制不完整。
+- `chat_sessions.title` 长度 1-120
+- `messages` 只允许 `text / meal_estimate / meal_recommendation` 契约
+- `food_logs.source_type` 只允许 `estimate_api / chat_message / manual`
+- `food_logs.status` 只允许 `active / deleted`
+- `food_logs.idempotency_key` 对单用户唯一
+- `insights_analysis.mode` 只允许 `day / week`
 
----
+### 4.3 本地存储
 
-## 6. 版本优先级（按现状重排）
+前端当前使用 `localStorage` 保存：
 
-## 6.1 P0（必须优先）
-
-1. ~~**前端 API 环境化**~~（已完成）
-   - 已通过 `VITE_API_BASE_URL` 实现环境切换。
-2. **Insights 服务化补全**（部分完成）
-   - 已完成：分析结果已后端持久化，`GET /api/insights/history` 可跨设备复用缓存。
-   - 待完成：分析选择篮后端同步（P0，影响跨设备体验一致性）
-      说明：
-      - 按日期回查 API 不再列为 P0。
-      - 当前用户已可通过日期选择器查看历史，API 侧按日期过滤属于性能优化与扩展能力，
-   调整至 P1 阶段实现。
-3. ~~**前端关键流程自动化测试**~~（已完成）
-   - 已通过 Playwright E2E（`frontend/e2e/critical-flow.spec.ts`）覆盖登录、聊天、保存 Food Log、进入 Insights 分析。
-   - 验收：`npm run test:e2e` 可一键执行并稳定回归。
-4. ~~**图片来源治理最小闭环**~~（已完成）
-   - 已为 Food Log 增加 `image`、`imageSource`、`imageLicense` 字段，保存时自动推断来源；无图场景一致兜底。
-
-## 6.2 P1（应尽快）
-
-1. 意图路由增强：在“推荐/估算”不确定输入时增加澄清提问策略。
-2. Food Log 筛选增强：时间段、来源、关键词等高级筛选。
-3. Insights 趋势面板：7/30 天趋势与目标差异可视化。
-4. Insights 按日期/范围回查 API（性能优化与趋势分析基础能力）
-
-## 6.3 P2（可后置）
-
-1. 中文饮食 RAG 知识库体系化建设。
-2. 导出报告（图片/PDF）。
-3. 长周期饮食 coaching 能力。
+- `foodpilot.authToken`
+- `foodpilot.authUser`
+- `foodpilot.profileId`
+- Insights 分析篮子（按用户、按日期）
 
 ---
 
-## 7. 未完成事项统计
+## 5. API 范围
 
-本节汇总文档中各模块提及的未完成项，便于排期与验收。
+当前后端公开的核心接口：
 
-### 7.1 按优先级统计
-
-| 优先级 | 数量 | 事项 |
-|--------|------|------|
-| P0     | 1    | Insights 选择篮后端同步 |
-| P1     | 4    | 按日期回查 API；意图路由澄清问答；Food Log 筛选增强；Insights 趋势面板 |
-| P2     | 3    | 中文饮食 RAG；导出报告；长周期 coaching |
-
-### 7.2 按模块统计
-
-| 模块 | 未完成项 |
-|------|----------|
-| **Insights** | ① 分析选择篮仍依赖 localStorage，换设备需重新勾选；② 历史分析无按日期回查 API；③ 7/30 天趋势与目标差异可视化（P1） |
-| **Food Log / 数据层** | ① 已支持 `imageSource`/`imageLicense` 元信息；② 时间段、来源、关键词等高级筛选（P1） |
-| **Assistant** | ① 意图分流为规则关键词优先，未实现不确定场景澄清问答（P1） |
-| **数据与内容** | ① 中文饮食知识库与 RAG 尚未成体系（P2） |
-| **非功能** | ① 可观测性：缺统一日志追踪、请求链路指标和错误聚合；② 数据合规：图片与营养数据来源审计机制不完整 |
-
-## 7. 未完成事项统计
-
-本节为“全量待办清单”，用于覆盖所有未完成能力，不代表实际开发顺序。
-实际执行优先级与节奏以第 10 节「执行计划」为准。
-
-**P0**
-
-- [ ] Insights 分析选择篮后端同步（跨设备可复用已选条目）
-- [x] Food Log 图片来源治理：新增 `imageSource`/`imageLicense` 等元信息，可追溯来源
-
-**P1**
-
-- [ ] Insights 按日期/范围回查 API（性能优化与趋势能力基础）
-- [x] Assistant 意图路由：不确定输入时增加澄清提问
-- [ ] Food Log 筛选增强：时间段、来源、关键词
-- [ ] Insights 趋势面板：7/30 天趋势与目标差异可视化
-
-**P2**
-
-- [ ] 中文饮食 RAG 知识库体系化
-- [ ] 导出报告（图片/PDF）
-- [ ] 长周期饮食 coaching
-
-**非功能（无明确优先级）**
-
-- [ ] 可观测性：统一日志追踪、请求链路指标、错误聚合
-- [ ] 数据合规：图片与营养数据来源审计机制补全
+- `GET /health`
+- `POST /auth/register`
+- `POST /auth/login`
+- `GET /auth/me`
+- `DELETE /auth/me`
+- `GET /chat/sessions`
+- `POST /chat/sessions`
+- `GET /chat/sessions/{session_id}`
+- `PATCH /chat/sessions/{session_id}`
+- `DELETE /chat/sessions/{session_id}`
+- `POST /chat/messages`
+- `POST /chat/sessions/{session_id}/messages`
+- `POST /estimate`
+- `GET /food-logs`
+- `GET /food-logs/{food_log_id}`
+- `POST /food-logs`
+- `POST /food-logs/from-estimate`
+- `PATCH /food-logs/{food_log_id}`
+- `POST /food-logs/{food_log_id}/restore`
+- `DELETE /food-logs/{food_log_id}`
+- `POST /profile`
+- `GET /profile/me`
+- `GET /profile/{profile_id}`
+- `PUT /profile/{profile_id}`
+- `POST /api/insights/analyze`
+- `GET /api/insights/history`
 
 ---
 
-## 8. 成功标准（本阶段）
+## 6. 非功能与工程状态
 
-满足以下条件视为本阶段完成：
+### 6.1 已具备的工程能力
 
-1. 用户稳定完成“问 -> 保存 -> 分析 -> 调整”的主闭环。
-2. Insights 分析结果可跨设备复用（已持久化）；选择篮同步与按日期回查待补全。
-3. 前端 API 地址无需改源码即可切换环境（已达成）。
-4. 前端关键链路具备自动化回归，发布风险可控。
+- 前后端接口字段别名处理较完整，中间层已经兼容部分旧命名
+- 后端有较系统的 `unittest` 覆盖认证、聊天、估算、Food Log、Profile、Insights
+- 前端有 Node 原生测试，覆盖消息展示、Food Log 状态、导航逻辑等
+- 前端有 Playwright E2E 脚本，目标覆盖注册/聊天/保存 Food Log/进入 Insights
+- 前端 API 基地址支持 `VITE_API_BASE_URL`
 
----
+### 6.2 当前验证结论
 
-## 9. 冻结结论（本版）
+2026-03-19 本地验证结果：
 
-1. 当前项目已是“可用的 Assistant + Food Log + Profile + 基础 Insights”。
-2. 当前短板不在“有没有页面”，而在“工程化、配置化、数据治理和 Insights 选择篮同步/按日期回查”。
-3. 后续迭代以本文件为执行基线，任何“已完成”声明必须可在代码中验证。
+- `frontend`: `npm.cmd test` 通过 `11/12`
+- `frontend`: 当前有 1 个失败测试，属于 `workspaceMessagePresentation` 输出结构与测试期望不一致
+- `backend`: 在仓库 `.venv` 下运行单测时，可见真实失败与环境问题并存，当前不是全绿基线
 
----
+当前已观察到的问题类型：
 
-## 10. 下一阶段执行计划（Action Plan）
+- 部分后端测试依赖 `httpx`，当前 `.venv` 未安装
+- 一部分后端测试因数据库路径使用相对路径，在特定工作目录下报 `unable to open database file`
+- Chat intent routing 回归测试存在误判样本
+- 部分测试断言与当前 schema/实现已发生漂移
 
-本节基于当前完成度与优先级，明确接下来可执行的开发路线，用于指导实际迭代顺序与资源投入。
-
----
-
-### 10.1 执行原则
-
-1. 优先保证主链路稳定性与跨设备一致性（P0）
-2. 优先做“用户感知明显”的改进，而非纯技术优化
-3. API 与数据结构演进优先保证向后兼容
-4. 避免过早复杂化（如过度分页、过度抽象）
+因此，当前规格不应宣称“关键测试已稳定通过”。
 
 ---
 
-### 10.2 P0 阶段（必须立即推进）
+## 7. 已知边界与风险
 
-#### 1. Insights 选择篮后端同步
+### 7.1 产品边界
 
-**目标：**
-解决当前“换设备需重新勾选”的体验断层问题
+- 不提供医疗诊断与治疗建议
+- 不自动记录全部饮食行为
+- 不具备图片识别上传主流程；图片目前只是 Food Log 条目字段
+- 不具备中文食物知识库/RAG
 
-**当前问题：**
-- 已选 Food Log 条目仅存于前端 `localStorage`
-- 用户跨设备或刷新后状态丢失 :contentReference[oaicite:0]{index=0}
+### 7.2 当前实现风险
 
-**实现建议：**
-- 后端新增：
-  - `selected_log_ids` 持久化（可绑定 user 或 session）
-- API：
-  - `GET /api/insights/selection`
-  - `POST /api/insights/selection`
-- 前端：
-  - 初始化时优先拉服务端状态
-  - 本地作为 fallback cache
-
-**验收标准：**
-- 用户在不同设备登录后可看到一致的选择篮状态
+- Chat 意图分流依赖规则，复杂比较句和替代类句式仍可能误分流
+- Insights 缓存 key 未包含 `selectedLogIds`，可能命中错误缓存
+- Insights 选择篮子仍是本地状态，不是跨设备状态
+- 独立 `/estimate` API 虽已实现，但主 UI 不走该路径，产品体验仍以 Chat 为中心
+- 当前测试基线存在失败项，说明实现与测试、或实现与预期之间仍有漂移
 
 ---
 
-### 10.3 P1 阶段（下一步迭代重点）
+## 8. 当前版本应如何描述
 
-#### 1. Insights 按日期/范围回查 API
+对外或对内描述当前产品时，建议使用以下口径：
 
-**目标：**
-降低全量拉取成本，并支撑趋势分析能力
-
-**当前状态：**
-- 使用 `GET /api/insights/history` 全量拉取 + 前端缓存匹配 :contentReference[oaicite:1]{index=1}
-
-**改造方向：**
-- 支持：
-  - `date_start`
-  - `date_end`
-- 可扩展：
-  - pagination（cursor / limit）
-
-**设计原则：**
-- 向后兼容（无参数时仍返回全量）
-- 内部统一为范围查询
+> Food Pilot 当前是一个以聊天为入口的营养助手。用户可以登录后在 Chat 中提问，获取餐食推荐或营养估算；有价值的估算结果可显式保存到 Food Log；随后在 Insights 中做基础的日/周分析。Profile 已参与个性化和过敏原约束。核心链路已具备，但 Insights 的选择同步、缓存策略和整体工程稳定性仍需继续收敛。
 
 ---
 
-#### 2. Insights 趋势面板（7 / 30 天）
+## 9. 下一阶段优先事项
 
-**目标：**
-从“单次分析”升级为“长期饮食趋势反馈”
+按当前实现状态，建议优先级如下：
 
-**能力：**
-- 热量趋势
-- 宏量营养分布变化
-- 与目标差异对比
+### P0
 
-**依赖：**
-- 按日期范围查询 API（建议与上项一起做）
+- 修正 Insights 缓存 key，仅按日期缓存会导致结果复用错误
+- 为 Insights 分析篮子提供后端同步能力
+- 收敛当前失败测试，恢复可作为发布门禁的稳定基线
 
----
+### P1
 
-#### 3. Food Log 高级筛选
+- 强化 Chat 意图分流，降低推荐/估算误判
+- 为 Food Log 增加更强的筛选能力，如来源筛选
+- 补齐独立 estimate 主流程是否继续保留的产品决策
 
-**目标：**
-提升历史数据可用性
+### P2
 
-**能力：**
-- 时间范围筛选
-- 来源筛选（estimate / manual）
-- 关键词搜索
+- 接入中文食物知识库 / RAG
+- 引入趋势分析与更长周期的饮食反馈
+- 增强图片来源治理与更完整的数据审计
 
 ---
 
-#### 4. Assistant 意图澄清能力
+## 10. 冻结结论
 
-**目标：**
-减少误判，提高交互质量
+截至 2026-03-19，Food Pilot 的真实状态可以归纳为：
 
-**当前问题：**
-- 规则路由可能误判推荐/估算 :contentReference[oaicite:2]{index=2}
+- 它已经不是纯 demo，认证、聊天、Food Log、Profile、Insights 都有真实后端和前端入口
+- 它的主路径已经成立，但仍是“可用的早期产品”，不是“流程完全收敛的稳定产品”
+- 现阶段最需要更新的不是页面数量，而是 Insights 状态模型、规则分流准确率和测试基线可信度
 
-**改进方向：**
-- 增加不确定分支：
-  - “你是想让我推荐还是帮你估算？”
-
----
-
-### 10.4 P2 阶段（中长期能力建设）
-
-#### 1. 中文饮食 RAG 知识库
-
-**目标：**
-提升中餐场景下的准确性与专业性
-
-**能力：**
-- 食材营养标准化
-- 菜品拆解
-- 地区饮食差异支持
-
----
-
-#### 2. 报告导出能力
-
-**目标：**
-增强分享与复用价值
-
-**形式：**
-- 图片卡片
-- PDF 报告
-
----
-
-#### 3. 长周期饮食 Coaching
-
-**目标：**
-从“工具”升级为“陪伴型产品”
-
-**能力：**
-- 周/月总结
-- 行为建议跟踪
-- 目标达成反馈
-
----
-
-### 10.5 技术演进路线总结
-
-当前系统将从：
-
-> 单次分析工具 → 可回溯数据系统 → 趋势驱动的健康决策系统
-
-演进路径：
-
-1. 先解决状态同步（P0）
-2. 再优化数据访问方式（P1 API）
-3. 最后构建长期价值能力（趋势 + RAG + coaching）
-
----
-
-### 10.6 不在当前阶段优先考虑
-
-为避免复杂度失控，以下能力暂不优先：
-
-- 实时流式分析（streaming insights）
-- 复杂推荐系统（协同过滤等）
-- 多模型自动路由系统
