@@ -1,3 +1,4 @@
+﻿import json
 import os
 import unittest
 from unittest.mock import patch
@@ -419,10 +420,8 @@ class FoodLogApiTests(unittest.TestCase):
 
     def test_save_food_log_entry_from_chat_estimate_succeeds(self) -> None:
         """
-        chat → Food Log：对于 estimate 结果（结构完整），保存应成功。
-        """
+        chat 鈫?Food Log锛氬浜?estimate 缁撴灉锛堢粨鏋勫畬鏁达級锛屼繚瀛樺簲鎴愬姛銆?        """
         session = create_empty_session(self.user_id)
-        # 使用 service 直接创建一条符合 can_save_message_to_food_log 条件的消息。
         from backend.database.connection import get_db_connection
 
         conn = get_db_connection()
@@ -493,7 +492,7 @@ class FoodLogApiTests(unittest.TestCase):
 
     def test_save_food_log_entry_from_chat_recommendation_is_rejected(self) -> None:
         """
-        chat → Food Log：对于推荐 / 解释性结果，保存应被拒绝并返回明确错误。
+        chat -> Food Log: recommendation replies should not be savable.
         """
         session = create_empty_session(self.user_id)
         from backend.database.connection import get_db_connection
@@ -509,15 +508,23 @@ class FoodLogApiTests(unittest.TestCase):
                     role,
                     message_type,
                     content,
+                    payload_json,
                     created_at
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     int(session["id"]),
                     self.user_id,
                     "assistant",
                     "meal_recommendation",
-                    "多吃蔬菜、少油少盐会更好。",
+                    "General healthy eating advice.",
+                    json.dumps(
+                        {
+                            "title": "General advice",
+                            "description": "Eat more vegetables and reduce oil/salt.",
+                        },
+                        ensure_ascii=False,
+                    ),
                     "2026-03-16 12:10:00",
                 ),
             )
@@ -531,7 +538,7 @@ class FoodLogApiTests(unittest.TestCase):
                 "sourceType": "chat_message",
                 "mealDescription": "generic advice",
                 "resultTitle": "General advice",
-                "resultDescription": "多吃蔬菜、少油少盐会更好。",
+                "resultDescription": "Eat more vegetables and reduce oil/salt.",
                 "totalCalories": "0 kcal",
                 "ingredients": [],
                 "sessionId": int(session["id"]),
@@ -545,8 +552,7 @@ class FoodLogApiTests(unittest.TestCase):
                 current_user=self.user,
             )
 
-        # FastAPI router 会把 ValueError 映射成 HTTP 400，这里只断言错误信息。
-        self.assertIn("当前这条回复不包含可复用的菜品结果，无法保存到 Food Log。", str(exc.exception))
+        self.assertIn("assistant estimate result", str(exc.exception))
 
 def _build_estimate_result(
     *,
@@ -573,3 +579,4 @@ def _build_estimate_result(
 
 if __name__ == "__main__":
     unittest.main()
+

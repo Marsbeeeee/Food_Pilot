@@ -66,7 +66,7 @@ class RecommendationServiceTests(unittest.TestCase):
         )
 
         self.assertIn("auxiliary fallback", system_instruction)
-        self.assertIn("not a standalone complex capability", system_instruction)
+        self.assertIn("Do not expand text requests into a third complex capability", system_instruction)
 
     def test_build_profile_context_contains_constraints(self) -> None:
         profile = ProfileOut(

@@ -1,6 +1,5 @@
 import os
 import sqlite3
-import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -13,19 +12,20 @@ from backend.repositories.user_repository import (
     get_user_by_id,
 )
 from backend.schemas.user import UserCreate
+from backend.tests.test_db_utils import create_workspace_db_path, remove_file_if_exists
 
 
 class UserRepositoryTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.db_path = os.path.join(self.temp_dir.name, "test_foodpilot.db")
+        self.db_path = create_workspace_db_path("user-repo-")
+        remove_file_if_exists(self.db_path)
         self.db_patch = patch("backend.database.connection.db_path", self.db_path)
         self.db_patch.start()
         init_db()
 
     def tearDown(self) -> None:
         self.db_patch.stop()
-        self.temp_dir.cleanup()
+        remove_file_if_exists(self.db_path)
 
     def test_init_db_creates_users_table_with_expected_columns(self) -> None:
         conn = get_db_connection()

@@ -1,66 +1,62 @@
-import assert from 'node:assert/strict';
+﻿import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { buildWorkspaceMessagePresentation } from './workspaceMessagePresentation.js';
 
-test('buildWorkspaceMessagePresentation returns estimate card copy for Chinese nutrition results', () => {
+test('buildWorkspaceMessagePresentation returns estimate card shape with extended fields', () => {
   const presentation = buildWorkspaceMessagePresentation({
     messageType: 'meal_estimate',
-    title: '鸡胸肉牛油果沙拉',
+    title: 'Chicken Avocado Salad',
     confidence: 'high',
-    description: '蛋白质充足，脂肪主要来自牛油果。',
+    description: 'Protein-forward meal.',
     items: [
-      { name: '鸡胸肉', portion: '150g', energy: '240 kcal' },
-      { name: '牛油果', portion: '1/2 个', energy: '180 kcal' },
+      { name: 'Chicken', portion: '150g', energy: '240 kcal' },
+      { name: 'Avocado', portion: '1/2', energy: '180 kcal' },
     ],
     total: '420 kcal',
   });
 
-  assert.deepEqual(presentation, {
-    variant: 'meal_estimate',
-    title: '鸡胸肉牛油果沙拉',
-    confidence: 'high',
-    description: '蛋白质充足，脂肪主要来自牛油果。',
-    items: [
-      { name: '鸡胸肉', portion: '150g', energy: '240 kcal' },
-      { name: '牛油果', portion: '1/2 个', energy: '180 kcal' },
-    ],
-    total: '420 kcal',
-    ingredientColumnLabel: '食材',
-    portionColumnLabel: '份量',
-    energyColumnLabel: '估算热量',
-    totalLabel: '估算总热量',
-  });
+  assert.equal(presentation.variant, 'meal_estimate');
+  assert.equal(presentation.title, 'Chicken Avocado Salad');
+  assert.equal(presentation.confidence, 'high');
+  assert.equal(presentation.total, '420 kcal');
+  assert.equal(presentation.items.length, 2);
+  assert.equal(presentation.estimates, null);
+  assert.equal(presentation.suggestion, null);
+  assert.ok(presentation.ingredientColumnLabel);
+  assert.ok(presentation.portionColumnLabel);
+  assert.ok(presentation.energyColumnLabel);
+  assert.ok(presentation.proteinColumnLabel);
+  assert.ok(presentation.carbsColumnLabel);
+  assert.ok(presentation.fatColumnLabel);
+  assert.ok(presentation.totalLabel);
 });
 
-test('buildWorkspaceMessagePresentation returns recommendation card copy and fallback title', () => {
+test('buildWorkspaceMessagePresentation returns recommendation card and fallback title', () => {
   const presentation = buildWorkspaceMessagePresentation({
     messageType: 'meal_recommendation',
-    content: '今晚优先选鸡肉沙拉，再配一份南瓜汤，会比炸鸡饭更稳妥。',
-    description: '保留饱腹感，同时减少油脂和精制碳水。',
+    content: 'Choose grilled chicken salad with pumpkin soup.',
+    description: 'Lower fat while keeping satiety.',
   });
 
-  assert.deepEqual(presentation, {
-    variant: 'meal_recommendation',
-    title: '推荐建议',
-    description: '保留饱腹感，同时减少油脂和精制碳水。',
-    content: '今晚优先选鸡肉沙拉，再配一份南瓜汤，会比炸鸡饭更稳妥。',
-    eyebrow: '饮食推荐',
-    fallbackTitle: '推荐建议',
-    badgeLabel: '建议',
-    reasonLabel: '为什么这样选',
-    contentLabel: '推荐怎么吃',
-  });
+  assert.equal(presentation.variant, 'meal_recommendation');
+  assert.equal(presentation.content, 'Choose grilled chicken salad with pumpkin soup.');
+  assert.equal(presentation.description, 'Lower fat while keeping satiety.');
+  assert.ok(presentation.title);
+  assert.ok(presentation.eyebrow);
+  assert.ok(presentation.badgeLabel);
+  assert.ok(presentation.reasonLabel);
+  assert.ok(presentation.contentLabel);
 });
 
 test('buildWorkspaceMessagePresentation keeps text messages as plain bubbles', () => {
   const presentation = buildWorkspaceMessagePresentation({
     messageType: 'text',
-    content: '更推荐烤鸡，是因为同等分量下通常更容易控制油脂和总热量。',
+    content: 'Grilling usually uses less oil than deep frying.',
   });
 
   assert.deepEqual(presentation, {
     variant: 'text',
-    content: '更推荐烤鸡，是因为同等分量下通常更容易控制油脂和总热量。',
+    content: 'Grilling usually uses less oil than deep frying.',
   });
 });

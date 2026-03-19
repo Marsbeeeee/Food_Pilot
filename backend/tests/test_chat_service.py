@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sqlite3
 import unittest
 from unittest.mock import patch
@@ -149,6 +149,20 @@ class ChatServiceTests(unittest.TestCase):
         )
 
         self.assertEqual(resolved, "meal_recommendation")
+
+    def test_resolve_message_type_routes_swap_and_worth_choice_phrases_to_recommendation(self) -> None:
+        for content in (
+            "麻辣烫和黄焖鸡哪个更值得选？",
+            "奶茶想换掉，有什么更好的替代？",
+        ):
+            with self.subTest(content=content):
+                resolved = resolve_message_type(
+                    content,
+                    profile_id=12,
+                    user_id=self.user_id,
+                )
+
+                self.assertEqual(resolved, "meal_recommendation")
 
     def test_resolve_message_type_routes_explanatory_follow_up_to_text(self) -> None:
         resolved = resolve_message_type(

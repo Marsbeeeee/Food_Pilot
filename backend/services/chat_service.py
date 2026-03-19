@@ -1,4 +1,4 @@
-import json
+﻿import json
 
 from backend.database.connection import get_db_connection
 from backend.repositories.chat_session_repository import (
@@ -113,6 +113,12 @@ CLARIFICATION_MESSAGE = (
 FOOD_QUANTITY_PATTERNS = (
     "一碗", "两碗", "一份", "两份", "一杯", "两杯",
     "一个", "两个", "半个", "一根", "两根",
+)
+ADDITIONAL_RECOMMENDATION_ROUTE_PHRASES = (
+    "更值得选",
+    "换掉",
+    "更好的替代",
+    "替代",
 )
 
 
@@ -694,7 +700,10 @@ def _matches_text_request(value: str) -> bool:
 def _matches_recommendation_request(value: str) -> bool:
     if _matches_estimate_request(value):
         return False
-    return _contains_any_phrase(value, RECOMMENDATION_ROUTE_PHRASES)
+    return _contains_any_phrase(
+        value,
+        RECOMMENDATION_ROUTE_PHRASES + ADDITIONAL_RECOMMENDATION_ROUTE_PHRASES,
+    )
 
 
 def _matches_estimate_request(value: str) -> bool:

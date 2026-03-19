@@ -141,6 +141,12 @@ pip install -r requirements.txt
 uvicorn backend.main:app --reload --port 8000
 ```
 
+If you will run tests locally:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
 ### 4) Setup and run frontend
 
 ```bash
@@ -178,7 +184,7 @@ cd frontend
 npm run dev
 npm run build
 npm test
-npm run test:e2e      # E2E 关键流程回归（需后端已启动）
+npm run test:e2e      # E2E 关键流程（无 DASHSCOPE_API_KEY 时自动 skip）
 ```
 
 **E2E 测试（Playwright）**
@@ -193,8 +199,16 @@ npm run test:e2e
 **Backend tests**
 
 ```bash
-python -m unittest discover backend/tests
+python -m pytest backend/tests
 ```
+
+**Release gate (recommended)**
+
+```powershell
+.\scripts\run_release_gate.ps1
+```
+
+See `docs/TEST_BASELINE.md` for gate scope and isolation rules.
 
 ### Example API call (health)
 
@@ -266,7 +280,7 @@ curl -X POST http://localhost:8000/estimate \
 1. Fork / 新建分支：`feature/xxx` 或 `fix/xxx`
 2. 本地开发并保证可运行
 3. 运行测试：
-   - `python -m unittest discover backend/tests`
+   - `python -m pytest backend/tests`
    - `cd frontend && npm test`
 4. 提交 PR，描述：
    - 背景问题

@@ -5,7 +5,7 @@ from unittest.mock import patch
 from backend.database.init_db import init_db
 from backend.routers.chat import create_chat_message
 from backend.schemas.chat import ChatSendMessageRequest
-from backend.schemas.profile import ProfileOut
+from backend.schemas.profile import ProfileIn
 from backend.schemas.user import UserCreate, UserOut
 from backend.services.profile_service import create_profile
 from backend.services.recommendation import check_allergen_violations
@@ -68,9 +68,8 @@ class ProfileAllergenIntegrationTests(unittest.TestCase):
 
         self.profile = create_profile(
             self.user.id,
-            ProfileOut.model_validate(
+            ProfileIn.model_validate(
                 {
-                    "id": 1,
                     "age": 30,
                     "height": 170,
                     "weight": 65,
@@ -122,10 +121,9 @@ class ProfileAllergenIntegrationTests(unittest.TestCase):
         assistant = exchange.assistant_message
 
         self.assertEqual(assistant.message_type, "meal_recommendation")
-        self.assertNotIn("花生", assistant.content)
-        self.assertNotIn("花生酱", assistant.content)
+        self.assertIn("已被系统拦截", assistant.content)
+        self.assertIn("花生", assistant.content)
 
 
 if __name__ == "__main__":
     unittest.main()
-
