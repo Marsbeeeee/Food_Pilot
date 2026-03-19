@@ -281,6 +281,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                   : 'Saved'}
           </span>
           <button
+            type="button"
             onClick={handleCancel}
             disabled={cancelDisabled}
             className="px-6 py-3 bg-white text-[#4A453E]/40 font-bold text-sm rounded-full border border-[#4A453E]/10 hover:bg-[#F7F3E9] transition-all disabled:cursor-not-allowed disabled:opacity-60"
@@ -288,6 +289,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleSave}
             disabled={saveDisabled}
             className={`flex items-center gap-2 px-8 py-3 font-bold text-sm rounded-full shadow-lg transition-all min-w-[160px] justify-center ${
