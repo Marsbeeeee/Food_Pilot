@@ -6,6 +6,11 @@ import {
   formatSavedMoment,
   sortFoodLogEntries,
 } from '../app/foodLogFavorites';
+import {
+  buildInsightsCacheKey,
+  getDateOnlyFromCacheKey,
+  normalizeSelectedLogIds,
+} from '../app/insightsCacheKey';
 import { analyzeInsights, fetchInsightsHistory, InsightsApiError } from '../api/insights';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import {
@@ -43,6 +48,17 @@ interface FoodLogEditDraft {
 interface AnalysisSelectionItem extends FoodLogEntry {
   basketId: string;
   analysisDate: string;
+}
+
+function getSelectedLogIdsForAnalysis(
+  analyzeItems: AnalysisSelectionItem[],
+  logEntryIds: Set<string>,
+): number[] {
+  return normalizeSelectedLogIds(
+    analyzeItems
+      .filter((item) => logEntryIds.has(item.id))
+      .map((item) => Number(item.id)),
+  );
 }
 
 export const Explorer: React.FC<ExplorerProps> = ({
@@ -663,6 +679,10 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       return item.analysisDate >= weekStart && item.analysisDate <= weekEnd;
     }
   });
+  const currentSelectedLogIds = React.useMemo(
+    () => getSelectedLogIdsForAnalysis(filteredItems, logEntryIds),
+    [filteredItems, logEntryIds],
+  );
 
   const hasOrphanedItems = filteredItems.some((item) => !logEntryIds.has(item.id));
 
@@ -682,7 +702,12 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     (sum, item) => sum + extractNutritionValue(item.fat),
     0,
   );
-  const currentCacheKey = getDateOnlyCacheKey(mode, dateRange.start, dateRange.end);
+  const currentCacheKey = buildInsightsCacheKey(
+    mode,
+    dateRange.start,
+    dateRange.end,
+    currentSelectedLogIds,
+  );
 
   const agg = analysisState.status === 'success' ? analysisState.data.aggregation : null;
   const useClientTotals = hasOrphanedItems || !agg;
@@ -711,7 +736,13 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       return;
     }
 
-    const cacheKey = getDateOnlyCacheKey(analyzeMode, analyzeStart, analyzeEnd);
+    const selectedLogIds = getSelectedLogIdsForAnalysis(analyzeItems, logEntryIds);
+    const cacheKey = buildInsightsCacheKey(
+      analyzeMode,
+      analyzeStart,
+      analyzeEnd,
+      selectedLogIds,
+    );
     if (!force && insightsCache[cacheKey]) {
       setAnalysisState(insightsCache[cacheKey]);
       return;
@@ -733,12 +764,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     }, 300);
 
     try {
-      const validIds = new Set(analyzeItems.filter((item) => logEntryIds.has(item.id)).map((item) => item.id));
-      const selectedLogIds = analyzeItems
-        .filter((item) => validIds.has(item.id))
-        .map((item) => Number(item.id))
-        .filter((id) => Number.isFinite(id) && id > 0);
-
       const response = await analyzeInsights({
         mode: analyzeMode,
         selectedLogIds: selectedLogIds.length > 0 ? selectedLogIds : undefined,
@@ -1875,20 +1900,6 @@ function getWeekRange(dateString: string): { start: string; end: string } {
   };
 
   return { start: format(monday), end: format(sunday) };
-}
-
-/** Date-only cache key: analysis persists by date/week, not by selected items. */
-function getDateOnlyCacheKey(mode: string, start: string, end: string): string {
-  return `${mode}_${start}_${end}`;
-}
-
-/** Extract date-only key from a full cache key (for backwards compatibility with history). */
-function getDateOnlyFromCacheKey(cacheKey: string): string | null {
-  const parts = cacheKey.split('_');
-  if (parts.length >= 3) {
-    return `${parts[0]}_${parts[1]}_${parts[2]}`;
-  }
-  return null;
 }
 
 /** Format: date -> array of {id, snapshot}. Snapshot allows items to persist after unsave from Food Log. */

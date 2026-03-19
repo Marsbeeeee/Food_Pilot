@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { AuthApiError, clearSession, deleteCurrentAccount, restoreSession } from '../api/auth';
 import { buildFoodLogNavigationState } from './foodLogNavigation';
+import { getDateOnlyFromCacheKey } from './insightsCacheKey';
 import { getChatSession, listChatSessions } from '../api/chat';
 import {
   deleteFoodLogEntry,
@@ -180,8 +181,7 @@ const App: React.FC = () => {
         if (item.data) {
           const state = { status: 'success' as const, data: item.data };
           next[item.cacheKey] = state;
-          const parts = item.cacheKey.split('_');
-          const dateOnly = parts.length >= 3 ? `${parts[0]}_${parts[1]}_${parts[2]}` : null;
+          const dateOnly = getDateOnlyFromCacheKey(item.cacheKey);
           if (dateOnly && !(dateOnly in next)) {
             next[dateOnly] = state;
           }
