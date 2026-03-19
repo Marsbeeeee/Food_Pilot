@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from backend.schemas.food_log import FoodLogEntryOut
+
 
 class InsightsDateRange(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -125,3 +127,37 @@ class InsightsHistoryResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     items: list[InsightsHistoryItem]
+
+
+class InsightsBasketItem(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    basket_id: str = Field(
+        validation_alias=AliasChoices("basket_id", "basketId"),
+        serialization_alias="basketId",
+    )
+    analysis_date: date = Field(
+        validation_alias=AliasChoices("analysis_date", "analysisDate"),
+        serialization_alias="analysisDate",
+    )
+    snapshot: FoodLogEntryOut
+
+    @field_validator("basket_id")
+    @classmethod
+    def validate_basket_id(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("basketId cannot be empty")
+        return normalized
+
+
+class InsightsBasketSyncRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    items: list[InsightsBasketItem] = Field(default_factory=list)
+
+
+class InsightsBasketResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    items: list[InsightsBasketItem]

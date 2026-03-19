@@ -2,6 +2,8 @@ import { clearSession, getStoredToken } from './auth';
 import {
   InsightsAnalyzeRequest,
   InsightsAnalyzeResponse,
+  InsightsBasketItem,
+  InsightsBasketResponse,
   InsightsHistoryResponse,
 } from '../types/types';
 import { API_BASE_URL } from '../config/api';
@@ -123,6 +125,75 @@ export async function fetchInsightsHistory(): Promise<InsightsHistoryResponse> {
 
   const result = body as InsightsHistoryResponse;
   return result ?? { items: [] };
+}
+
+export async function fetchInsightsBasket(): Promise<InsightsBasketResponse> {
+  const token = getStoredToken();
+  if (!token) {
+    return { items: [] };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${INSIGHTS_BASE_URL}/basket`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch {
+    return { items: [] };
+  }
+
+  if (response.status === 401) {
+    clearSession();
+    return { items: [] };
+  }
+
+  if (!response.ok) {
+    return { items: [] };
+  }
+
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return { items: [] };
+  }
+
+  const result = body as InsightsBasketResponse;
+  if (!result || !Array.isArray(result.items)) {
+    return { items: [] };
+  }
+  return result;
+}
+
+export async function syncInsightsBasket(items: InsightsBasketItem[]): Promise<boolean> {
+  const token = getStoredToken();
+  if (!token) {
+    return false;
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${INSIGHTS_BASE_URL}/basket`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ items }),
+    });
+  } catch {
+    return false;
+  }
+
+  if (response.status === 401) {
+    clearSession();
+    return false;
+  }
+
+  return response.ok;
 }
 
 function extractErrorMessage(payload: unknown): string | null {

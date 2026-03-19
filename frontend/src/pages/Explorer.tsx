@@ -7,11 +7,25 @@ import {
   sortFoodLogEntries,
 } from '../app/foodLogFavorites';
 import {
+  AnalysisSelectionItem,
+  autoSaveAnalysisBasket,
+  createAnalysisBasketItemId,
+  restoreAllAnalysisItems,
+  restoreAnalysisItemsFromSyncedBasket,
+  serializeAnalysisBasketForSync,
+} from '../app/insightsBasketState';
+import {
   buildInsightsCacheKey,
   getDateOnlyFromCacheKey,
   normalizeSelectedLogIds,
 } from '../app/insightsCacheKey';
-import { analyzeInsights, fetchInsightsHistory, InsightsApiError } from '../api/insights';
+import {
+  analyzeInsights,
+  fetchInsightsBasket,
+  fetchInsightsHistory,
+  InsightsApiError,
+  syncInsightsBasket,
+} from '../api/insights';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import {
   FoodLogEntry,
@@ -43,11 +57,6 @@ interface FoodLogEditDraft {
   calories: string;
   ingredients: IngredientResult[];
   originalIngredients: IngredientResult[];
-}
-
-interface AnalysisSelectionItem extends FoodLogEntry {
-  basketId: string;
-  analysisDate: string;
 }
 
 function getSelectedLogIdsForAnalysis(
@@ -90,7 +99,10 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
   const [analysisBasket, setAnalysisBasket] = useState<AnalysisSelectionItem[]>([]);
   const [showAnalysisView, setShowAnalysisView] = useState(defaultToAnalysisView);
+  const analysisBasketRef = React.useRef<AnalysisSelectionItem[]>([]);
   const basketHydratedRef = React.useRef(false);
+  const basketSyncReadyRef = React.useRef(false);
+  const basketSyncQueueRef = React.useRef<Promise<void>>(Promise.resolve());
 
   const [localInsightsCache, setLocalInsightsCache] = useState<Record<string, { status: 'success'; data: InsightsAnalyzeData }>>({});
   const [localInsightsHistoryLoaded, setLocalInsightsHistoryLoaded] = useState(false);
@@ -104,23 +116,73 @@ export const Explorer: React.FC<ExplorerProps> = ({
   }, [defaultToAnalysisView]);
 
   useEffect(() => {
+    analysisBasketRef.current = analysisBasket;
+  }, [analysisBasket]);
+
+  useEffect(() => {
     if (basketHydratedRef.current) return;
     basketHydratedRef.current = true;
 
     const userKey = currentUserId != null ? String(currentUserId).trim() : '';
     if (!userKey || typeof window === 'undefined') return;
 
-    const restored = restoreAllAnalysisItems(userKey, logEntries);
-    if (restored.length > 0) {
-      setAnalysisBasket(restored);
+    const localRestored = restoreAllAnalysisItems(userKey, logEntries);
+    if (localRestored.length > 0) {
+      setAnalysisBasket(localRestored);
     }
+
+    let cancelled = false;
+    void fetchInsightsBasket()
+      .then((res) => {
+        if (cancelled) return;
+
+        const syncedRestored = restoreAnalysisItemsFromSyncedBasket(res.items, logEntries);
+        if (syncedRestored.length > 0) {
+          setAnalysisBasket(syncedRestored);
+          return;
+        }
+
+        const currentLocalBasket = (
+          analysisBasketRef.current.length > 0
+            ? analysisBasketRef.current
+            : localRestored
+        );
+        if (currentLocalBasket.length === 0) return;
+        const payload = serializeAnalysisBasketForSync(currentLocalBasket);
+        basketSyncQueueRef.current = basketSyncQueueRef.current
+          .catch(() => undefined)
+          .then(async () => {
+            await syncInsightsBasket(payload);
+          })
+          .catch(() => undefined);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) {
+          basketSyncReadyRef.current = true;
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [logEntries, currentUserId]);
 
   useEffect(() => {
     if (!basketHydratedRef.current) return;
     const userKey = currentUserId != null ? String(currentUserId).trim() : '';
     if (!userKey || typeof window === 'undefined') return;
+
     autoSaveAnalysisBasket(userKey, analysisBasket);
+    if (!basketSyncReadyRef.current) return;
+
+    const payload = serializeAnalysisBasketForSync(analysisBasket);
+    basketSyncQueueRef.current = basketSyncQueueRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        await syncInsightsBasket(payload);
+      })
+      .catch(() => undefined);
   }, [analysisBasket, currentUserId]);
 
   useEffect(() => {
@@ -316,7 +378,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
       ...current,
       {
         ...entry,
-        basketId: createLocalId(),
+        basketId: createAnalysisBasketItemId(),
         analysisDate,
       },
     ]));
@@ -1853,10 +1915,6 @@ function extractNutritionValue(value?: string | null): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function createLocalId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
 function getPercent(value: number, total: number): number {
   if (total <= 0) {
     return 0;
@@ -1900,110 +1958,5 @@ function getWeekRange(dateString: string): { start: string; end: string } {
   };
 
   return { start: format(monday), end: format(sunday) };
-}
-
-/** Format: date -> array of {id, snapshot}. Snapshot allows items to persist after unsave from Food Log. */
-type SavedAnalysisSelections = Record<string, Array<{ id: string; snapshot: FoodLogEntry }>>;
-
-const DAILY_ANALYSIS_STORAGE_PREFIX = 'foodpilot:dailyAnalysis:';
-
-function getDailyAnalysisStorageKey(userId: string): string {
-  return `${DAILY_ANALYSIS_STORAGE_PREFIX}${userId}`;
-}
-
-function loadSavedAnalysisSelections(userId: string): SavedAnalysisSelections {
-  if (typeof window === 'undefined') {
-    return {};
-  }
-  try {
-    const raw = window.localStorage.getItem(getDailyAnalysisStorageKey(userId));
-    if (!raw) {
-      return {};
-    }
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object') {
-      return {};
-    }
-    const obj = parsed as Record<string, unknown>;
-    const result: SavedAnalysisSelections = {};
-    for (const [date, val] of Object.entries(obj)) {
-      if (Array.isArray(val)) {
-        const items: Array<{ id: string; snapshot: FoodLogEntry }> = [];
-        for (const it of val) {
-          if (it && typeof it === 'object' && 'id' in it && 'snapshot' in it) {
-            const snap = (it as { snapshot: unknown }).snapshot;
-            if (snap && typeof snap === 'object') {
-              items.push({
-                id: String((it as { id: unknown }).id),
-                snapshot: snap as FoodLogEntry,
-              });
-            }
-          } else if (typeof it === 'string') {
-            items.push({ id: it, snapshot: null as unknown as FoodLogEntry });
-          }
-        }
-        result[date] = items;
-      }
-    }
-    return result;
-  } catch {
-    return {};
-  }
-}
-
-function persistSavedAnalysisSelections(userId: string, value: SavedAnalysisSelections): void {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    window.localStorage.setItem(
-      getDailyAnalysisStorageKey(userId),
-      JSON.stringify(value),
-    );
-  } catch {
-    // Swallow storage errors to avoid breaking the UI.
-  }
-}
-
-function autoSaveAnalysisBasket(
-  userId: string,
-  basket: AnalysisSelectionItem[],
-): void {
-  const byDate: SavedAnalysisSelections = {};
-  for (const item of basket) {
-    if (!byDate[item.analysisDate]) {
-      byDate[item.analysisDate] = [];
-    }
-    const { basketId, analysisDate, ...snapshot } = item;
-    byDate[item.analysisDate].push({
-      id: item.id,
-      snapshot: snapshot as FoodLogEntry,
-    });
-  }
-  persistSavedAnalysisSelections(userId, byDate);
-}
-
-function restoreAllAnalysisItems(
-  userId: string,
-  allEntries: FoodLogEntry[],
-): AnalysisSelectionItem[] {
-  const saved = loadSavedAnalysisSelections(userId);
-  const entriesById = new Map(allEntries.map((e) => [e.id, e]));
-  const result: AnalysisSelectionItem[] = [];
-
-  for (const [date, items] of Object.entries(saved)) {
-    for (const { id, snapshot } of items) {
-      const entry = entriesById.get(id) ?? (snapshot && Object.keys(snapshot).length > 0 ? snapshot : null);
-      if (entry) {
-        result.push({
-          ...entry,
-          basketId: createLocalId(),
-          analysisDate: date,
-        });
-      }
-    }
-  }
-
-  return result;
 }
 

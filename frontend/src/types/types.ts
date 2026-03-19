@@ -249,6 +249,16 @@ export interface InsightsAnalyzeRequest {
   cacheKey?: string;
 }
 
+export interface InsightsBasketItem {
+  basketId: string;
+  analysisDate: string;
+  snapshot: FoodLogEntry;
+}
+
+export interface InsightsBasketResponse {
+  items: InsightsBasketItem[];
+}
+
 export interface InsightsHistoryItem {
   cacheKey: string;
   data: InsightsAnalyzeData;

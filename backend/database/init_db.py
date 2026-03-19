@@ -15,6 +15,7 @@ def init_db():
     _ensure_messages_table(cursor)
     _ensure_food_logs_table(cursor)
     _ensure_insights_analysis_table(cursor)
+    _ensure_insights_basket_state_table(cursor)
 
     conn.commit()
     conn.close()
@@ -586,6 +587,26 @@ def _ensure_insights_analysis_table(cursor) -> None:
         """
         CREATE UNIQUE INDEX IF NOT EXISTS idx_insights_analysis_user_cache_key
         ON insights_analysis(user_id, cache_key);
+        """
+    )
+
+
+def _ensure_insights_basket_state_table(cursor) -> None:
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS insights_basket_state (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            basket_json TEXT NOT NULL DEFAULT '[]',
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CHECK (length(trim(basket_json)) > 0)
+        );
+        """
+    )
+    cursor.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_insights_basket_state_user_id
+        ON insights_basket_state(user_id);
         """
     )
 
