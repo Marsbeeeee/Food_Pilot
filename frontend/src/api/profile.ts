@@ -98,7 +98,11 @@ export function normalizeProfileForm(form: UserProfileForm): UserProfileForm {
     weight: normalizeNumericText(form.weight),
     sex: form.sex.trim(),
     activityLevel: form.activityLevel.trim(),
-    exerciseType: form.exerciseType.trim(),
+    exerciseType: form.exerciseType
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join(', '),
     goal: form.goal.trim(),
     pace: form.pace.trim(),
     kcalTarget: normalizeNumericText(form.kcalTarget),
@@ -227,7 +231,7 @@ function toProfileInput(form: UserProfileForm): UserProfileInput {
     weight: parseRequiredNumber(normalized.weight, 'Weight'),
     sex: requireText(normalized.sex, 'Sex'),
     activityLevel: requireText(normalized.activityLevel, 'Activity level'),
-    exerciseType: requireText(normalized.exerciseType, 'Exercise type'),
+    exerciseType: normalized.exerciseType.trim(),
     goal: requireText(normalized.goal, 'Goal'),
     pace: requireText(normalized.pace, 'Pace'),
     kcalTarget: parseRequiredNumber(normalized.kcalTarget, 'Calorie target', true),

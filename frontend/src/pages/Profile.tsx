@@ -33,6 +33,7 @@ const DIET_STYLE_OPTIONS = [
   { label: 'Vegetarian', icon: 'eco' },
 ];
 const ALLERGY_OPTIONS = ['Nuts', 'Dairy', 'Seafood', 'Gluten', 'Soy', 'Shellfish'];
+const EXERCISE_OPTIONS = ['瑜伽', '跑步', '游泳', '健身', '骑行'];
 
 const INPUT_CLASSNAME =
   'w-full bg-[#F7F3E9]/30 border border-[#4A453E]/05 rounded-[18px] px-4 py-3 font-bold text-[#4A453E] focus:ring-2 focus:ring-[#FF8A65]/20 focus:bg-white outline-none transition-all placeholder:text-[#4A453E]/20 disabled:cursor-not-allowed disabled:opacity-70';
@@ -44,7 +45,6 @@ type TextProfileField =
   | 'weight'
   | 'sex'
   | 'activityLevel'
-  | 'exerciseType'
   | 'goal'
   | 'pace'
   | 'kcalTarget'
@@ -55,6 +55,8 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
   const [bannerMessage, setBannerMessage] = useState<string | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [lastSavedProfile, setLastSavedProfile] = useState<UserProfileForm>(cloneProfile(profile));
+  const [showAddExercise, setShowAddExercise] = useState(false);
+  const [customExerciseInput, setCustomExerciseInput] = useState('');
 
   useEffect(() => {
     if (profile.id) {
@@ -165,6 +167,34 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
     if (inlineError) {
       setInlineError(null);
     }
+  };
+
+  const parseExerciseTypes = (value: string): string[] => {
+    if (!value?.trim()) return [];
+    return value.split(',').map((s) => s.trim()).filter(Boolean);
+  };
+
+  const toggleExercise = (exercise: string) => {
+    setProfile((prev) => {
+      const current = parseExerciseTypes(prev.exerciseType);
+      const exists = current.includes(exercise);
+      const next = exists ? current.filter((x) => x !== exercise) : [...current, exercise];
+      return { ...prev, exerciseType: next.join(', ') };
+    });
+    if (inlineError) setInlineError(null);
+  };
+
+  const addCustomExercise = () => {
+    const trimmed = customExerciseInput.trim();
+    if (!trimmed) return;
+    setProfile((prev) => {
+      const current = parseExerciseTypes(prev.exerciseType);
+      if (current.includes(trimmed)) return prev;
+      return { ...prev, exerciseType: [...current, trimmed].join(', ') };
+    });
+    setCustomExerciseInput('');
+    setShowAddExercise(false);
+    if (inlineError) setInlineError(null);
   };
 
   const handleSave = async () => {
@@ -344,9 +374,69 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                     </div>
                   </div>
 
-                  <Field label="Exercise type">
-                    <input type="text" value={profile.exerciseType} onChange={(event) => updateField('exerciseType', event.target.value)} placeholder="Strength, running, yoga..." className={INPUT_CLASSNAME} />
-                  </Field>
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-4">
+                      Exercise type
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {EXERCISE_OPTIONS.map((option) => {
+                        const checked = parseExerciseTypes(profile.exerciseType).includes(option);
+                        return (
+                          <label key={option} className="group relative flex items-center gap-2 px-4 py-2 bg-[#F7F3E9]/30 border border-transparent rounded-full cursor-pointer transition-all hover:bg-white hover:border-[#4A453E]/10 has-[:checked]:bg-[#4A453E] has-[:checked]:text-white overflow-hidden">
+                            <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleExercise(option)} />
+                            <span className={`text-xs font-bold transition-colors truncate ${checked ? 'text-white' : 'text-[#4A453E]/60'}`}>{option}</span>
+                            {checked && <span className="material-symbols-outlined text-sm font-bold text-white shrink-0">close</span>}
+                          </label>
+                        );
+                      })}
+                      {parseExerciseTypes(profile.exerciseType)
+                        .filter((x) => !EXERCISE_OPTIONS.includes(x))
+                        .map((custom) => (
+                          <label key={custom} className="group relative flex items-center gap-2 px-4 py-2 bg-[#4A453E] text-white border border-transparent rounded-full cursor-pointer transition-all hover:bg-[#3a3630] overflow-hidden">
+                            <input type="checkbox" className="sr-only" checked onChange={() => toggleExercise(custom)} />
+                            <span className="text-xs font-bold truncate">{custom}</span>
+                            <span className="material-symbols-outlined text-sm font-bold shrink-0">close</span>
+                          </label>
+                        ))}
+                      {showAddExercise ? (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-white border border-[#81C784]/30 rounded-full">
+                          <input
+                            type="text"
+                            value={customExerciseInput}
+                            onChange={(e) => setCustomExerciseInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && addCustomExercise()}
+                            placeholder="输入运动名称"
+                            className="w-24 text-xs font-bold text-[#4A453E] bg-transparent outline-none placeholder:text-[#4A453E]/30"
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={addCustomExercise}
+                            disabled={!customExerciseInput.trim()}
+                            className="p-1 rounded-full bg-[#81C784] text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#6AB76B] transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-sm font-bold">check</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setShowAddExercise(false); setCustomExerciseInput(''); }}
+                            className="p-1 rounded-full text-[#4A453E]/50 hover:bg-[#4A453E]/10 transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-sm font-bold">close</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowAddExercise(true)}
+                          className="flex items-center justify-center gap-1 px-4 py-2 bg-[#F7F3E9]/30 border border-dashed border-[#4A453E]/20 rounded-full cursor-pointer transition-all hover:bg-white hover:border-[#81C784]/30 hover:text-[#81C784] text-[#4A453E]/50"
+                        >
+                          <span className="material-symbols-outlined text-sm font-bold">add</span>
+                          <span className="text-xs font-bold">添加</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </section>
             </div>
@@ -529,7 +619,6 @@ function hasProfileRequiredFields(profile: UserProfileForm): boolean {
       profile.weight &&
       profile.sex &&
       profile.activityLevel &&
-      profile.exerciseType &&
       profile.goal &&
       profile.pace &&
       profile.kcalTarget &&

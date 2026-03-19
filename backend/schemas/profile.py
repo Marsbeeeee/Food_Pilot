@@ -35,7 +35,6 @@ class ProfileBase(BaseModel):
         "activity_level",
         "goal",
         "diet_style",
-        "exercise_type",
         "pace",
     )
     @classmethod
@@ -44,6 +43,15 @@ class ProfileBase(BaseModel):
         if not normalized:
             raise ValueError("字段不能为空")
         return normalized
+
+    @field_validator("exercise_type", mode="before")
+    @classmethod
+    def normalize_exercise_type(cls, value: object) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value.strip()
+        return ""
 
     @field_validator("allergies", mode="before")
     @classmethod

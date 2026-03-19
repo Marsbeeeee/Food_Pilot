@@ -34,7 +34,7 @@ const DEFAULT_PROFILE: UserProfileForm = {
   weight: '',
   sex: 'Prefer not to say',
   activityLevel: 'Sedentary',
-  exerciseType: 'Minimal',
+  exerciseType: '',
   goal: 'General health',
   pace: 'Moderate',
   kcalTarget: '2000',
