@@ -8,6 +8,10 @@ import {
   toProfileForm,
 } from '../api/profile';
 import { UserProfileForm } from '../types/types';
+import {
+  getRecommendedCalories,
+  PACE_OPTIONS,
+} from '../utils/calorieRecommendation';
 
 interface ProfileProps {
   profile: UserProfileForm;
@@ -124,10 +128,22 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
   const cancelDisabled = isBusy || !isDirty;
 
   const updateField = (key: TextProfileField, value: string) => {
-    setProfile((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setProfile((prev) => {
+      const next = { ...prev, [key]: value };
+      const rec = getRecommendedCalories({
+        age: parseInt(next.age, 10) || 0,
+        height: parseFloat(next.height) || 0,
+        weight: parseFloat(next.weight) || 0,
+        sex: next.sex,
+        activityLevel: next.activityLevel,
+        goal: next.goal,
+        pace: next.pace,
+      });
+      if (rec.canCalculate && (key === 'pace' || key === 'goal' || key === 'age' || key === 'height' || key === 'weight' || key === 'sex' || key === 'activityLevel')) {
+        next.kcalTarget = String(rec.recommendedKcal);
+      }
+      return next;
+    });
     if (inlineError) {
       setInlineError(null);
     }
@@ -359,17 +375,60 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <Field label="Daily calorie target">
-                      <div className="relative group">
-                        <input type="number" value={profile.kcalTarget} onChange={(event) => updateField('kcalTarget', event.target.value)} className={INPUT_CLASSNAME} />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#4A453E]/20 uppercase">kcal</span>
-                      </div>
-                    </Field>
-                    <Field label="Pace">
-                      <input type="text" value={profile.pace} onChange={(event) => updateField('pace', event.target.value)} placeholder="Moderate, aggressive, conservative" className={INPUT_CLASSNAME} />
-                    </Field>
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-4">
+                      Pace
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-6">
+                      {PACE_OPTIONS.map((option) => (
+                        <label
+                          key={option.value}
+                          className="group flex flex-col p-4 bg-[#F7F3E9]/30 border border-transparent rounded-[24px] cursor-pointer transition-all hover:bg-white hover:border-[#FF8A65]/20 has-[:checked]:border-[#FF8A65] has-[:checked]:bg-white overflow-hidden"
+                        >
+                          <input
+                            type="radio"
+                            name="pace"
+                            className="sr-only"
+                            checked={profile.pace === option.value}
+                            onChange={() => updateField('pace', option.value)}
+                          />
+                          <span className="text-sm font-bold text-[#4A453E] group-has-[:checked]:text-[#FF8A65] truncate">
+                            {option.label}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
+
+                  <Field label="Daily calorie">
+                    <div className="relative group">
+                      <input
+                        type="number"
+                        value={profile.kcalTarget}
+                        onChange={(event) => updateField('kcalTarget', event.target.value)}
+                        className={INPUT_CLASSNAME}
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#4A453E]/20 uppercase">
+                        kcal
+                      </span>
+                    </div>
+                    {(() => {
+                      const rec = getRecommendedCalories({
+                        age: parseInt(profile.age, 10) || 0,
+                        height: parseFloat(profile.height) || 0,
+                        weight: parseFloat(profile.weight) || 0,
+                        sex: profile.sex,
+                        activityLevel: profile.activityLevel,
+                        goal: profile.goal,
+                        pace: profile.pace,
+                      });
+                      return rec.canCalculate ? (
+                        <p className="text-[10px] text-[#4A453E]/50 mt-2 px-1">
+                          BMR: {rec.bmr} · TDEE: {rec.tdee} kcal · Recommended: {rec.recommendedKcal} kcal
+                        </p>
+                      ) : null;
+                    })()}
+                  </Field>
                 </div>
               </section>
 
