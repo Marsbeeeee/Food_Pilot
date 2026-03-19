@@ -13,3 +13,5 @@
 {"sessionId": "9096da", "location": "insights_service.py", "message": "AI request start", "data": {"model": "qwen-plus"}, "timestamp": 1773855550673, "hypothesisId": "H5"}
 {"sessionId": "9096da", "location": "insights_service.py", "message": "AI config before call", "data": {"api_key_present": true, "model": "qwen-plus", "timeout": 20}, "timestamp": 1773855971384, "hypothesisId": "H1"}
 {"sessionId": "9096da", "location": "insights_service.py", "message": "AI request start", "data": {"model": "qwen-plus"}, "timestamp": 1773855971385, "hypothesisId": "H5"}
+{"sessionId": "9096da", "location": "insights_service.py", "message": "AI config before call", "data": {"api_key_present": true, "model": "qwen-plus", "timeout": 20}, "timestamp": 1773911759749, "hypothesisId": "H1"}
+{"sessionId": "9096da", "location": "insights_service.py", "message": "AI request start", "data": {"model": "qwen-plus"}, "timestamp": 1773911759750, "hypothesisId": "H5"}
