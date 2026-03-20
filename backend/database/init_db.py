@@ -585,8 +585,45 @@ def _ensure_insights_analysis_table(cursor) -> None:
     )
     cursor.execute(
         """
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_insights_analysis_user_cache_key
+        DROP INDEX IF EXISTS idx_insights_analysis_user_cache_key
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_insights_analysis_user_cache_key
         ON insights_analysis(user_id, cache_key);
+        """
+    )
+    _dedupe_insights_analysis_rows(cursor)
+    cursor.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_insights_analysis_user_mode_range
+        ON insights_analysis(user_id, mode, date_start, date_end);
+        """
+    )
+
+
+def _dedupe_insights_analysis_rows(cursor) -> None:
+    """Keep only the latest row for each user+mode+date_start+date_end group."""
+    cursor.execute(
+        """
+        DELETE FROM insights_analysis
+        WHERE id IN (
+            SELECT older.id
+            FROM insights_analysis AS older
+            JOIN insights_analysis AS newer
+              ON newer.user_id = older.user_id
+             AND newer.mode = older.mode
+             AND newer.date_start = older.date_start
+             AND newer.date_end = older.date_end
+             AND (
+                 newer.created_at > older.created_at
+                 OR (
+                     newer.created_at = older.created_at
+                     AND newer.id > older.id
+                 )
+             )
+        )
         """
     )
 

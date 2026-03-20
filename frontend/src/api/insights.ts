@@ -223,13 +223,13 @@ function normalizeInsightsHistoryResponse(payload: unknown): InsightsHistoryResp
   }
   const items = rawItems
     .map((item) => normalizeInsightsHistoryItem(item))
-    .filter((item): item is { cacheKey: string; data: InsightsAnalyzeData } => item != null);
+    .filter((item): item is InsightsHistoryResponse['items'][number] => item != null);
   return { items };
 }
 
 function normalizeInsightsHistoryItem(
   payload: unknown,
-): { cacheKey: string; data: InsightsAnalyzeData } | null {
+): InsightsHistoryResponse['items'][number] | null {
   if (!payload || typeof payload !== 'object') {
     return null;
   }
@@ -237,6 +237,9 @@ function normalizeInsightsHistoryItem(
   const record = payload as {
     cacheKey?: unknown;
     cache_key?: unknown;
+    mode?: unknown;
+    dateRange?: unknown;
+    date_range?: unknown;
     data?: unknown;
   };
   const cacheKey = typeof record.cacheKey === 'string'
@@ -244,12 +247,33 @@ function normalizeInsightsHistoryItem(
     : typeof record.cache_key === 'string'
       ? record.cache_key.trim()
       : '';
-  if (!cacheKey || !record.data || typeof record.data !== 'object') {
+  if (!record.data || typeof record.data !== 'object') {
+    return null;
+  }
+
+  const rawDateRange = (
+    record.dateRange && typeof record.dateRange === 'object'
+      ? record.dateRange
+      : record.date_range && typeof record.date_range === 'object'
+        ? record.date_range
+        : null
+  ) as { start?: unknown; end?: unknown } | null;
+  const dateRange = rawDateRange
+    && typeof rawDateRange.start === 'string'
+    && typeof rawDateRange.end === 'string'
+    ? { start: rawDateRange.start, end: rawDateRange.end }
+    : undefined;
+  const mode = record.mode === 'day' || record.mode === 'week' ? record.mode : undefined;
+  const fallbackCacheKey = mode && dateRange ? `${mode}_${dateRange.start}_${dateRange.end}` : '';
+  const resolvedCacheKey = cacheKey || fallbackCacheKey;
+  if (!resolvedCacheKey) {
     return null;
   }
 
   return {
-    cacheKey,
+    cacheKey: resolvedCacheKey,
+    mode,
+    dateRange,
     data: record.data as InsightsAnalyzeData,
   };
 }

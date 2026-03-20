@@ -261,6 +261,8 @@ export interface InsightsBasketResponse {
 
 export interface InsightsHistoryItem {
   cacheKey: string;
+  mode?: 'day' | 'week';
+  dateRange?: InsightsDateRange;
   data: InsightsAnalyzeData;
 }
 

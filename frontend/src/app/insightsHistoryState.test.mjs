@@ -108,3 +108,18 @@ test('range key normalization rejects malformed cache keys', () => {
     'week_2026-03-16_2026-03-22',
   );
 });
+
+test('falls back to mode + dateRange when cache key cannot be parsed', () => {
+  const cache = buildInsightsCacheFromHistoryItems([
+    {
+      cacheKey: 'legacy-key-without-range',
+      mode: 'day',
+      dateRange: { start: '2026-03-20', end: '2026-03-20' },
+      data: buildData('from-range-fields'),
+    },
+  ]);
+
+  const resolved = resolveHistoryInsightsState(cache, 'day_2026-03-20_2026-03-20_ids:1');
+  assert.ok(resolved);
+  assert.equal(resolved?.data.ai.summary, 'from-range-fields');
+});

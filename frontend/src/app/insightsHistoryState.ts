@@ -5,6 +5,9 @@ export type InsightsCache = Record<string, InsightsSuccessState>;
 export type RawInsightsHistoryItem = {
   cacheKey?: unknown;
   cache_key?: unknown;
+  mode?: unknown;
+  dateRange?: unknown;
+  date_range?: unknown;
   data?: unknown;
 };
 
@@ -46,6 +49,29 @@ function readHistoryCacheKey(item: RawInsightsHistoryItem): string | null {
   return null;
 }
 
+function getNormalizedRangeKeyFromHistoryItem(item: RawInsightsHistoryItem): string | null {
+  const mode = item.mode === 'day' || item.mode === 'week' ? item.mode : null;
+  if (!mode) {
+    return null;
+  }
+  const rawDateRange = (
+    item.dateRange && typeof item.dateRange === 'object'
+      ? item.dateRange
+      : item.date_range && typeof item.date_range === 'object'
+        ? item.date_range
+        : null
+  ) as { start?: unknown; end?: unknown } | null;
+  if (!rawDateRange) {
+    return null;
+  }
+  const start = typeof rawDateRange.start === 'string' ? rawDateRange.start : '';
+  const end = typeof rawDateRange.end === 'string' ? rawDateRange.end : '';
+  if (!isValidDateInput(start) || !isValidDateInput(end)) {
+    return null;
+  }
+  return `${mode}_${start}_${end}`;
+}
+
 function readHistoryData(item: RawInsightsHistoryItem): InsightsAnalyzeData | null {
   if (!item.data || typeof item.data !== 'object') {
     return null;
@@ -59,15 +85,18 @@ export function buildInsightsCacheFromHistoryItems(
   const next: InsightsCache = {};
   for (const item of items) {
     const cacheKey = readHistoryCacheKey(item);
+    const rangeKeyFromCacheKey = cacheKey ? getNormalizedRangeKeyFromCacheKey(cacheKey) : null;
+    const rangeKeyFromFields = getNormalizedRangeKeyFromHistoryItem(item);
+    const rangeKey = rangeKeyFromCacheKey ?? rangeKeyFromFields;
+    const effectiveCacheKey = cacheKey || rangeKey;
     const data = readHistoryData(item);
-    if (!cacheKey || !data) {
+    if (!effectiveCacheKey || !data) {
       continue;
     }
 
     const state = { status: 'success' as const, data };
-    next[cacheKey] = state;
+    next[effectiveCacheKey] = state;
 
-    const rangeKey = getNormalizedRangeKeyFromCacheKey(cacheKey);
     if (rangeKey && !(rangeKey in next)) {
       next[rangeKey] = state;
     }

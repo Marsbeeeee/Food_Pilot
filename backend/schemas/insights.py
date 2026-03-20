@@ -119,6 +119,11 @@ class InsightsAnalyzeResponse(BaseModel):
 class InsightsHistoryItem(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
+    mode: Literal["day", "week"]
+    date_range: InsightsDateRange = Field(
+        validation_alias=AliasChoices("date_range", "dateRange"),
+        serialization_alias="dateRange",
+    )
     cache_key: str = Field(validation_alias=AliasChoices("cache_key", "cacheKey"), serialization_alias="cacheKey")
     data: InsightsAnalyzeData
 
