@@ -737,6 +737,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const [currentDate, setCurrentDate] = useState(analysisDate);
   const [mode, setMode] = useState<AnalysisMode>('day');
   const [weekMetric, setWeekMetric] = useState<WeeklyTrendMetric>('calories');
+  const [hoveredWeekPointDate, setHoveredWeekPointDate] = useState<string | null>(null);
   const [runtimeAnalysisState, setRuntimeAnalysisState] = useState<AnalysisState>(IDLE_ANALYSIS_STATE);
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const previousCacheKeyRef = React.useRef<string>('');
@@ -861,6 +862,10 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       maxValue,
     };
   }, [selectedWeekSeries]);
+
+  useEffect(() => {
+    setHoveredWeekPointDate(null);
+  }, [mode, weekMetric, currentDate]);
 
   const handleAnalyze = async (
     force = false,
@@ -1303,119 +1308,118 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                 <div className="mt-4 rounded-2xl border border-[#4A453E]/7 bg-[#FFFDF8] p-4">
                   {selectedWeekSeries && weekChartModel && (
                     <>
-                      <svg
-                        viewBox={`0 0 ${weekChartModel.width} ${weekChartModel.height}`}
-                        className="h-[230px] w-full"
-                        role="img"
-                        aria-label={`${selectedWeekSeries.label}周趋势折线图`}
-                      >
-                        <line
-                          x1={weekChartModel.leftPad}
-                          y1={weekChartModel.averageY}
-                          x2={weekChartModel.width - weekChartModel.rightPad}
-                          y2={weekChartModel.averageY}
-                          stroke="#A1887F"
-                          strokeDasharray="4 4"
-                          strokeWidth="1.2"
-                        />
-                        <path
-                          d={weekChartModel.path}
-                          fill="none"
-                          stroke="#FF8A65"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        {selectedWeekSeries.points.map((point, index) => {
-                          const x = weekChartModel.toX(index);
-                          const y = weekChartModel.toY(point.value);
-                          const isPeak = selectedWeekSeries.peakPoint?.date === point.date;
-                          const isLow = selectedWeekSeries.lowPoint?.date === point.date;
-                          return (
-                            <g key={point.date}>
-                              <circle
-                                cx={x}
-                                cy={y}
-                                r={isPeak || isLow ? 4.5 : 3.5}
-                                fill={isPeak ? '#C25235' : isLow ? '#4CAF50' : '#FF8A65'}
-                              />
-                              <text
-                                x={x}
-                                y={weekChartModel.height - 14}
-                                textAnchor="middle"
-                                fontSize="11"
-                                fill="#6E655B"
-                              >
-                                {point.label}
-                              </text>
-                              {weekMetric === 'calories' && (
-                                (() => {
-                                  const changeTag = weeklyTrend.changeTags.find((tag) => tag.date === point.date);
-                                  if (!changeTag) return null;
-                                  const prefix = changeTag.direction === 'up' ? '↑ +' : '↓ ';
-                                  return (
-                                    <text
-                                      x={x}
-                                      y={y + (changeTag.direction === 'up' ? -10 : 16)}
-                                      textAnchor="middle"
-                                      fontSize="10"
-                                      fontWeight="700"
-                                      fill={changeTag.direction === 'up' ? '#C25235' : '#2E7D32'}
-                                    >
-                                      {`${prefix}${Math.abs(changeTag.delta)} kcal`}
-                                    </text>
-                                  );
-                                })()
-                              )}
-                            </g>
-                          );
-                        })}
-                      </svg>
+                      <div className="relative">
+                        <svg
+                          viewBox={`0 0 ${weekChartModel.width} ${weekChartModel.height}`}
+                          className="h-[230px] w-full"
+                          role="img"
+                          aria-label={`${selectedWeekSeries.label}周趋势折线图`}
+                        >
+                          <line
+                            x1={weekChartModel.leftPad}
+                            y1={weekChartModel.averageY}
+                            x2={weekChartModel.width - weekChartModel.rightPad}
+                            y2={weekChartModel.averageY}
+                            stroke="#A1887F"
+                            strokeDasharray="4 4"
+                            strokeWidth="1.2"
+                          />
+                          <path
+                            d={weekChartModel.path}
+                            fill="none"
+                            stroke="#FF8A65"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          {selectedWeekSeries.points.map((point, index) => {
+                            const x = weekChartModel.toX(index);
+                            const y = weekChartModel.toY(point.value);
+                            const isPeak = selectedWeekSeries.peakPoint?.date === point.date;
+                            const isLow = selectedWeekSeries.lowPoint?.date === point.date;
+                            const isHovered = hoveredWeekPointDate === point.date;
+                            const pointColor = isPeak ? '#C25235' : isLow ? '#4CAF50' : '#FF8A65';
+                            return (
+                              <g key={point.date}>
+                                <circle
+                                  cx={x}
+                                  cy={y}
+                                  r={isHovered ? 6 : 4}
+                                  fill={pointColor}
+                                  onMouseEnter={() => setHoveredWeekPointDate(point.date)}
+                                  onMouseLeave={() => setHoveredWeekPointDate((current) => (
+                                    current === point.date ? null : current
+                                  ))}
+                                  style={{ cursor: 'pointer' }}
+                                />
+                                <text
+                                  x={x}
+                                  y={weekChartModel.height - 14}
+                                  textAnchor="middle"
+                                  fontSize="11"
+                                  fill="#6E655B"
+                                >
+                                  {point.label}
+                                </text>
+                              </g>
+                            );
+                          })}
+                        </svg>
 
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
-                        <span className="rounded-full bg-white px-3 py-1 text-[#4A453E]/70">
-                          平均 {Math.round(selectedWeekSeries.average)} {selectedWeekSeries.unit}
-                        </span>
-                        {selectedWeekSeries.peakPoint && (
-                          <span className="rounded-full bg-[#FDECE7] px-3 py-1 text-[#C25235]">
-                            最高 {selectedWeekSeries.peakPoint.label} {Math.round(selectedWeekSeries.peakPoint.value)} {selectedWeekSeries.unit}
-                          </span>
-                        )}
-                        {selectedWeekSeries.lowPoint && (
-                          <span className="rounded-full bg-[#EAF6EC] px-3 py-1 text-[#2E7D32]">
-                            最低 {selectedWeekSeries.lowPoint.label} {Math.round(selectedWeekSeries.lowPoint.value)} {selectedWeekSeries.unit}
-                          </span>
-                        )}
+                        {(() => {
+                          const hoverIndex = selectedWeekSeries.points.findIndex(
+                            (point) => point.date === hoveredWeekPointDate,
+                          );
+                          if (hoverIndex < 0) {
+                            return null;
+                          }
+                          const hoverPoint = selectedWeekSeries.points[hoverIndex];
+                          const tooltipWidth = 104;
+                          const anchorX = weekChartModel.toX(hoverIndex);
+                          const minAnchorX = tooltipWidth / 2 + 10;
+                          const maxAnchorX = weekChartModel.width - tooltipWidth / 2 - 10;
+                          const safeAnchorX = Math.min(Math.max(anchorX, minAnchorX), maxAnchorX);
+                          const tooltipLeft = (safeAnchorX / weekChartModel.width) * 100;
+                          const tooltipTop = (weekChartModel.toY(hoverPoint.value) / weekChartModel.height) * 100;
+                          const tooltipValue = selectedWeekSeries.unit === 'kcal'
+                            ? `${Math.round(hoverPoint.value)} kcal`
+                            : `${formatNumber(hoverPoint.value)} g`;
+                          return (
+                            <div
+                              className="pointer-events-none absolute z-20 rounded-lg border border-[#4A453E]/10 bg-white px-3 py-2 text-[11px] shadow-md"
+                              style={{
+                                left: `${tooltipLeft}%`,
+                                top: `${tooltipTop}%`,
+                                transform: 'translate(-50%, -115%)',
+                              }}
+                            >
+                              <p className="font-semibold text-[#4A453E]/70">
+                                {`${hoverPoint.label} (${hoverPoint.date.slice(5)})`}
+                              </p>
+                              <p className="mt-0.5 font-bold text-[#4A453E]">{tooltipValue}</p>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </>
                   )}
                 </div>
 
-                {weekMetric === 'calories' && (
-                  <div className="mt-3">
-                    <div className="flex flex-wrap gap-2">
-                      {weeklyTrend.changeTags.length > 0 ? (
-                        weeklyTrend.changeTags.map((tag) => (
-                          <span
-                            key={tag.date}
-                            className={`rounded-full px-3 py-1 text-xs font-bold ${
-                              tag.direction === 'up'
-                                ? 'bg-[#FDECE7] text-[#C25235]'
-                                : 'bg-[#EAF6EC] text-[#2E7D32]'
-                            }`}
-                          >
-                            {`${tag.label} ${tag.direction === 'up' ? '↑' : '↓'} ${Math.abs(tag.delta)} kcal`}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#4A453E]/60">
-                          本周暂无明显日变化标签
-                        </span>
-                      )}
+                {selectedWeekSeries && (
+                  <div className="mt-3 grid grid-cols-1 gap-2 text-center text-xs font-semibold sm:grid-cols-3">
+                    <div className="rounded-xl bg-white px-3 py-2 text-[#4A453E]/70">
+                      平均 {Math.round(selectedWeekSeries.average)} {selectedWeekSeries.unit}
                     </div>
-                    <p className="mt-2 text-xs leading-6 text-[#4A453E]/60">
-                      {weeklyTrend.changeInsightText}
-                    </p>
+                    <div className="rounded-xl bg-[#FDECE7] px-3 py-2 text-[#C25235]">
+                      {selectedWeekSeries.peakPoint
+                        ? `最高 ${selectedWeekSeries.peakPoint.label} ${Math.round(selectedWeekSeries.peakPoint.value)} ${selectedWeekSeries.unit}`
+                        : '最高 -'}
+                    </div>
+                    <div className="rounded-xl bg-[#EAF6EC] px-3 py-2 text-[#2E7D32]">
+                      {selectedWeekSeries.lowPoint
+                        ? `最低 ${selectedWeekSeries.lowPoint.label} ${Math.round(selectedWeekSeries.lowPoint.value)} ${selectedWeekSeries.unit}`
+                        : '最低 -'}
+                    </div>
                   </div>
                 )}
               </div>
