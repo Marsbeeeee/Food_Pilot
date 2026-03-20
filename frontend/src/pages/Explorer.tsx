@@ -795,7 +795,9 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     : runtimeAnalysisState;
 
   const agg = analysisState.status === 'success' ? analysisState.data.aggregation : null;
-  const useClientTotals = hasOrphanedItems || !agg;
+  // Week mode uses the currently selected weekly items as the single source of truth,
+  // keeping top-level totals consistent with the trend chart data points.
+  const useClientTotals = mode === 'week' || hasOrphanedItems || !agg;
   const totalCalories = useClientTotals ? clientTotalCalories : agg!.totalCalories;
   const totalProtein = useClientTotals ? clientTotalProtein : agg!.totalProtein;
   const totalCarbs = useClientTotals ? clientTotalCarbs : agg!.totalCarbs;
@@ -1337,20 +1339,27 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                             const y = weekChartModel.toY(point.value);
                             const isPeak = selectedWeekSeries.peakPoint?.date === point.date;
                             const isLow = selectedWeekSeries.lowPoint?.date === point.date;
-                            const isHovered = hoveredWeekPointDate === point.date;
                             const pointColor = isPeak ? '#C25235' : isLow ? '#4CAF50' : '#FF8A65';
                             return (
                               <g key={point.date}>
                                 <circle
                                   cx={x}
                                   cy={y}
-                                  r={isHovered ? 6 : 4}
-                                  fill={pointColor}
+                                  r={10}
+                                  fill="transparent"
+                                  pointerEvents="all"
                                   onMouseEnter={() => setHoveredWeekPointDate(point.date)}
                                   onMouseLeave={() => setHoveredWeekPointDate((current) => (
                                     current === point.date ? null : current
                                   ))}
                                   style={{ cursor: 'pointer' }}
+                                />
+                                <circle
+                                  cx={x}
+                                  cy={y}
+                                  r={4}
+                                  fill={pointColor}
+                                  pointerEvents="none"
                                 />
                                 <text
                                   x={x}
@@ -1407,7 +1416,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
 
                 {selectedWeekSeries && (
                   <div className="mt-3 grid grid-cols-1 gap-2 text-center text-xs font-semibold sm:grid-cols-3">
-                    <div className="rounded-xl bg-white px-3 py-2 text-[#4A453E]/70">
+                    <div className="rounded-xl bg-[#F3EFE9] px-3 py-2 text-[#4A453E]/70">
                       平均 {Math.round(selectedWeekSeries.average)} {selectedWeekSeries.unit}
                     </div>
                     <div className="rounded-xl bg-[#FDECE7] px-3 py-2 text-[#C25235]">
