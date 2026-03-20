@@ -2,6 +2,7 @@ import { clearSession, getStoredToken } from './auth';
 import {
   InsightsAnalyzeRequest,
   InsightsAnalyzeResponse,
+  InsightsAnalyzeData,
   InsightsBasketItem,
   InsightsBasketResponse,
   InsightsHistoryResponse,
@@ -123,8 +124,7 @@ export async function fetchInsightsHistory(): Promise<InsightsHistoryResponse> {
     return { items: [] };
   }
 
-  const result = body as InsightsHistoryResponse;
-  return result ?? { items: [] };
+  return normalizeInsightsHistoryResponse(body);
 }
 
 export async function fetchInsightsBasket(): Promise<InsightsBasketResponse> {
@@ -211,4 +211,45 @@ function extractErrorMessage(payload: unknown): string | null {
     }
   }
   return null;
+}
+
+function normalizeInsightsHistoryResponse(payload: unknown): InsightsHistoryResponse {
+  if (!payload || typeof payload !== 'object') {
+    return { items: [] };
+  }
+  const rawItems = (payload as { items?: unknown }).items;
+  if (!Array.isArray(rawItems)) {
+    return { items: [] };
+  }
+  const items = rawItems
+    .map((item) => normalizeInsightsHistoryItem(item))
+    .filter((item): item is { cacheKey: string; data: InsightsAnalyzeData } => item != null);
+  return { items };
+}
+
+function normalizeInsightsHistoryItem(
+  payload: unknown,
+): { cacheKey: string; data: InsightsAnalyzeData } | null {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  const record = payload as {
+    cacheKey?: unknown;
+    cache_key?: unknown;
+    data?: unknown;
+  };
+  const cacheKey = typeof record.cacheKey === 'string'
+    ? record.cacheKey.trim()
+    : typeof record.cache_key === 'string'
+      ? record.cache_key.trim()
+      : '';
+  if (!cacheKey || !record.data || typeof record.data !== 'object') {
+    return null;
+  }
+
+  return {
+    cacheKey,
+    data: record.data as InsightsAnalyzeData,
+  };
 }

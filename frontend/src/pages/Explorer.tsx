@@ -16,10 +16,13 @@ import {
 } from '../app/insightsBasketState';
 import {
   buildInsightsCacheKey,
-  getDateOnlyFromCacheKey,
   normalizeSelectedLogIds,
 } from '../app/insightsCacheKey';
-import { resolveHistoryInsightsState } from '../app/insightsHistoryState';
+import {
+  buildInsightsCacheFromHistoryItems,
+  getNormalizedRangeKeyFromCacheKey,
+  resolveHistoryInsightsState,
+} from '../app/insightsHistoryState';
 import { getInsightsAnalyzeButtonText, shouldForceReanalyze } from '../app/insightsUiState';
 import {
   analyzeInsights,
@@ -196,22 +199,21 @@ export const Explorer: React.FC<ExplorerProps> = ({
       return;
     }
     let cancelled = false;
-    void fetchInsightsHistory().then((res) => {
-      if (cancelled) return;
-      const next: Record<string, { status: 'success'; data: InsightsAnalyzeData }> = {};
-      for (const item of res.items) {
-        if (item.data) {
-          const state = { status: 'success' as const, data: item.data };
-          next[item.cacheKey] = state;
-          const dateOnly = getDateOnlyFromCacheKey(item.cacheKey);
-          if (dateOnly && !(dateOnly in next)) {
-            next[dateOnly] = state;
-          }
+    setLocalInsightsHistoryLoaded(false);
+    void fetchInsightsHistory()
+      .then((res) => {
+        if (cancelled) return;
+        setLocalInsightsCache(buildInsightsCacheFromHistoryItems(res.items));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLocalInsightsCache({});
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLocalInsightsHistoryLoaded(true);
         }
-      }
-      setLocalInsightsCache(next);
-      setLocalInsightsHistoryLoaded(true);
-    });
+      });
     return () => {
       cancelled = true;
     };
@@ -707,6 +709,7 @@ interface AnalysisViewProps {
 }
 
 type AnalysisMode = 'day' | 'week';
+const IDLE_ANALYSIS_STATE: AnalysisState = { status: 'idle' };
 
 const AnalysisView: React.FC<AnalysisViewProps> = ({
   items,
@@ -724,8 +727,9 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const logEntryIds = React.useMemo(() => new Set(logEntries.map((e) => e.id)), [logEntries]);
   const [currentDate, setCurrentDate] = useState(analysisDate);
   const [mode, setMode] = useState<AnalysisMode>('day');
-  const [analysisState, setAnalysisState] = useState<AnalysisState>({ status: 'idle' });
+  const [runtimeAnalysisState, setRuntimeAnalysisState] = useState<AnalysisState>(IDLE_ANALYSIS_STATE);
   const abortControllerRef = React.useRef<AbortController | null>(null);
+  const previousCacheKeyRef = React.useRef<string>('');
 
   useEffect(() => {
     setCurrentDate(analysisDate);
@@ -772,6 +776,12 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     dateRange.end,
     currentSelectedLogIds,
   );
+  const historyMatchedState = insightsHistoryLoaded
+    ? resolveHistoryInsightsState(insightsCache, currentCacheKey)
+    : null;
+  const analysisState: AnalysisState = runtimeAnalysisState.status === 'idle'
+    ? (historyMatchedState ?? IDLE_ANALYSIS_STATE)
+    : runtimeAnalysisState;
 
   const agg = analysisState.status === 'success' ? analysisState.data.aggregation : null;
   const useClientTotals = hasOrphanedItems || !agg;
@@ -796,7 +806,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     analyzeItems = filteredItems,
   ) => {
     if (analyzeItems.length === 0) {
-      setAnalysisState({ status: 'idle' });
+      setRuntimeAnalysisState(IDLE_ANALYSIS_STATE);
       return;
     }
 
@@ -808,7 +818,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       selectedLogIds,
     );
     if (!force && insightsCache[cacheKey]) {
-      setAnalysisState(insightsCache[cacheKey]);
+      setRuntimeAnalysisState(insightsCache[cacheKey]);
       return;
     }
 
@@ -820,7 +830,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
 
     const loadingTimeout = setTimeout(() => {
       if (!abortController.signal.aborted) {
-        setAnalysisState((prev) => ({
+        setRuntimeAnalysisState((prev) => ({
           ...prev,
           status: 'loading'
         }));
@@ -842,19 +852,19 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       if (response.data) {
         const newState = { status: 'success' as const, data: response.data };
         onInsightsCacheUpdate((prev) => {
-          const dateOnlyKey = getDateOnlyFromCacheKey(cacheKey);
-          if (!dateOnlyKey) {
+          const rangeKey = getNormalizedRangeKeyFromCacheKey(cacheKey);
+          if (!rangeKey) {
             return { ...prev, [cacheKey]: newState };
           }
           return {
             ...prev,
             [cacheKey]: newState,
-            [dateOnlyKey]: newState,
+            [rangeKey]: newState,
           };
         });
-        setAnalysisState(newState);
+        setRuntimeAnalysisState(newState);
       } else {
-        setAnalysisState({
+        setRuntimeAnalysisState({
           status: 'error',
           message: '分析服务返回了空数据，请稍后重试。',
           retryable: true,
@@ -869,13 +879,13 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
         // #region agent log
         fetch('http://127.0.0.1:7693/ingest/2b8ec8af-3a30-41dc-a691-2ee12f18fa1a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9096da'},body:JSON.stringify({sessionId:'9096da',location:'Explorer.tsx:handleAnalyze',message:'Insights API error',data:{msg:error.message,status:error.status,retryable:error.retryable},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
-        setAnalysisState({
+        setRuntimeAnalysisState({
           status: 'error',
           message: error.message,
           retryable: error.retryable,
         });
       } else {
-        setAnalysisState({
+        setRuntimeAnalysisState({
           status: 'error',
           message: error instanceof Error ? error.message : '暂时无法生成分析，请稍后重试。',
           retryable: true,
@@ -885,16 +895,20 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   };
 
   useEffect(() => {
-    if (!insightsHistoryLoaded) {
+    if (previousCacheKeyRef.current === '') {
+      previousCacheKeyRef.current = currentCacheKey;
       return;
     }
-    const cached = resolveHistoryInsightsState(insightsCache, currentCacheKey);
-    if (cached) {
-      setAnalysisState(cached);
+    if (previousCacheKeyRef.current === currentCacheKey) {
       return;
     }
-    setAnalysisState({ status: 'idle' });
-  }, [currentCacheKey, insightsCache, insightsHistoryLoaded]);
+    previousCacheKeyRef.current = currentCacheKey;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setRuntimeAnalysisState(IDLE_ANALYSIS_STATE);
+  }, [currentCacheKey]);
 
   // Cleanup abort controller on unmount
   useEffect(() => {

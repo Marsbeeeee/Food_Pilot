@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { AuthApiError, clearSession, deleteCurrentAccount, restoreSession } from '../api/auth';
 import { buildFoodLogNavigationState } from './foodLogNavigation';
-import { getDateOnlyFromCacheKey } from './insightsCacheKey';
+import { buildInsightsCacheFromHistoryItems } from './insightsHistoryState';
 import { getChatSession, listChatSessions } from '../api/chat';
 import {
   deleteFoodLogEntry,
@@ -174,22 +174,21 @@ const App: React.FC = () => {
       return;
     }
     let cancelled = false;
-    void fetchInsightsHistory().then((res) => {
-      if (cancelled) return;
-      const next: Record<string, { status: 'success'; data: InsightsAnalyzeData }> = {};
-      for (const item of res.items) {
-        if (item.data) {
-          const state = { status: 'success' as const, data: item.data };
-          next[item.cacheKey] = state;
-          const dateOnly = getDateOnlyFromCacheKey(item.cacheKey);
-          if (dateOnly && !(dateOnly in next)) {
-            next[dateOnly] = state;
-          }
+    setInsightsHistoryLoaded(false);
+    void fetchInsightsHistory()
+      .then((res) => {
+        if (cancelled) return;
+        setInsightsCache(buildInsightsCacheFromHistoryItems(res.items));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setInsightsCache({});
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setInsightsHistoryLoaded(true);
         }
-      }
-      setInsightsCache(next);
-      setInsightsHistoryLoaded(true);
-    });
+      });
     return () => {
       cancelled = true;
     };
