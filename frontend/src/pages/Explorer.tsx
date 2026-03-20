@@ -19,6 +19,8 @@ import {
   getDateOnlyFromCacheKey,
   normalizeSelectedLogIds,
 } from '../app/insightsCacheKey';
+import { resolveHistoryInsightsState } from '../app/insightsHistoryState';
+import { getInsightsAnalyzeButtonText, shouldForceReanalyze } from '../app/insightsUiState';
 import {
   analyzeInsights,
   fetchInsightsBasket,
@@ -838,8 +840,18 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       if (abortController.signal.aborted) return;
 
       if (response.data) {
-        const newState: AnalysisState = { status: 'success', data: response.data };
-        onInsightsCacheUpdate((prev) => ({ ...prev, [cacheKey]: newState }));
+        const newState = { status: 'success' as const, data: response.data };
+        onInsightsCacheUpdate((prev) => {
+          const dateOnlyKey = getDateOnlyFromCacheKey(cacheKey);
+          if (!dateOnlyKey) {
+            return { ...prev, [cacheKey]: newState };
+          }
+          return {
+            ...prev,
+            [cacheKey]: newState,
+            [dateOnlyKey]: newState,
+          };
+        });
         setAnalysisState(newState);
       } else {
         setAnalysisState({
@@ -873,20 +885,16 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   };
 
   useEffect(() => {
-    if (filteredItems.length === 0) {
-      setAnalysisState({ status: 'idle' });
-      return;
-    }
     if (!insightsHistoryLoaded) {
       return;
     }
-    const cached = insightsCache[currentCacheKey];
+    const cached = resolveHistoryInsightsState(insightsCache, currentCacheKey);
     if (cached) {
       setAnalysisState(cached);
       return;
     }
     setAnalysisState({ status: 'idle' });
-  }, [filteredItems.length, currentCacheKey, insightsCache, insightsHistoryLoaded]);
+  }, [currentCacheKey, insightsCache, insightsHistoryLoaded]);
 
   // Cleanup abort controller on unmount
   useEffect(() => {
@@ -1364,7 +1372,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
           <div className="border-t border-[#4A453E]/05 bg-[#FFFDF8] px-6 py-6">
             <button
               type="button"
-              onClick={() => void handleAnalyze(analysisState.status === 'success')}
+              onClick={() => void handleAnalyze(shouldForceReanalyze(analysisState.status))}
               disabled={analysisState.status === 'loading' || filteredItems.length === 0}
               className={`flex h-12 w-full items-center justify-center gap-2 rounded-full px-5 text-sm font-bold text-white shadow-lg transition-all ${
                 analysisState.status === 'loading' || filteredItems.length === 0
@@ -1375,11 +1383,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
               <span className="material-symbols-outlined text-[18px]">
                 {analysisState.status === 'loading' ? 'progress_activity' : 'forum'}
               </span>
-              {analysisState.status === 'loading'
-                ? '分析中...'
-                : analysisState.status === 'success'
-                  ? '重新分析'
-                  : '生成 AI 分析'}
+              {getInsightsAnalyzeButtonText(analysisState.status)}
             </button>
           </div>
         </aside>
