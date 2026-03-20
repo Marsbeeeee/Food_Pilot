@@ -2,21 +2,44 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  getInsightsAIPanelDescription,
   getInsightsAnalyzeButtonText,
+  getInsightsIdleHint,
+  getInsightsLoadingHint,
+  getInsightsScopeDescription,
   shouldForceReanalyze,
 } from './insightsUiState.ts';
 
-test('button text is "生成 AI 分析" for idle and error states', () => {
-  assert.equal(getInsightsAnalyzeButtonText('idle'), '生成 AI 分析');
-  assert.equal(getInsightsAnalyzeButtonText('error'), '生成 AI 分析');
+test('day mode button text uses default states', () => {
+  assert.equal(getInsightsAnalyzeButtonText('idle', 'day'), '生成 AI 分析');
+  assert.equal(getInsightsAnalyzeButtonText('error', 'day'), '生成 AI 分析');
+  assert.equal(getInsightsAnalyzeButtonText('loading', 'day'), '分析中...');
+  assert.equal(getInsightsAnalyzeButtonText('success', 'day'), '重新分析');
 });
 
-test('button text is "分析中..." when loading', () => {
-  assert.equal(getInsightsAnalyzeButtonText('loading'), '分析中...');
+test('week mode button text emphasizes trend analysis states', () => {
+  assert.equal(getInsightsAnalyzeButtonText('idle', 'week'), '生成周趋势分析');
+  assert.equal(getInsightsAnalyzeButtonText('error', 'week'), '生成周趋势分析');
+  assert.equal(getInsightsAnalyzeButtonText('loading', 'week'), '周趋势分析中...');
+  assert.equal(getInsightsAnalyzeButtonText('success', 'week'), '重新分析周趋势');
 });
 
-test('button text is "重新分析" when success', () => {
-  assert.equal(getInsightsAnalyzeButtonText('success'), '重新分析');
+test('mode descriptions are distinct between day and week', () => {
+  assert.equal(getInsightsScopeDescription('day'), '聚焦单日摄入、目标差距和当日调整。');
+  assert.equal(getInsightsScopeDescription('week'), '聚焦一周趋势、波动和工作日/周末节律。');
+
+  assert.equal(getInsightsAIPanelDescription('day'), '基于当日已选菜品，生成营养摄入分析与改善建议。');
+  assert.equal(getInsightsAIPanelDescription('week'), '基于本周已选菜品，生成趋势解读、波动提示与改善建议。');
+});
+
+test('idle and loading hints change with mode and selected items', () => {
+  assert.equal(getInsightsIdleHint('day', false), '添加饮食记录后，即可生成 AI 营养摄入分析。');
+  assert.equal(getInsightsIdleHint('day', true), '点击下方按钮开始生成 AI 分析。');
+  assert.equal(getInsightsIdleHint('week', false), '添加饮食记录后，即可生成本周趋势分析。');
+  assert.equal(getInsightsIdleHint('week', true), '点击下方按钮开始生成本周趋势分析。');
+
+  assert.equal(getInsightsLoadingHint('day'), '正在分析中，请稍候…');
+  assert.equal(getInsightsLoadingHint('week'), '正在分析本周趋势，请稍候…');
 });
 
 test('force flag is enabled only for success state', () => {

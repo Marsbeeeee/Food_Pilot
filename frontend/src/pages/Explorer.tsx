@@ -23,7 +23,16 @@ import {
   getNormalizedRangeKeyFromCacheKey,
   resolveHistoryInsightsState,
 } from '../app/insightsHistoryState';
-import { getInsightsAnalyzeButtonText, shouldForceReanalyze } from '../app/insightsUiState';
+import {
+  getInsightsAIPanelDescription,
+  getInsightsAnalyzeButtonText,
+  getInsightsIdleHint,
+  getInsightsLoadingHint,
+  getInsightsScopeDescription,
+  shouldForceReanalyze,
+} from '../app/insightsUiState';
+import { buildWeeklyTrendSummary } from '../app/insightsWeekTrends';
+import type { WeeklyTrendMetric } from '../app/insightsWeekTrends';
 import {
   analyzeInsights,
   fetchInsightsBasket,
@@ -727,6 +736,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const logEntryIds = React.useMemo(() => new Set(logEntries.map((e) => e.id)), [logEntries]);
   const [currentDate, setCurrentDate] = useState(analysisDate);
   const [mode, setMode] = useState<AnalysisMode>('day');
+  const [weekMetric, setWeekMetric] = useState<WeeklyTrendMetric>('calories');
   const [runtimeAnalysisState, setRuntimeAnalysisState] = useState<AnalysisState>(IDLE_ANALYSIS_STATE);
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const previousCacheKeyRef = React.useRef<string>('');
@@ -797,6 +807,60 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const remainingCalories = Math.max(targetCalories - intake, 0);
   const exceededCalories = Math.max(intake - targetCalories, 0);
   const isExceeded = intake > targetCalories;
+  const weeklyTrend = React.useMemo(
+    () => (mode === 'week'
+      ? buildWeeklyTrendSummary({
+        weekStart,
+        weekEnd,
+        items: filteredItems,
+      })
+      : null),
+    [mode, weekStart, weekEnd, filteredItems],
+  );
+  const modeScopeDescription = getInsightsScopeDescription(mode);
+  const modeAIPanelDescription = getInsightsAIPanelDescription(mode);
+  const modeIdleHint = getInsightsIdleHint(mode, filteredItems.length > 0);
+  const modeLoadingHint = getInsightsLoadingHint(mode);
+  const selectedWeekSeries = weeklyTrend ? weeklyTrend.seriesByMetric[weekMetric] : null;
+  const weekChartModel = React.useMemo(() => {
+    if (!selectedWeekSeries || selectedWeekSeries.points.length === 0) {
+      return null;
+    }
+    const width = 640;
+    const height = 240;
+    const leftPad = 40;
+    const rightPad = 20;
+    const topPad = 18;
+    const bottomPad = 40;
+    const innerWidth = width - leftPad - rightPad;
+    const innerHeight = height - topPad - bottomPad;
+    const values = selectedWeekSeries.points.map((point) => point.value);
+    const maxValue = Math.max(...values, selectedWeekSeries.average, 1);
+    const toX = (index: number) => {
+      if (selectedWeekSeries.points.length === 1) {
+        return leftPad + innerWidth / 2;
+      }
+      return leftPad + (innerWidth * index) / (selectedWeekSeries.points.length - 1);
+    };
+    const toY = (value: number) => topPad + innerHeight - (value / maxValue) * innerHeight;
+    const path = selectedWeekSeries.points
+      .map((point, index) => `${index === 0 ? 'M' : 'L'} ${toX(index)} ${toY(point.value)}`)
+      .join(' ');
+    return {
+      width,
+      height,
+      leftPad,
+      rightPad,
+      topPad,
+      bottomPad,
+      innerHeight,
+      toX,
+      toY,
+      path,
+      averageY: toY(selectedWeekSeries.average),
+      maxValue,
+    };
+  }, [selectedWeekSeries]);
 
   const handleAnalyze = async (
     force = false,
@@ -931,7 +995,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                     Insights
                   </h1>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-[#4A453E]/60 md:text-base">
-                    基于所选 Food Log 条目，生成营养摄入分析与改善建议。
+                    {modeAIPanelDescription}
                   </p>
                 </div>
               </div>
@@ -978,6 +1042,9 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   )}
                 </div>
               </div>
+              <p className="text-xs font-semibold text-[#4A453E]/55">
+                {modeScopeDescription}
+              </p>
             </div>
 
             {filteredItems.length === 0 ? (
@@ -1197,6 +1264,163 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   </div>
             </div>
 
+            {mode === 'week' && weeklyTrend && (
+              <div className="mt-4 rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
+                    周趋势图
+                  </h2>
+                  <span className="rounded-full bg-[#FFF7EF] px-3 py-1 text-[11px] font-semibold text-[#FF8A65]">
+                    活跃记录 {weeklyTrend.activeDays}/{weeklyTrend.points.length} 天
+                  </span>
+                </div>
+                <p className="mt-2 text-xs leading-6 text-[#4A453E]/60">
+                  {weeklyTrend.trendLabel} · {weeklyTrend.volatilityLabel} · {weeklyTrend.cycleLabel}
+                </p>
+
+                <div className="mt-4 inline-flex items-center gap-1 rounded-full border border-[#4A453E]/10 bg-[#FFFDF9] p-1">
+                  {[
+                    { key: 'calories' as const, label: '热量' },
+                    { key: 'protein' as const, label: '蛋白质' },
+                    { key: 'carbs' as const, label: '碳水' },
+                    { key: 'fat' as const, label: '脂肪' },
+                  ].map((metric) => (
+                    <button
+                      key={metric.key}
+                      type="button"
+                      onClick={() => setWeekMetric(metric.key)}
+                      className={`rounded-full px-3 py-1 text-xs font-bold transition-all ${
+                        weekMetric === metric.key
+                          ? 'bg-[#4A453E] text-white shadow-sm'
+                          : 'text-[#4A453E]/65 hover:bg-[#4A453E]/5'
+                      }`}
+                    >
+                      {metric.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-[#4A453E]/7 bg-[#FFFDF8] p-4">
+                  {selectedWeekSeries && weekChartModel && (
+                    <>
+                      <svg
+                        viewBox={`0 0 ${weekChartModel.width} ${weekChartModel.height}`}
+                        className="h-[230px] w-full"
+                        role="img"
+                        aria-label={`${selectedWeekSeries.label}周趋势折线图`}
+                      >
+                        <line
+                          x1={weekChartModel.leftPad}
+                          y1={weekChartModel.averageY}
+                          x2={weekChartModel.width - weekChartModel.rightPad}
+                          y2={weekChartModel.averageY}
+                          stroke="#A1887F"
+                          strokeDasharray="4 4"
+                          strokeWidth="1.2"
+                        />
+                        <path
+                          d={weekChartModel.path}
+                          fill="none"
+                          stroke="#FF8A65"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        {selectedWeekSeries.points.map((point, index) => {
+                          const x = weekChartModel.toX(index);
+                          const y = weekChartModel.toY(point.value);
+                          const isPeak = selectedWeekSeries.peakPoint?.date === point.date;
+                          const isLow = selectedWeekSeries.lowPoint?.date === point.date;
+                          return (
+                            <g key={point.date}>
+                              <circle
+                                cx={x}
+                                cy={y}
+                                r={isPeak || isLow ? 4.5 : 3.5}
+                                fill={isPeak ? '#C25235' : isLow ? '#4CAF50' : '#FF8A65'}
+                              />
+                              <text
+                                x={x}
+                                y={weekChartModel.height - 14}
+                                textAnchor="middle"
+                                fontSize="11"
+                                fill="#6E655B"
+                              >
+                                {point.label}
+                              </text>
+                              {weekMetric === 'calories' && (
+                                (() => {
+                                  const changeTag = weeklyTrend.changeTags.find((tag) => tag.date === point.date);
+                                  if (!changeTag) return null;
+                                  const prefix = changeTag.direction === 'up' ? '↑ +' : '↓ ';
+                                  return (
+                                    <text
+                                      x={x}
+                                      y={y + (changeTag.direction === 'up' ? -10 : 16)}
+                                      textAnchor="middle"
+                                      fontSize="10"
+                                      fontWeight="700"
+                                      fill={changeTag.direction === 'up' ? '#C25235' : '#2E7D32'}
+                                    >
+                                      {`${prefix}${Math.abs(changeTag.delta)} kcal`}
+                                    </text>
+                                  );
+                                })()
+                              )}
+                            </g>
+                          );
+                        })}
+                      </svg>
+
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+                        <span className="rounded-full bg-white px-3 py-1 text-[#4A453E]/70">
+                          平均 {Math.round(selectedWeekSeries.average)} {selectedWeekSeries.unit}
+                        </span>
+                        {selectedWeekSeries.peakPoint && (
+                          <span className="rounded-full bg-[#FDECE7] px-3 py-1 text-[#C25235]">
+                            最高 {selectedWeekSeries.peakPoint.label} {Math.round(selectedWeekSeries.peakPoint.value)} {selectedWeekSeries.unit}
+                          </span>
+                        )}
+                        {selectedWeekSeries.lowPoint && (
+                          <span className="rounded-full bg-[#EAF6EC] px-3 py-1 text-[#2E7D32]">
+                            最低 {selectedWeekSeries.lowPoint.label} {Math.round(selectedWeekSeries.lowPoint.value)} {selectedWeekSeries.unit}
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {weekMetric === 'calories' && (
+                  <div className="mt-3">
+                    <div className="flex flex-wrap gap-2">
+                      {weeklyTrend.changeTags.length > 0 ? (
+                        weeklyTrend.changeTags.map((tag) => (
+                          <span
+                            key={tag.date}
+                            className={`rounded-full px-3 py-1 text-xs font-bold ${
+                              tag.direction === 'up'
+                                ? 'bg-[#FDECE7] text-[#C25235]'
+                                : 'bg-[#EAF6EC] text-[#2E7D32]'
+                            }`}
+                          >
+                            {`${tag.label} ${tag.direction === 'up' ? '↑' : '↓'} ${Math.abs(tag.delta)} kcal`}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#4A453E]/60">
+                          本周暂无明显日变化标签
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-xs leading-6 text-[#4A453E]/60">
+                      {weeklyTrend.changeInsightText}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="mt-4 rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
               <div className="mb-5 flex items-center justify-between">
                 <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
@@ -1265,7 +1489,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
               AI 饮食建议
             </h3>
             <p className="mt-2 text-sm leading-6 text-[#4A453E]/50">
-              基于当日已选菜品，生成营养摄入分析与改善建议。
+              {modeAIPanelDescription}
             </p>
           </div>
 
@@ -1290,7 +1514,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   </span>
                 </div>
                 <p className="text-sm leading-7 text-[#4A453E]/50">
-                  {filteredItems.length === 0 ? '添加饮食记录后，即可生成 AI 营养摄入分析。' : '点击下方按钮开始生成 AI 分析。'}
+                  {modeIdleHint}
                 </p>
               </div>
             )}
@@ -1303,7 +1527,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   </span>
                 </div>
                 <p className="text-sm font-semibold leading-7 text-[#4A453E]/60">
-                  正在分析中，请稍候…
+                  {modeLoadingHint}
                 </p>
               </div>
             )}
@@ -1397,7 +1621,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
               <span className="material-symbols-outlined text-[18px]">
                 {analysisState.status === 'loading' ? 'progress_activity' : 'forum'}
               </span>
-              {getInsightsAnalyzeButtonText(analysisState.status)}
+              {getInsightsAnalyzeButtonText(analysisState.status, mode)}
             </button>
           </div>
         </aside>

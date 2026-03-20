@@ -1,7 +1,7 @@
 import json
 import re
 import time
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from urllib import error, request
@@ -142,7 +142,14 @@ def analyze_insights(
 
     aggregation = _aggregate_nutrition(entries)
     entry_briefs = _build_entry_briefs(entries)
-    ai_insights = _generate_ai_insights(aggregation, entry_briefs, mode=mode)
+    ai_insights = _generate_ai_insights(
+        aggregation,
+        entry_briefs,
+        mode=mode,
+        raw_entries=entries,
+        date_start=date_start,
+        date_end=date_end,
+    )
 
     return InsightsAnalyzeData(
         aggregation=aggregation,
@@ -286,6 +293,9 @@ def _generate_ai_insights(
     entries: list[InsightsEntryBrief],
     *,
     mode: str,
+    raw_entries: list[dict[str, object]],
+    date_start: date,
+    date_end: date,
 ) -> AIInsights:
     config = get_estimate_ai_config()
     # #region agent log
@@ -294,7 +304,14 @@ def _generate_ai_insights(
     if not config.api_key:
         raise AIConfigMissingError()
 
-    user_prompt = _build_insights_user_prompt(aggregation, entries, mode=mode)
+    user_prompt = _build_insights_user_prompt(
+        aggregation,
+        entries,
+        mode=mode,
+        raw_entries=raw_entries,
+        date_start=date_start,
+        date_end=date_end,
+    )
     raw = _call_ai_for_insights(config, user_prompt)
 
     summary = str(raw.get("summary") or "").strip()
@@ -318,6 +335,9 @@ def _build_insights_user_prompt(
     entries: list[InsightsEntryBrief],
     *,
     mode: str,
+    raw_entries: list[dict[str, object]] | None = None,
+    date_start: date | None = None,
+    date_end: date | None = None,
 ) -> str:
     mode_label = "单日" if mode == "day" else "一周"
 
@@ -342,10 +362,123 @@ def _build_insights_user_prompt(
     if len(entries) > 30:
         lines.append(f"  …… 以及另外 {len(entries) - 30} 条记录")
 
+    if mode == "week" and raw_entries and date_start and date_end:
+        trend_lines = _build_week_trend_context(
+            raw_entries,
+            date_start=date_start,
+            date_end=date_end,
+        )
+        if trend_lines:
+            lines.append("")
+            lines.append("周趋势信息：")
+            lines.extend([f"- {line}" for line in trend_lines])
+
     lines.append("")
-    lines.append("请根据以上数据给出分析（summary、risks、actions）。")
+    if mode == "week":
+        lines.append("请优先总结趋势变化、波动来源和周期特征，再给出风险与行动建议（summary、risks、actions）。")
+    else:
+        lines.append("请根据以上数据给出分析（summary、risks、actions）。")
 
     return "\n".join(lines)
+
+
+def _build_week_trend_context(
+    entries: list[dict[str, object]],
+    *,
+    date_start: date,
+    date_end: date,
+) -> list[str]:
+    if date_end < date_start:
+        return []
+
+    day_totals: dict[date, float] = {}
+    cursor = date_start
+    while cursor <= date_end:
+        day_totals[cursor] = 0.0
+        cursor += timedelta(days=1)
+
+    for entry in entries:
+        entry_date = _resolve_entry_date(entry)
+        if entry_date is None or entry_date not in day_totals:
+            continue
+        day_totals[entry_date] += _extract_calories(entry.get("total_calories"))
+
+    if not day_totals:
+        return []
+
+    ordered_days = sorted(day_totals.items(), key=lambda item: item[0])
+    formatted_daily = "；".join(
+        f"{day.strftime('%m-%d')}: {round(total, 1)} kcal"
+        for day, total in ordered_days
+    )
+
+    peak_day, peak_calories = max(ordered_days, key=lambda item: item[1])
+    low_day, low_calories = min(ordered_days, key=lambda item: item[1])
+    swing = round(peak_calories - low_calories, 1)
+
+    half_window = max(1, len(ordered_days) // 2)
+    first_half_avg = sum(total for _, total in ordered_days[:half_window]) / half_window
+    last_half_avg = sum(total for _, total in ordered_days[-half_window:]) / half_window
+    trend_delta = round(last_half_avg - first_half_avg, 1)
+    trend_threshold = max(80.0, (sum(total for _, total in ordered_days) / len(ordered_days)) * 0.15)
+    if trend_delta > trend_threshold:
+        trend_label = "后半周摄入走高"
+    elif trend_delta < -trend_threshold:
+        trend_label = "后半周摄入回落"
+    else:
+        trend_label = "整周摄入相对平稳"
+
+    weekday_totals = [total for day, total in ordered_days if day.weekday() < 5]
+    weekend_totals = [total for day, total in ordered_days if day.weekday() >= 5]
+    weekday_avg = round(sum(weekday_totals) / len(weekday_totals), 1) if weekday_totals else 0.0
+    weekend_avg = round(sum(weekend_totals) / len(weekend_totals), 1) if weekend_totals else 0.0
+    cycle_delta = weekend_avg - weekday_avg
+    if cycle_delta >= 80:
+        cycle_label = "周末摄入高于工作日"
+    elif cycle_delta <= -80:
+        cycle_label = "工作日摄入高于周末"
+    else:
+        cycle_label = "工作日与周末摄入接近"
+
+    return [
+        f"按天热量：{formatted_daily}",
+        (
+            f"峰值日 {peak_day.strftime('%m-%d')} ({round(peak_calories, 1)} kcal)，"
+            f"低值日 {low_day.strftime('%m-%d')} ({round(low_calories, 1)} kcal)，"
+            f"波动幅度 {swing} kcal"
+        ),
+        f"趋势判断：{trend_label}，后半周较前半周变化 {abs(trend_delta)} kcal/天",
+        f"周期判断：{cycle_label}（工作日日均 {weekday_avg} kcal，周末日均 {weekend_avg} kcal）",
+    ]
+
+
+def _resolve_entry_date(entry: dict[str, object]) -> date | None:
+    candidates = (
+        entry.get("meal_occurred_at"),
+        entry.get("updated_at"),
+        entry.get("created_at"),
+        entry.get("logged_at"),
+    )
+    for value in candidates:
+        if not isinstance(value, str) or not value.strip():
+            continue
+        parsed = _parse_datetime_value(value)
+        if parsed is not None:
+            return parsed.date()
+    return None
+
+
+def _parse_datetime_value(value: str) -> datetime | None:
+    normalized = value.strip()
+    for parser in (
+        lambda raw: datetime.strptime(raw, "%Y-%m-%d %H:%M:%S"),
+        lambda raw: datetime.fromisoformat(raw.replace("Z", "+00:00")),
+    ):
+        try:
+            return parser(normalized)
+        except ValueError:
+            continue
+    return None
 
 
 def _call_ai_for_insights(config: Any, user_prompt: str) -> dict[str, Any]:
