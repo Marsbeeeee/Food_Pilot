@@ -150,8 +150,12 @@ function buildQueryString(params?: FoodLogListParams): string {
   if (params.dateTo) {
     searchParams.set('dateTo', params.dateTo);
   }
-  if (params.meal) {
-    searchParams.set('meal', params.meal);
+  const query = params.query ?? params.meal;
+  if (query) {
+    searchParams.set('query', query);
+  }
+  if (params.sort) {
+    searchParams.set('sort', params.sort);
   }
   return searchParams.toString();
 }

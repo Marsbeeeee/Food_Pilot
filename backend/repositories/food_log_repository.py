@@ -39,7 +39,14 @@ FOOD_LOG_SELECT_COLUMNS = """
 FOOD_LOG_ACTIVE_FILTER = (
     f"status = '{ACTIVE_FOOD_LOG_STATUS}' AND deleted_at IS NULL"
 )
-FOOD_LOG_DEFAULT_ORDER_BY = "updated_at DESC, created_at DESC, id DESC"
+FOOD_LOG_CREATED_DESC_ORDER_BY = "created_at DESC, id DESC"
+FOOD_LOG_CREATED_ASC_ORDER_BY = "created_at ASC, id ASC"
+FOOD_LOG_DEFAULT_SORT = "created_desc"
+FOOD_LOG_DEFAULT_ORDER_BY = FOOD_LOG_CREATED_DESC_ORDER_BY
+FOOD_LOG_SORT_OPTIONS: dict[str, str] = {
+    "created_desc": FOOD_LOG_CREATED_DESC_ORDER_BY,
+    "created_asc": FOOD_LOG_CREATED_ASC_ORDER_BY,
+}
 
 
 def create_food_log(
@@ -455,12 +462,15 @@ def list_food_logs_by_user(
     session_id: int | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
+    query_text: str | None = None,
     meal: str | None = None,
+    sort: str = FOOD_LOG_DEFAULT_SORT,
     limit: int | None = None,
     offset: int = 0,
 ) -> list[dict[str, object]]:
     cursor = conn.cursor()
-    query = f"""
+    order_by = _resolve_food_log_order_by(sort)
+    sql = f"""
         SELECT
             {FOOD_LOG_SELECT_COLUMNS}
         FROM food_logs
@@ -469,32 +479,36 @@ def list_food_logs_by_user(
     parameters: list[object] = [user_id]
 
     if session_id is not None:
-        query += " AND session_id = ?"
+        sql += " AND session_id = ?"
         parameters.append(session_id)
 
     if date_from is not None:
-        query += " AND meal_occurred_at >= ?"
+        sql += " AND meal_occurred_at >= ?"
         parameters.append(f"{date_from.isoformat()} 00:00:00")
 
     if date_to is not None:
-        query += " AND meal_occurred_at < ?"
+        sql += " AND meal_occurred_at < ?"
         parameters.append(f"{(date_to + timedelta(days=1)).isoformat()} 00:00:00")
 
-    if meal:
-        query += (
-            " AND (meal_description LIKE ? ESCAPE '\\' "
-            "OR result_title LIKE ? ESCAPE '\\')"
-        )
-        keyword = f"%{_escape_like_value(meal)}%"
-        parameters.extend([keyword, keyword])
+    keyword_input = query_text if query_text is not None else meal
+    if keyword_input:
+        normalized_keyword = normalize_food_log_query(keyword_input)
+        if normalized_keyword:
+            escaped_keyword = _escape_like_value(normalized_keyword)
+            sql += (
+                " AND (normalized_query LIKE ? ESCAPE '\\' "
+                "OR LOWER(result_title) LIKE ? ESCAPE '\\')"
+            )
+            keyword = f"%{escaped_keyword}%"
+            parameters.extend([keyword, keyword])
 
-    query += f"""
-        ORDER BY {FOOD_LOG_DEFAULT_ORDER_BY}
+    sql += f"""
+        ORDER BY {order_by}
         LIMIT COALESCE(?, -1) OFFSET ?
     """
     parameters.extend([limit, offset])
 
-    cursor.execute(query, tuple(parameters))
+    cursor.execute(sql, tuple(parameters))
     return [_row_to_food_log(row) for row in cursor.fetchall()]
 
 
@@ -615,6 +629,13 @@ def _escape_like_value(value: str) -> str:
         .replace("%", "\\%")
         .replace("_", "\\_")
     )
+
+
+def _resolve_food_log_order_by(value: str | None) -> str:
+    normalized = (value or FOOD_LOG_DEFAULT_SORT).strip().lower()
+    if normalized not in FOOD_LOG_SORT_OPTIONS:
+        raise ValueError("sort must be created_desc or created_asc")
+    return FOOD_LOG_SORT_OPTIONS[normalized]
 
 
 def _get_food_log_by_idempotency_key(

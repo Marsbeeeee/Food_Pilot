@@ -154,7 +154,7 @@ class FoodLogApiTests(unittest.TestCase):
         self.assertEqual(linked_entry["sourceType"], "chat_message")
         self.assertFalse(linked_entry["isManual"])
 
-    def test_get_food_logs_supports_session_limit_date_and_meal_filters(self) -> None:
+    def test_get_food_logs_supports_session_limit_date_query_and_sort_filters(self) -> None:
         lunch_session = create_empty_session(self.user_id)
         dinner_session = create_empty_session(self.user_id)
 
@@ -251,7 +251,17 @@ class FoodLogApiTests(unittest.TestCase):
         )
         self.assertEqual([entry.name for entry in ranged_entries], ["Oatmeal Bowl", "Salmon Bowl"])
 
-        meal_entries = list_food_log_entries(
+        query_entries = list_food_log_entries(
+            filters=FoodLogListQuery.model_validate(
+                {
+                    "query": "salad",
+                }
+            ),
+            current_user=self.user,
+        )
+        self.assertEqual([entry.name for entry in query_entries], ["Chicken Salad"])
+
+        legacy_meal_entries = list_food_log_entries(
             filters=FoodLogListQuery.model_validate(
                 {
                     "meal": "salad",
@@ -259,7 +269,19 @@ class FoodLogApiTests(unittest.TestCase):
             ),
             current_user=self.user,
         )
-        self.assertEqual([entry.name for entry in meal_entries], ["Chicken Salad"])
+        self.assertEqual([entry.name for entry in legacy_meal_entries], ["Chicken Salad"])
+
+        asc_sorted_entries = list_food_log_entries(
+            filters=FoodLogListQuery.model_validate(
+                {
+                    "dateFrom": "2026-03-14",
+                    "dateTo": "2026-03-15",
+                    "sort": "created_asc",
+                }
+            ),
+            current_user=self.user,
+        )
+        self.assertEqual([entry.name for entry in asc_sorted_entries], ["Salmon Bowl", "Oatmeal Bowl"])
 
     def test_get_food_log_entry_returns_single_entry(self) -> None:
         created = create_food_log(

@@ -39,7 +39,8 @@ def list_food_log_entries(
         session_id=filters.session_id,
         date_from=filters.date_from,
         date_to=filters.date_to,
-        meal=filters.meal,
+        query=filters.query,
+        sort=filters.sort,
         limit=filters.limit,
     )
     return [serialize_food_log_entry(entry) for entry in entries]

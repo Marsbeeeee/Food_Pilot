@@ -108,7 +108,16 @@ class FoodLogListQuery(BaseModel):
         validation_alias=AliasChoices("date_to", "dateTo"),
         serialization_alias="dateTo",
     )
-    meal: str | None = None
+    query: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("query", "keyword", "meal"),
+        serialization_alias="query",
+    )
+    sort: Literal["created_desc", "created_asc"] = Field(
+        default="created_desc",
+        validation_alias=AliasChoices("sort", "order"),
+        serialization_alias="sort",
+    )
 
     @field_validator("session_id")
     @classmethod
@@ -124,9 +133,9 @@ class FoodLogListQuery(BaseModel):
             raise ValueError("limit must be greater than 0")
         return value
 
-    @field_validator("meal")
+    @field_validator("query")
     @classmethod
-    def validate_meal(cls, value: str | None) -> str | None:
+    def validate_query(cls, value: str | None) -> str | None:
         if value is None:
             return None
         normalized = " ".join(value.strip().split())

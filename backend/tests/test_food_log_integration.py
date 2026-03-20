@@ -224,7 +224,7 @@ class FoodLogIntegrationTests(unittest.TestCase):
         self.assertEqual(len(saved_entries), 1)
         self.assertEqual(saved_entries[0].id, first_save.id)
 
-    def test_editing_saved_favorite_refreshes_listing_order_and_fields(self) -> None:
+    def test_editing_saved_favorite_keeps_created_time_order_and_updates_fields(self) -> None:
         edited_entry = create_food_log(
             self.user.id,
             "manual",
@@ -291,10 +291,10 @@ class FoodLogIntegrationTests(unittest.TestCase):
             current_user=self.user,
         )
 
-        self.assertEqual(refreshed_entries[0].id, str(edited_entry["id"]))
-        self.assertEqual(refreshed_entries[0].name, "Breakfast Oats Deluxe")
-        self.assertEqual(refreshed_entries[0].calories, "260")
-        self.assertEqual(len(refreshed_entries[0].breakdown), 2)
+        self.assertEqual(refreshed_entries[1].id, str(edited_entry["id"]))
+        self.assertEqual(refreshed_entries[1].name, "Breakfast Oats Deluxe")
+        self.assertEqual(refreshed_entries[1].calories, "260")
+        self.assertEqual(len(refreshed_entries[1].breakdown), 2)
 
     def test_deleted_favorite_can_be_restored_back_into_listing(self) -> None:
         created = create_food_log(

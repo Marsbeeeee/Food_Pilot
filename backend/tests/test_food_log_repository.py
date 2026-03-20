@@ -170,7 +170,7 @@ class FoodLogRepositoryTests(unittest.TestCase):
         self.assertEqual([entry["result_title"] for entry in paged_logs], ["Meal two", "Meal one"])
         self.assertEqual([entry["result_title"] for entry in recent_logs], ["Meal three", "Meal two"])
 
-    def test_list_food_logs_order_by_recent_update(self) -> None:
+    def test_list_food_logs_order_by_created_time_and_support_ascending(self) -> None:
         conn = get_db_connection()
         try:
             oldest = create_food_log(
@@ -224,17 +224,26 @@ class FoodLogRepositoryTests(unittest.TestCase):
             conn.commit()
 
             all_logs = list_food_logs_by_user(conn, self.user_id)
+            ascending_logs = list_food_logs_by_user(
+                conn,
+                self.user_id,
+                sort="created_asc",
+            )
             session_logs = list_food_logs_by_session(conn, self.user_id, self.session_id)
         finally:
             conn.close()
 
         self.assertEqual(
             [entry["result_title"] for entry in all_logs],
-            ["Meal one", "Meal three", "Meal two"],
+            ["Meal three", "Meal two", "Meal one"],
+        )
+        self.assertEqual(
+            [entry["result_title"] for entry in ascending_logs],
+            ["Meal one", "Meal two", "Meal three"],
         )
         self.assertEqual(
             [entry["result_title"] for entry in session_logs],
-            ["Meal one", "Meal three"],
+            ["Meal three", "Meal one"],
         )
 
     def test_list_food_logs_date_filters_use_meal_occurred_at(self) -> None:
@@ -277,6 +286,48 @@ class FoodLogRepositoryTests(unittest.TestCase):
             conn.close()
 
         self.assertEqual([entry["result_title"] for entry in filtered_logs], ["Meal one"])
+
+    def test_list_food_logs_keyword_filter_supports_query_and_legacy_meal_alias(self) -> None:
+        conn = get_db_connection()
+        try:
+            create_food_log(
+                conn,
+                self.user_id,
+                source_type="estimate_api",
+                meal_description=" chicken   salad with avocado ",
+                result_title="Lunch Option",
+                result_description="Description one",
+                total_calories="100 kcal",
+                ingredients=[],
+                created_at="2026-03-15 09:00:00",
+            )
+            create_food_log(
+                conn,
+                self.user_id,
+                source_type="estimate_api",
+                meal_description="salmon bowl",
+                result_title="Omega Bowl",
+                result_description="Description two",
+                total_calories="200 kcal",
+                ingredients=[],
+                created_at="2026-03-16 09:00:00",
+            )
+
+            query_filtered = list_food_logs_by_user(
+                conn,
+                self.user_id,
+                query_text="chicken salad",
+            )
+            legacy_filtered = list_food_logs_by_user(
+                conn,
+                self.user_id,
+                meal="omega",
+            )
+        finally:
+            conn.close()
+
+        self.assertEqual([entry["result_title"] for entry in query_filtered], ["Lunch Option"])
+        self.assertEqual([entry["result_title"] for entry in legacy_filtered], ["Omega Bowl"])
 
     def test_save_food_log_is_idempotent_for_same_chat_message_source(self) -> None:
         conn = get_db_connection()

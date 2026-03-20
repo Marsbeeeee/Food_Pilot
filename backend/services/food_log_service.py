@@ -459,19 +459,23 @@ def list_food_logs_by_user(
     session_id: int | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
+    query: str | None = None,
     meal: str | None = None,
+    sort: str = "created_desc",
     limit: int | None = None,
     offset: int = 0,
 ) -> list[dict[str, object]]:
     conn = get_db_connection()
     try:
+        resolved_query = query if query is not None else meal
         return list_food_logs_by_user_record(
             conn,
             user_id,
             session_id=session_id,
             date_from=date_from,
             date_to=date_to,
-            meal=meal,
+            query_text=resolved_query,
+            sort=sort,
             limit=limit,
             offset=offset,
         )

@@ -182,6 +182,9 @@ export interface FoodLogListParams {
   limit?: number;
   dateFrom?: string;
   dateTo?: string;
+  query?: string;
+  sort?: 'created_desc' | 'created_asc';
+  // Deprecated: kept for backward compatibility, mapped to `query`.
   meal?: string;
 }
 
