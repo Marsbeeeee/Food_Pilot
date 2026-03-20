@@ -15,6 +15,8 @@ class ChatIntentRoutingRegressionTests(unittest.TestCase):
             ("帮我推荐一个更轻一点的晚餐", "meal_recommendation"),
             ("午饭吃什么比较合适？", "meal_recommendation"),
             ("汉堡和鸡肉沙拉哪个更适合我今天晚饭？", "meal_recommendation"),
+            ("鸡胸肉和鸡腿差别是什么，哪个更适合减脂晚餐？", "meal_recommendation"),
+            ("炸鸡想换成更健康的，为什么这么换更合适？", "meal_recommendation"),
             ("为什么更推荐烤鸡而不是炸鸡？", "text"),
             ("解释一下这个推荐为什么更适合减脂", "text"),
             ("说明一下这个估算为什么这么高", "text"),

@@ -164,6 +164,24 @@ class ChatServiceTests(unittest.TestCase):
 
                 self.assertEqual(resolved, "meal_recommendation")
 
+    def test_resolve_message_type_prefers_recommendation_for_comparison_with_text_markers(self) -> None:
+        resolved = resolve_message_type(
+            "鸡胸肉和鸡腿差别是什么，哪个更适合减脂晚餐？",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "meal_recommendation")
+
+    def test_resolve_message_type_prefers_recommendation_for_swap_request_with_why(self) -> None:
+        resolved = resolve_message_type(
+            "炸鸡想换成更健康的，为什么这么换更合适？",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "meal_recommendation")
+
     def test_resolve_message_type_routes_explanatory_follow_up_to_text(self) -> None:
         resolved = resolve_message_type(
             "为什么拉面通常热量更高？",

@@ -33,6 +33,8 @@ REAL_USER_CASES = [
     ("  帮我推荐一下   今天晚饭吃什么  ", RECOMMENDATION),
     ("帮我选个低卡的", RECOMMENDATION),
     ("沙拉和轻食哪个更好", RECOMMENDATION),
+    ("鸡胸肉和鸡腿差别是什么，哪个更适合减脂晚餐？", RECOMMENDATION),
+    ("炸鸡想换成更健康的，为什么这么换更合适？", RECOMMENDATION),
     # ----- 估算意图：描述一餐 + 问热量/营养/大概多少 -----
     ("这份鸡胸肉沙拉大概多少热量？", ESTIMATE),
     ("一碗牛肉面大概多少卡？", ESTIMATE),

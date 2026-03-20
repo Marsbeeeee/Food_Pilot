@@ -119,6 +119,18 @@ ADDITIONAL_RECOMMENDATION_ROUTE_PHRASES = (
     "换掉",
     "更好的替代",
     "替代",
+    "换成更健康",
+    "更健康的替代",
+)
+EXPLANATORY_FOLLOW_UP_PHRASES = (
+    "这个推荐",
+    "该推荐",
+    "这个估算",
+    "该估算",
+    "这个结果",
+    "该结果",
+    "为什么更推荐",
+    "为什么推荐",
 )
 
 
@@ -413,19 +425,31 @@ def resolve_message_type(
     del profile_id, user_id
     normalized_content = _normalize_routing_text(content)
 
-    if _matches_text_request(normalized_content):
+    is_text_request = _matches_text_request(normalized_content)
+    is_recommendation_request = _matches_recommendation_request(normalized_content)
+    is_estimate_request = _matches_estimate_request(normalized_content)
+    needs_clarification = _contains_any_phrase(
+        normalized_content,
+        AMBIGUOUS_PHRASES,
+    ) and not _looks_like_food_description(normalized_content)
+
+    # Only explicit explanatory follow-ups should let `text` override
+    # recommendation signals. This reduces high-frequency misroutes for
+    # comparison/swap requests containing words like "区别/为什么".
+    if _is_explanatory_follow_up(normalized_content, has_text_signal=is_text_request):
         return TEXT_MESSAGE_TYPE
 
-    if _matches_recommendation_request(normalized_content):
-        return RECOMMENDATION_MESSAGE_TYPE
-
-    if _matches_estimate_request(normalized_content):
+    if is_estimate_request:
         return DEFAULT_RESOLVED_MESSAGE_TYPE
 
+    if is_recommendation_request:
+        return RECOMMENDATION_MESSAGE_TYPE
+
+    if is_text_request:
+        return TEXT_MESSAGE_TYPE
+
     # 无明确推荐/估算信号，且包含模糊表述，且不像食物描述 -> 澄清提问
-    if _contains_any_phrase(normalized_content, AMBIGUOUS_PHRASES) and not _looks_like_food_description(
-        normalized_content
-    ):
+    if needs_clarification:
         return CLARIFICATION_NEEDED
 
     return DEFAULT_RESOLVED_MESSAGE_TYPE
@@ -708,6 +732,12 @@ def _matches_recommendation_request(value: str) -> bool:
 
 def _matches_estimate_request(value: str) -> bool:
     return _contains_any_phrase(value, ESTIMATE_ROUTE_PHRASES)
+
+
+def _is_explanatory_follow_up(value: str, *, has_text_signal: bool) -> bool:
+    if not has_text_signal:
+        return False
+    return _contains_any_phrase(value, EXPLANATORY_FOLLOW_UP_PHRASES)
 
 
 def _contains_any_phrase(value: str, phrases: tuple[str, ...]) -> bool:
