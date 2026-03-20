@@ -54,6 +54,7 @@ Food Pilot 解决“营养建议难落地、记录难复用”的问题：
 - Assistant 双核心意图：
   - `meal_recommendation`（推荐吃什么）
   - `meal_estimate`（这餐大概多少热量/营养）
+- `/estimate` 能力层：系统级结构化估算接口（当前不作为独立用户主入口）
 - Chat 会话管理：新建、续聊、重命名、删除
 - Food Log：保存、详情、编辑、删除、恢复、回跳来源聊天
 - Profile：目标、热量目标、饮食风格、过敏原等约束接入
@@ -224,6 +225,8 @@ curl -X POST http://localhost:8000/estimate \
   -d '{"query":"一碗牛肉面大概多少热量？"}'
 ```
 
+> 当前产品策略：用户估算入口统一走 Chat；`/estimate` 作为系统能力接口保留，用于结构化估算复用。
+
 ---
 
 ## API Quick Reference
@@ -237,6 +240,7 @@ curl -X POST http://localhost:8000/estimate \
 - `POST /chat/sessions`
 - `POST /chat/messages`
 - `POST /chat/sessions/{session_id}/messages`
+- `POST /estimate`
 - `GET /food-logs`
 - `POST /food-logs`
 - `PATCH /food-logs/{food_log_id}`
