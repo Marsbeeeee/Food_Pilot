@@ -164,6 +164,24 @@ class ChatServiceTests(unittest.TestCase):
 
                 self.assertEqual(resolved, "meal_recommendation")
 
+    def test_resolve_message_type_routes_flat_substitute_phrase_to_recommendation(self) -> None:
+        resolved = resolve_message_type(
+            "奶茶有没有更健康的平替？",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "meal_recommendation")
+
+    def test_resolve_message_type_routes_huanshi_comparison_to_recommendation(self) -> None:
+        resolved = resolve_message_type(
+            "米饭还是红薯更适合减脂吗？",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "meal_recommendation")
+
     def test_resolve_message_type_prefers_recommendation_for_comparison_with_text_markers(self) -> None:
         resolved = resolve_message_type(
             "鸡胸肉和鸡腿差别是什么，哪个更适合减脂晚餐？",
@@ -194,6 +212,15 @@ class ChatServiceTests(unittest.TestCase):
     def test_resolve_message_type_prefers_text_for_explanatory_follow_up_about_recommendations(self) -> None:
         resolved = resolve_message_type(
             "为什么更推荐烤鸡而不是炸鸡？",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "text")
+
+    def test_resolve_message_type_routes_why_this_recommendation_wording_to_text(self) -> None:
+        resolved = resolve_message_type(
+            "为什么这么推荐？",
             profile_id=12,
             user_id=self.user_id,
         )
@@ -265,6 +292,15 @@ class ChatServiceTests(unittest.TestCase):
     def test_resolve_message_type_prefers_estimate_for_ambiguous_message_with_estimate_markers(self) -> None:
         resolved = resolve_message_type(
             "汉堡和鸡肉沙拉哪个更适合我今天晚饭？热量大概多少？",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "meal_estimate")
+
+    def test_resolve_message_type_prefers_estimate_for_calorie_is_how_much_pattern(self) -> None:
+        resolved = resolve_message_type(
+            "汉堡和沙拉哪个好，卡路里分别是多少？",
             profile_id=12,
             user_id=self.user_id,
         )

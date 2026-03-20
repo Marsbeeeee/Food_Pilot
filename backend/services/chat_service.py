@@ -75,10 +75,33 @@ ESTIMATE_ROUTE_PHRASES = (
     "营养怎么样",
     "营养结构",
 )
+NUTRITION_TOPIC_PHRASES = (
+    "热量",
+    "卡路里",
+    "千卡",
+    "大卡",
+    "蛋白质",
+    "碳水",
+    "脂肪",
+    "营养",
+    "能量",
+)
+NUTRITION_QUANTITY_PHRASES = (
+    "多少",
+    "是多少",
+    "几克",
+    "几千卡",
+    "几大卡",
+    "几卡",
+    "几卡路里",
+    "有多高",
+    "有多低",
+)
 TEXT_ROUTE_PHRASES = (
     "你好",
     "谢谢",
     "为什么",
+    "为啥",
     "解释一下",
     "解释下",
     "解释",
@@ -119,6 +142,9 @@ ADDITIONAL_RECOMMENDATION_ROUTE_PHRASES = (
     "换掉",
     "更好的替代",
     "替代",
+    "平替",
+    "替换成",
+    "替换",
     "换成更健康",
     "更健康的替代",
 )
@@ -131,6 +157,42 @@ EXPLANATORY_FOLLOW_UP_PHRASES = (
     "该结果",
     "为什么更推荐",
     "为什么推荐",
+    "为什么这么推荐",
+    "为什么这样推荐",
+    "为啥推荐",
+    "为啥这么推荐",
+    "为啥这样推荐",
+)
+COMPARISON_CONNECTOR_PHRASES = (
+    "还是",
+    "和",
+    "跟",
+    "与",
+)
+COMPARISON_DECISION_PHRASES = (
+    "更适合",
+    "更好",
+    "更值得",
+    "更稳妥",
+    "怎么选",
+    "选哪个",
+    "该选",
+)
+SWAP_REQUEST_PHRASES = (
+    "换成",
+    "换掉",
+    "替代",
+    "替换",
+    "平替",
+)
+SWAP_DECISION_PHRASES = (
+    "什么",
+    "哪个",
+    "推荐",
+    "更",
+    "可以吗",
+    "行吗",
+    "好吗",
 )
 
 
@@ -724,14 +786,16 @@ def _matches_text_request(value: str) -> bool:
 def _matches_recommendation_request(value: str) -> bool:
     if _matches_estimate_request(value):
         return False
-    return _contains_any_phrase(
+    if _contains_any_phrase(
         value,
         RECOMMENDATION_ROUTE_PHRASES + ADDITIONAL_RECOMMENDATION_ROUTE_PHRASES,
-    )
+    ):
+        return True
+    return _looks_like_comparison_or_swap_recommendation(value)
 
 
 def _matches_estimate_request(value: str) -> bool:
-    return _contains_any_phrase(value, ESTIMATE_ROUTE_PHRASES)
+    return _contains_any_phrase(value, ESTIMATE_ROUTE_PHRASES) or _has_nutrition_quantity_question(value)
 
 
 def _is_explanatory_follow_up(value: str, *, has_text_signal: bool) -> bool:
@@ -742,6 +806,24 @@ def _is_explanatory_follow_up(value: str, *, has_text_signal: bool) -> bool:
 
 def _contains_any_phrase(value: str, phrases: tuple[str, ...]) -> bool:
     return any(phrase in value for phrase in phrases)
+
+
+def _looks_like_comparison_or_swap_recommendation(value: str) -> bool:
+    has_comparison_connector = _contains_any_phrase(value, COMPARISON_CONNECTOR_PHRASES)
+    if has_comparison_connector and _contains_any_phrase(value, COMPARISON_DECISION_PHRASES):
+        return True
+
+    has_swap_signal = _contains_any_phrase(value, SWAP_REQUEST_PHRASES)
+    if has_swap_signal and _contains_any_phrase(value, SWAP_DECISION_PHRASES):
+        return True
+
+    return False
+
+
+def _has_nutrition_quantity_question(value: str) -> bool:
+    if not _contains_any_phrase(value, NUTRITION_TOPIC_PHRASES):
+        return False
+    return _contains_any_phrase(value, NUTRITION_QUANTITY_PHRASES)
 
 
 def _looks_like_food_description(value: str) -> bool:

@@ -35,6 +35,8 @@ REAL_USER_CASES = [
     ("沙拉和轻食哪个更好", RECOMMENDATION),
     ("鸡胸肉和鸡腿差别是什么，哪个更适合减脂晚餐？", RECOMMENDATION),
     ("炸鸡想换成更健康的，为什么这么换更合适？", RECOMMENDATION),
+    ("米饭还是红薯更适合减脂吗？", RECOMMENDATION),
+    ("奶茶有没有更健康的平替？", RECOMMENDATION),
     # ----- 估算意图：描述一餐 + 问热量/营养/大概多少 -----
     ("这份鸡胸肉沙拉大概多少热量？", ESTIMATE),
     ("一碗牛肉面大概多少卡？", ESTIMATE),
@@ -48,6 +50,7 @@ REAL_USER_CASES = [
     ("这份轻食碗的营养结构大概是什么？", ESTIMATE),
     ("这个三明治大概有多少蛋白质？", ESTIMATE),
     ("我今天这餐大概吃了多少热量和营养？", ESTIMATE),
+    ("汉堡和沙拉哪个好，卡路里分别是多少？", ESTIMATE),
     ("这份餐大概多少热量？", ESTIMATE),
     ("一碗鸡胸肉沙拉加半个牛油果", ESTIMATE),
     ("这碗麻辣烫大概有多少蛋白质和碳水？", ESTIMATE),

@@ -17,12 +17,16 @@ class ChatIntentRoutingRegressionTests(unittest.TestCase):
             ("汉堡和鸡肉沙拉哪个更适合我今天晚饭？", "meal_recommendation"),
             ("鸡胸肉和鸡腿差别是什么，哪个更适合减脂晚餐？", "meal_recommendation"),
             ("炸鸡想换成更健康的，为什么这么换更合适？", "meal_recommendation"),
+            ("米饭还是红薯更适合减脂吗？", "meal_recommendation"),
+            ("奶茶有没有更健康的平替？", "meal_recommendation"),
             ("为什么更推荐烤鸡而不是炸鸡？", "text"),
+            ("为什么这么推荐？", "text"),
             ("解释一下这个推荐为什么更适合减脂", "text"),
             ("说明一下这个估算为什么这么高", "text"),
             ("一碗鸡胸肉沙拉加半个牛油果", "meal_estimate"),
             ("这碗麻辣烫大概有多少蛋白质和碳水？", "meal_estimate"),
             ("汉堡和鸡肉沙拉哪个更适合我今天晚饭？热量大概多少？", "meal_estimate"),
+            ("汉堡和沙拉哪个好，卡路里分别是多少？", "meal_estimate"),
             ("  帮我推荐一下   今天晚饭吃什么  ", "meal_recommendation"),
         ]
 
