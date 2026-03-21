@@ -154,6 +154,12 @@ function buildQueryString(params?: FoodLogListParams): string {
   if (query) {
     searchParams.set('query', query);
   }
+  if (params.sourceType) {
+    searchParams.set('sourceType', params.sourceType);
+  }
+  if (params.hasImage !== undefined) {
+    searchParams.set('hasImage', String(params.hasImage));
+  }
   if (params.sort) {
     searchParams.set('sort', params.sort);
   }

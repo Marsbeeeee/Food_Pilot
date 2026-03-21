@@ -464,6 +464,8 @@ def list_food_logs_by_user(
     date_to: date | None = None,
     query_text: str | None = None,
     meal: str | None = None,
+    source_type: str | None = None,
+    has_image: bool | None = None,
     sort: str = FOOD_LOG_DEFAULT_SORT,
     limit: int | None = None,
     offset: int = 0,
@@ -481,6 +483,15 @@ def list_food_logs_by_user(
     if session_id is not None:
         sql += " AND session_id = ?"
         parameters.append(session_id)
+
+    if source_type is not None:
+        sql += " AND source_type = ?"
+        parameters.append(source_type)
+
+    if has_image is True:
+        sql += " AND image IS NOT NULL AND TRIM(image) != ''"
+    elif has_image is False:
+        sql += " AND (image IS NULL OR TRIM(image) = '')"
 
     if date_from is not None:
         sql += " AND meal_occurred_at >= ?"

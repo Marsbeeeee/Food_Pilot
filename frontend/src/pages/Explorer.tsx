@@ -3,8 +3,8 @@ import React, { useEffect, useState } from 'react';
 import {
   buildFoodLogCollectionStats,
   buildFoodLogEditPayload,
+  filterFoodLogEntries,
   formatSavedMoment,
-  sortFoodLogEntries,
 } from '../app/foodLogFavorites';
 import {
   AnalysisSelectionItem,
@@ -41,6 +41,8 @@ import {
   syncInsightsBasket,
 } from '../api/insights';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { FoodLogSearchToolbar } from '../components/FoodLogSearchToolbar';
+import type { FoodLogCaloriesPreset, FoodLogSort } from '../components/FoodLogSearchToolbar';
 import {
   FoodLogEntry,
   FoodLogPatchInput,
@@ -100,7 +102,35 @@ export const Explorer: React.FC<ExplorerProps> = ({
   onInsightsCacheUpdate: onInsightsCacheUpdateProp,
   insightsHistoryLoaded: insightsHistoryLoadedProp,
 }) => {
-  const orderedEntries = sortFoodLogEntries(logEntries);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [listSort, setListSort] = useState<FoodLogSort>('created_desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [caloriePreset, setCaloriePreset] = useState<FoodLogCaloriesPreset>('any');
+  const [customMinCalories, setCustomMinCalories] = useState('');
+  const [customMaxCalories, setCustomMaxCalories] = useState('');
+
+  const filteredEntries = React.useMemo(
+    () => filterFoodLogEntries(logEntries, {
+      query: searchQuery,
+      dateFrom,
+      dateTo,
+      sort: listSort,
+      caloriePreset,
+      minCalories: customMinCalories,
+      maxCalories: customMaxCalories,
+    }),
+    [logEntries, searchQuery, dateFrom, dateTo, listSort, caloriePreset, customMinCalories, customMaxCalories],
+  );
+  const hasActiveFilters = Boolean(
+    searchQuery.trim()
+    || dateFrom
+    || dateTo
+    || listSort !== 'created_desc'
+    || caloriePreset !== 'any'
+    || customMinCalories.trim()
+    || customMaxCalories.trim(),
+  );
   const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(null);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -228,10 +258,10 @@ export const Explorer: React.FC<ExplorerProps> = ({
     };
   }, [currentUserId, onInsightsCacheUpdateProp]);
 
-  const collectionStats = buildFoodLogCollectionStats(orderedEntries);
+  const collectionStats = buildFoodLogCollectionStats(logEntries);
 
   useEffect(() => {
-    if (orderedEntries.length === 0) {
+    if (filteredEntries.length === 0) {
       setSelectedEntry(null);
       setIsMobileDetailOpen(false);
       setIsEditing(false);
@@ -245,9 +275,9 @@ export const Explorer: React.FC<ExplorerProps> = ({
         return null;
       }
 
-      return orderedEntries.find((entry) => entry.id === current.id) ?? null;
+      return filteredEntries.find((entry) => entry.id === current.id) ?? null;
     });
-  }, [logEntries]);
+  }, [filteredEntries]);
 
   const handleDeleteSelectedEntry = async () => {
     if (!selectedEntry || deletingEntryId) {
@@ -443,8 +473,8 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
           <div className="mb-12 grid grid-cols-1 gap-4 md:grid-cols-3">
             <SummaryCard
-              label="Saved Entries"
-              value={String(orderedEntries.length)}
+              label={hasActiveFilters ? 'Matching Entries' : 'Saved Entries'}
+              value={String(filteredEntries.length)}
               unit="items"
               accent
             />
@@ -461,19 +491,51 @@ export const Explorer: React.FC<ExplorerProps> = ({
           </div>
 
           <div className="flex flex-col gap-4">
+            <FoodLogSearchToolbar
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              sort={listSort}
+              onSortChange={setListSort}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              onDateFromChange={setDateFrom}
+              onDateToChange={setDateTo}
+              caloriePreset={caloriePreset}
+              customMinCalories={customMinCalories}
+              customMaxCalories={customMaxCalories}
+              onCaloriePresetChange={(value) => {
+                setCaloriePreset(value);
+                setCustomMinCalories('');
+                setCustomMaxCalories('');
+              }}
+              onCustomMinCaloriesChange={(value) => {
+                setCustomMinCalories(value);
+              }}
+              onCustomMaxCaloriesChange={(value) => {
+                setCustomMaxCalories(value);
+              }}
+              hasActiveFilters={hasActiveFilters}
+              onClearFilters={() => {
+                setSearchQuery('');
+                setDateFrom('');
+                setDateTo('');
+                setListSort('created_desc');
+                setCaloriePreset('any');
+                setCustomMinCalories('');
+                setCustomMaxCalories('');
+              }}
+            />
             <div className="flex items-center justify-between px-1">
               <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
                 Saved Entries
               </h2>
-              {orderedEntries.length > 0 && (
-                <span className="text-[11px] font-semibold text-[#4A453E]/35">
-                  Sorted by latest save or edit
-                </span>
-              )}
+              <span className="text-[11px] font-semibold text-[#4A453E]/35">
+                {filteredEntries.length} result{filteredEntries.length === 1 ? '' : 's'}
+              </span>
             </div>
 
-              {orderedEntries.length > 0 ? (
-              orderedEntries.map((entry) => {
+              {filteredEntries.length > 0 ? (
+              filteredEntries.map((entry) => {
                 const isActive = selectedEntry?.id === entry.id;
                 const savedMoment = formatSavedMoment(entry.savedAt);
 
@@ -546,9 +608,13 @@ export const Explorer: React.FC<ExplorerProps> = ({
                     history_toggle_off
                   </span>
                 </div>
-                <p className="text-base font-bold text-[#4A453E]/45">Nothing in Food Log yet.</p>
+                <p className="text-base font-bold text-[#4A453E]/45">
+                  {logEntries.length === 0 ? 'Nothing in Food Log yet.' : 'No entries match current filters.'}
+                </p>
                 <p className="mt-2 text-sm text-[#4A453E]/35">
-                  Save an analysis first. Food Log keeps only the results you choose to keep.
+                  {logEntries.length === 0
+                    ? 'Save an analysis first. Food Log keeps only the results you choose to keep.'
+                    : 'Try a broader keyword, date range, or source filter.'}
                 </p>
               </div>
             )}

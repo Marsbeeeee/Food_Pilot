@@ -113,6 +113,16 @@ class FoodLogListQuery(BaseModel):
         validation_alias=AliasChoices("query", "keyword", "meal"),
         serialization_alias="query",
     )
+    source_type: Literal["estimate_api", "chat_message", "manual"] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("source_type", "sourceType"),
+        serialization_alias="sourceType",
+    )
+    has_image: bool | None = Field(
+        default=None,
+        validation_alias=AliasChoices("has_image", "hasImage"),
+        serialization_alias="hasImage",
+    )
     sort: Literal["created_desc", "created_asc"] = Field(
         default="created_desc",
         validation_alias=AliasChoices("sort", "order"),

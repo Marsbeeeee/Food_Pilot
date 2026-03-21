@@ -40,6 +40,8 @@ def list_food_log_entries(
         date_from=filters.date_from,
         date_to=filters.date_to,
         query=filters.query,
+        source_type=filters.source_type,
+        has_image=filters.has_image,
         sort=filters.sort,
         limit=filters.limit,
     )

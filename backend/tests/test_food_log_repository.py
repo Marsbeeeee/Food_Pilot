@@ -329,6 +329,81 @@ class FoodLogRepositoryTests(unittest.TestCase):
         self.assertEqual([entry["result_title"] for entry in query_filtered], ["Lunch Option"])
         self.assertEqual([entry["result_title"] for entry in legacy_filtered], ["Omega Bowl"])
 
+    def test_list_food_logs_supports_source_type_has_image_and_combined_filters(self) -> None:
+        conn = get_db_connection()
+        try:
+            create_food_log(
+                conn,
+                self.user_id,
+                source_type="chat_message",
+                session_id=self.session_id,
+                meal_description="salmon rice bowl",
+                result_title="Salmon Bowl",
+                result_description="Chat result with image.",
+                total_calories="520 kcal",
+                ingredients=[],
+                image="https://img.example/salmon.jpg",
+                meal_occurred_at="2026-03-14 18:30:00",
+                created_at="2026-03-14 18:30:00",
+            )
+            create_food_log(
+                conn,
+                self.user_id,
+                source_type="estimate_api",
+                meal_description="oatmeal breakfast",
+                result_title="Oatmeal Bowl",
+                result_description="Estimate result without image.",
+                total_calories="320 kcal",
+                ingredients=[],
+                meal_occurred_at="2026-03-15 08:00:00",
+                created_at="2026-03-15 08:00:00",
+            )
+            create_food_log(
+                conn,
+                self.user_id,
+                source_type="manual",
+                meal_description="manual chicken bowl",
+                result_title="Manual Bowl",
+                result_description="Manual result with image.",
+                total_calories="410 kcal",
+                ingredients=[],
+                image="https://img.example/manual.jpg",
+                meal_occurred_at="2026-03-16 12:00:00",
+                created_at="2026-03-16 12:00:00",
+                is_manual=True,
+            )
+
+            estimate_only = list_food_logs_by_user(
+                conn,
+                self.user_id,
+                source_type="estimate_api",
+            )
+            with_image = list_food_logs_by_user(
+                conn,
+                self.user_id,
+                has_image=True,
+                sort="created_asc",
+            )
+            combined = list_food_logs_by_user(
+                conn,
+                self.user_id,
+                query_text="salmon",
+                source_type="chat_message",
+                has_image=True,
+                date_from=date(2026, 3, 14),
+                date_to=date(2026, 3, 14),
+                sort="created_desc",
+            )
+        finally:
+            conn.close()
+
+        self.assertEqual([entry["result_title"] for entry in estimate_only], ["Oatmeal Bowl"])
+        self.assertEqual(
+            [entry["result_title"] for entry in with_image],
+            ["Salmon Bowl", "Manual Bowl"],
+        )
+        self.assertEqual([entry["result_title"] for entry in combined], ["Salmon Bowl"])
+
     def test_save_food_log_is_idempotent_for_same_chat_message_source(self) -> None:
         conn = get_db_connection()
         try:

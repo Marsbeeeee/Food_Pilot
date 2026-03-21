@@ -183,6 +183,8 @@ export interface FoodLogListParams {
   dateFrom?: string;
   dateTo?: string;
   query?: string;
+  sourceType?: 'estimate_api' | 'chat_message' | 'manual';
+  hasImage?: boolean;
   sort?: 'created_desc' | 'created_asc';
   // Deprecated: kept for backward compatibility, mapped to `query`.
   meal?: string;

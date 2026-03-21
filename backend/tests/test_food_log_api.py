@@ -154,7 +154,7 @@ class FoodLogApiTests(unittest.TestCase):
         self.assertEqual(linked_entry["sourceType"], "chat_message")
         self.assertFalse(linked_entry["isManual"])
 
-    def test_get_food_logs_supports_session_limit_date_query_and_sort_filters(self) -> None:
+    def test_get_food_logs_supports_session_limit_date_query_sort_source_and_image_filters(self) -> None:
         lunch_session = create_empty_session(self.user_id)
         dinner_session = create_empty_session(self.user_id)
 
@@ -191,6 +191,7 @@ class FoodLogApiTests(unittest.TestCase):
                 }
             ],
             session_id=int(dinner_session["id"]),
+            image="https://img.example/salmon.jpg",
             logged_at="2026-03-14 18:30:00",
             created_at="2026-03-14 18:30:00",
         )
@@ -282,6 +283,41 @@ class FoodLogApiTests(unittest.TestCase):
             current_user=self.user,
         )
         self.assertEqual([entry.name for entry in asc_sorted_entries], ["Salmon Bowl", "Oatmeal Bowl"])
+
+        estimate_api_entries = list_food_log_entries(
+            filters=FoodLogListQuery.model_validate(
+                {
+                    "sourceType": "estimate_api",
+                }
+            ),
+            current_user=self.user,
+        )
+        self.assertEqual([entry.name for entry in estimate_api_entries], ["Oatmeal Bowl"])
+
+        with_image_entries = list_food_log_entries(
+            filters=FoodLogListQuery.model_validate(
+                {
+                    "hasImage": True,
+                }
+            ),
+            current_user=self.user,
+        )
+        self.assertEqual([entry.name for entry in with_image_entries], ["Salmon Bowl"])
+
+        combined_entries = list_food_log_entries(
+            filters=FoodLogListQuery.model_validate(
+                {
+                    "query": "salmon",
+                    "sourceType": "chat_message",
+                    "hasImage": True,
+                    "dateFrom": "2026-03-14",
+                    "dateTo": "2026-03-14",
+                    "sort": "created_desc",
+                }
+            ),
+            current_user=self.user,
+        )
+        self.assertEqual([entry.name for entry in combined_entries], ["Salmon Bowl"])
 
     def test_get_food_log_entry_returns_single_entry(self) -> None:
         created = create_food_log(
