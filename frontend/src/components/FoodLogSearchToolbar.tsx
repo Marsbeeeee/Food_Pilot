@@ -217,25 +217,25 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
   return (
     <div
       ref={toolbarRef}
-      className="rounded-[30px] border border-[#4A453E]/11 bg-[#FFFEFA]/92 p-5 shadow-[0_10px_26px_rgba(74,69,62,0.06)] backdrop-blur-sm md:p-6"
+      className="rounded-[28px] border border-[#E7DED0] bg-white/95 p-4 shadow-[0_14px_36px_rgba(74,69,62,0.10)] backdrop-blur-sm md:p-5"
     >
       <style>{PANEL_ANIMATION_STYLE}</style>
 
-      <label className="group flex h-14 items-center gap-3 rounded-[20px] border border-[#4A453E]/14 bg-[#FDFBF7] px-5 shadow-[0_1px_0_rgba(74,69,62,0.03)] transition-all duration-200 ease-out hover:border-[#4A453E]/20 hover:bg-[#FCFAF4] focus-within:border-[#FF8A65]/45 focus-within:bg-[#FFFDF9] focus-within:shadow-[0_0_0_4px_rgba(255,138,101,0.10),0_10px_18px_rgba(74,69,62,0.08)]">
-        <span className="material-symbols-outlined text-[20px] text-[#4A453E]/35 transition-colors duration-200 group-hover:text-[#4A453E]/45">
-          search
-        </span>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(event) => onSearchQueryChange(event.target.value)}
-          placeholder="Search saved meals, notes, or ingredients"
-          className="w-full appearance-none border-none bg-transparent text-[15px] leading-none text-[#3F3A34] outline-none ring-0 shadow-none placeholder:text-[#4A453E]/35 focus:border-none focus:outline-none focus:ring-0 focus-visible:outline-none"
-        />
-      </label>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <label className="group flex h-14 flex-1 items-center gap-3 rounded-full border border-[#E5DCCE] bg-[#FCFAF5] px-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-200 ease-out hover:border-[#D9CEBE] focus-within:border-[#FF8A65]/45 focus-within:shadow-[0_0_0_4px_rgba(255,138,101,0.10)]">
+          <span className="material-symbols-outlined text-[20px] text-[#4A453E]/30 transition-colors duration-200 group-hover:text-[#4A453E]/45">
+            search
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(event) => onSearchQueryChange(event.target.value)}
+            placeholder="Search saved meals, notes, or ingredients"
+            className="w-full appearance-none border-none bg-transparent text-[15px] leading-none text-[#3F3A34] outline-none ring-0 shadow-none placeholder:text-[#4A453E]/38 focus:border-none focus:outline-none focus:ring-0 focus-visible:outline-none"
+          />
+        </label>
 
-      <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
-        <div className="relative">
+        <div className="relative shrink-0">
           <ToolbarTrigger
             label="Filter"
             value={filterLabel}
@@ -395,7 +395,7 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
           )}
         </div>
 
-        <div className="relative">
+        <div className="relative shrink-0">
           <SortIconTrigger
             open={openPanel === 'sort'}
             selected={isSortSelected}
@@ -429,17 +429,17 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
             </div>
           )}
         </div>
-
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={onClearFilters}
-            className="h-[50px] rounded-full border border-[#4A453E]/14 bg-[#FFFEFB] px-4 text-xs font-semibold text-[#4A453E]/65 transition-all duration-200 ease-out hover:border-[#4A453E]/22 hover:bg-[#F5F0E8] active:translate-y-[1px]"
-          >
-            Clear Filters
-          </button>
-        )}
       </div>
+
+      {hasActiveFilters && (
+        <button
+          type="button"
+          onClick={onClearFilters}
+          className="mt-3 inline-flex rounded-full border border-[#4A453E]/12 bg-[#FFFCF7] px-3 py-1.5 text-[11px] font-semibold text-[#4A453E]/62 transition-colors hover:bg-[#F8F1E7]"
+        >
+          Clear Filters
+        </button>
+      )}
     </div>
   );
 };
@@ -465,19 +465,16 @@ const ToolbarTrigger: React.FC<ToolbarTriggerProps> = ({
     aria-expanded={open}
     className={`group inline-flex h-[50px] min-w-[170px] items-center justify-between gap-3 rounded-full border px-4 text-left transition-all duration-200 ease-out active:translate-y-[1px] ${
       open
-        ? 'border-[#D9B8A9] bg-[#FBF3EE] shadow-[0_4px_12px_rgba(74,69,62,0.08)]'
-        : 'border-[#4A453E]/14 bg-[#FCFAF6] hover:border-[#4A453E]/22 hover:bg-[#F5F0E8]'
+        ? 'border-[#E2875E] bg-[#E98F67] text-white shadow-[0_10px_20px_rgba(233,143,103,0.34)]'
+        : selected
+          ? 'border-[#E5926D] bg-[#EA936D] text-white shadow-[0_8px_16px_rgba(233,143,103,0.28)]'
+          : 'border-[#E9D6CA] bg-[#F8EDE6] text-[#8D5F4A] hover:border-[#DFB7A2] hover:bg-[#F6E6DD]'
     }`}
   >
-    <span className="min-w-0 leading-none">
-      <span className="block text-[10px] font-semibold uppercase tracking-[0.08em] text-[#4A453E]/45">
-        {label}
-      </span>
-      <span className={`mt-1 block max-w-[118px] truncate text-[13px] ${selected ? 'font-semibold text-[#3F3A34]' : 'font-medium text-[#4A453E]/72'}`}>
-        {value}
-      </span>
+    <span className="min-w-0 truncate text-[13px] font-bold uppercase tracking-[0.02em]">
+      {label}: {value}
     </span>
-    <span className={`material-symbols-outlined text-[17px] text-[#4A453E]/38 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+    <span className={`material-symbols-outlined text-[17px] transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
       expand_more
     </span>
   </button>
@@ -497,13 +494,13 @@ const SortIconTrigger: React.FC<SortIconTriggerProps> = ({ open, selected, onCli
     aria-label="Sort options"
     className={`inline-flex h-[50px] w-[50px] items-center justify-center rounded-full border transition-all duration-200 ease-out active:translate-y-[1px] ${
       open
-        ? 'border-[#D9B8A9] bg-[#FBF3EE] shadow-[0_4px_12px_rgba(74,69,62,0.08)]'
+        ? 'border-[#E2875E] bg-[#E98F67] text-white shadow-[0_10px_20px_rgba(233,143,103,0.34)]'
         : selected
-          ? 'border-[#D9B8A9] bg-[#FCF4EE] hover:border-[#C88D76]'
-          : 'border-[#4A453E]/14 bg-[#FCFAF6] hover:border-[#4A453E]/22 hover:bg-[#F5F0E8]'
+          ? 'border-[#E5926D] bg-[#EA936D] text-white shadow-[0_8px_16px_rgba(233,143,103,0.28)]'
+          : 'border-[#E9D6CA] bg-[#F8EDE6] text-[#8D5F4A] hover:border-[#DFB7A2] hover:bg-[#F6E6DD]'
     }`}
   >
-    <span className="material-symbols-outlined text-[20px] text-[#4A453E]/70">tune</span>
+    <span className="material-symbols-outlined text-[20px]">tune</span>
   </button>
 );
 

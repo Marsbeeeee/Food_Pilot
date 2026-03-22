@@ -455,8 +455,8 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#FFFDF5] lg:flex-row">
-      <main className="custom-scrollbar flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10 xl:px-12">
-        <div className="mx-auto w-full max-w-4xl pb-10">
+      <main className="relative custom-scrollbar flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10 xl:px-12">
+        <div className="relative mx-auto w-full max-w-4xl pb-10">
           <div className="mb-8 flex flex-col gap-2">
             <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#FF8A65]/70">
               Food Log
@@ -471,7 +471,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
             </p>
           </div>
 
-          <div className="mb-12 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="mb-10 grid grid-cols-1 gap-4 md:grid-cols-3">
             <SummaryCard
               label={hasActiveFilters ? 'Matching Entries' : 'Saved Entries'}
               value={String(filteredEntries.length)}
@@ -525,6 +525,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                 setCustomMaxCalories('');
               }}
             />
+
             <div className="flex items-center justify-between px-1">
               <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
                 Saved Entries
@@ -534,73 +535,77 @@ export const Explorer: React.FC<ExplorerProps> = ({
               </span>
             </div>
 
-              {filteredEntries.length > 0 ? (
-              filteredEntries.map((entry) => {
-                const isActive = selectedEntry?.id === entry.id;
-                const savedMoment = formatSavedMoment(entry.savedAt);
+            {filteredEntries.length > 0 ? (
+              <div className="overflow-hidden rounded-[28px] border border-[#E7DED0] bg-[#FFFEFB] shadow-[0_16px_34px_rgba(74,69,62,0.09)]">
+                {filteredEntries.map((entry, index) => {
+                  const isActive = selectedEntry?.id === entry.id;
+                  const savedMoment = formatSavedMoment(entry.savedAt);
 
-                return (
-                  <div
-                    key={entry.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleSelectEntry(entry)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        handleSelectEntry(entry);
-                      }
-                    }}
-                    className={`group flex w-full flex-col rounded-[28px] border p-5 text-left transition-all md:flex-row md:items-center cursor-pointer ${
-                      isActive
-                        ? 'translate-x-1 border-[#4A453E]/10 bg-white shadow-md'
-                        : 'border-transparent bg-white/40 hover:border-[#4A453E]/05 hover:bg-white hover:shadow-sm'
-                    }`}
-                  >
-                    <div className="mb-4 size-full h-40 overflow-hidden rounded-[22px] border border-[#4A453E]/05 md:mb-0 md:size-14 md:shrink-0">
-                      <FoodLogImage
-                        src={entry.image}
-                        alt={entry.name}
-                        compact
-                        className="h-full w-full object-cover grayscale-[20%] transition-all group-hover:grayscale-0"
-                      />
-                    </div>
-
-                    <div className="min-w-0 flex-1 md:px-6">
-                      <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-[#4A453E]/30">
-                        Updated {savedMoment.date} / {savedMoment.time}
-                      </span>
-                      <h4 className="truncate text-lg font-bold text-[#4A453E]">{entry.name}</h4>
-                      <p className="mt-1 truncate text-xs text-[#4A453E]/50">{entry.description}</p>
-                    </div>
-
-                    <div className="mt-4 flex items-center justify-between gap-3 md:mt-0 md:gap-4">
-                      <div className="flex flex-col items-start md:items-end">
-                        <div className="flex items-baseline gap-1">
-                          <span className="font-serif-brand text-2xl font-bold text-[#4A453E]">
-                            {formatCalories(entry.calories)}
-                          </span>
-                          <span className="text-[10px] font-bold uppercase text-[#4A453E]/30">
-                            kcal
-                          </span>
-                        </div>
+                  return (
+                    <div
+                      key={entry.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleSelectEntry(entry)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          handleSelectEntry(entry);
+                        }
+                      }}
+                      className={`group flex w-full cursor-pointer flex-col gap-4 px-4 py-4 text-left transition-colors md:flex-row md:items-center md:gap-4 md:px-5 ${
+                        index < filteredEntries.length - 1 ? 'border-b border-[#ECE3D5]' : ''
+                      } ${
+                        isActive
+                          ? 'bg-[#FFF4EC]'
+                          : 'bg-transparent hover:bg-[#FFF8F1]'
+                      }`}
+                    >
+                      <div className="mb-2 h-40 w-full overflow-hidden rounded-[16px] border border-[#E7DDD0] bg-[#F8F2E8] md:mb-0 md:h-14 md:w-14 md:shrink-0">
+                        <FoodLogImage
+                          src={entry.image}
+                          alt={entry.name}
+                          compact
+                          className="h-full w-full object-cover transition-all group-hover:scale-[1.02]"
+                        />
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleAddToAnalysis(entry);
-                        }}
-                        className="flex size-10 items-center justify-center rounded-full bg-[#FFF2EC] text-[#FF8A65] transition-all hover:scale-[1.03] hover:bg-[#FF8A65] hover:text-white"
-                        title="Add to today analysis"
-                      >
-                        <span className="material-symbols-outlined text-[20px]">add</span>
-                      </button>
+                      <div className="min-w-0 flex-1 md:px-5">
+                        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-[#4A453E]/36">
+                          Update {savedMoment.date} / {savedMoment.time}
+                        </p>
+                        <h4 className="truncate text-lg font-bold text-[#4A453E]">{entry.name}</h4>
+                        <p className="mt-1 truncate text-xs text-[#4A453E]/55">{entry.description}</p>
+                      </div>
+
+                      <div className="mt-2 flex items-center justify-between gap-3 md:mt-0 md:gap-4">
+                        <div className="flex min-w-[88px] flex-col items-start md:items-end">
+                          <div className="flex items-baseline gap-1">
+                            <span className="font-serif-brand text-2xl font-bold text-[#4A453E]">
+                              {formatCalories(entry.calories)}
+                            </span>
+                            <span className="text-[10px] font-bold uppercase text-[#4A453E]/35">
+                              kcal
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleAddToAnalysis(entry);
+                          }}
+                          className="flex size-10 items-center justify-center rounded-full bg-[#FFF2EC] text-[#FF8A65] transition-all hover:scale-[1.03] hover:bg-[#FF8A65] hover:text-white"
+                          title="Add to today analysis"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">add</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             ) : (
               <div className="rounded-[32px] border border-dashed border-[#4A453E]/10 bg-white/40 py-20 text-center">
                 <div className="mb-4 inline-flex size-16 items-center justify-center rounded-full bg-white">
@@ -1714,6 +1719,7 @@ interface SummaryCardProps {
   value: string;
   unit: string;
   accent?: boolean;
+  className?: string;
 }
 
 interface SelectedEntryPanelProps {
@@ -2004,24 +2010,24 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
   );
 };
 
-const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, unit, accent = false }) => (
+const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, unit, accent = false, className = '' }) => (
   <div
-    className={`rounded-[24px] border p-6 shadow-sm ${
+    className={`rounded-[24px] border p-5 shadow-[0_8px_24px_rgba(74,69,62,0.08)] ${
       accent
-        ? 'border-[#FF8A65]/10 bg-[#FF8A65]/5'
-        : 'border-[#4A453E]/5 bg-white/60'
-    }`}
+        ? 'border-[#FF8A65]/18 bg-[#FFF2EC]'
+        : 'border-[#E7DED0] bg-white/92'
+    } ${className}`}
   >
     <span
       className={`mb-2 block text-[10px] font-bold uppercase tracking-widest ${
-        accent ? 'text-[#FF8A65]/60' : 'text-[#4A453E]/40'
+        accent ? 'text-[#FF8A65]/70' : 'text-[#4A453E]/40'
       }`}
     >
       {label}
     </span>
     <div className="flex items-baseline gap-1">
       <span
-        className={`font-serif-brand text-3xl font-bold ${
+        className={`font-serif-brand text-3xl font-bold leading-none ${
           accent ? 'text-[#FF8A65]' : 'text-[#4A453E]'
         }`}
       >
@@ -2029,7 +2035,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, unit, accent = 
       </span>
       <span
         className={`text-xs font-bold uppercase ${
-          accent ? 'text-[#FF8A65]/40' : 'text-[#4A453E]/30'
+          accent ? 'text-[#FF8A65]/50' : 'text-[#4A453E]/30'
         }`}
       >
         {unit}
