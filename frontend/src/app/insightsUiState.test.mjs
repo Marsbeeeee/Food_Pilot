@@ -6,6 +6,8 @@ import {
   getInsightsAnalyzeButtonText,
   getInsightsIdleHint,
   getInsightsLoadingHint,
+  getInsightsSnapshotLifecycleHint,
+  getInsightsSnapshotNotice,
   getInsightsScopeDescription,
   shouldForceReanalyze,
 } from './insightsUiState.ts';
@@ -47,4 +49,42 @@ test('force flag is enabled only for success state', () => {
   assert.equal(shouldForceReanalyze('idle'), false);
   assert.equal(shouldForceReanalyze('loading'), false);
   assert.equal(shouldForceReanalyze('error'), false);
+});
+
+test('snapshot lifecycle hint clarifies history-first and reanalyze flow', () => {
+  assert.equal(
+    getInsightsSnapshotLifecycleHint('day'),
+    '页面会优先展示该日期最近一次分析快照。Food Log 变化后不会自动同步，请点击“重新分析”获取最新结果。',
+  );
+  assert.equal(
+    getInsightsSnapshotLifecycleHint('week'),
+    '页面会优先展示本周最近一次分析快照。Food Log 变化后不会自动同步，请点击“重新分析周趋势”获取最新结果。',
+  );
+});
+
+test('snapshot notice escalates when history result is shown or selection mismatches', () => {
+  assert.deepEqual(
+    getInsightsSnapshotNotice('day', true, false),
+    {
+      level: 'warning',
+      title: '数据可能已变化',
+      detail: '当前显示的是历史分析快照，Food Log 可能已变化，请重新分析。',
+    },
+  );
+  assert.deepEqual(
+    getInsightsSnapshotNotice('week', false, true),
+    {
+      level: 'warning',
+      title: '数据可能已变化',
+      detail: '当前显示的是历史周趋势快照，Food Log 可能已变化，请重新分析周趋势。',
+    },
+  );
+  assert.deepEqual(
+    getInsightsSnapshotNotice('day', false, false),
+    {
+      level: 'info',
+      title: '当前结果为快照',
+      detail: '结果不会随 Food Log 自动更新。修改记录后，请重新分析。',
+    },
+  );
 });

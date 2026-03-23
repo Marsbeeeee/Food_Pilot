@@ -28,6 +28,8 @@ import {
   getInsightsAnalyzeButtonText,
   getInsightsIdleHint,
   getInsightsLoadingHint,
+  getInsightsSnapshotLifecycleHint,
+  getInsightsSnapshotNotice,
   getInsightsScopeDescription,
   shouldForceReanalyze,
 } from '../app/insightsUiState';
@@ -84,6 +86,13 @@ function getSelectedLogIdsForAnalysis(
       .filter((item) => logEntryIds.has(item.id))
       .map((item) => Number(item.id)),
   );
+}
+
+function areEqualNumberArrays(a: readonly number[], b: readonly number[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  return a.every((value, index) => value === b[index]);
 }
 
 export const Explorer: React.FC<ExplorerProps> = ({
@@ -861,6 +870,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const historyMatchedState = insightsHistoryLoaded
     ? resolveHistoryInsightsState(insightsCache, currentCacheKey)
     : null;
+  const isShowingHistoryResult = runtimeAnalysisState.status === 'idle' && historyMatchedState != null;
   const analysisState: AnalysisState = runtimeAnalysisState.status === 'idle'
     ? (historyMatchedState ?? IDLE_ANALYSIS_STATE)
     : runtimeAnalysisState;
@@ -895,6 +905,20 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const modeAIPanelDescription = getInsightsAIPanelDescription(mode);
   const modeIdleHint = getInsightsIdleHint(mode, filteredItems.length > 0);
   const modeLoadingHint = getInsightsLoadingHint(mode);
+  const modeSnapshotLifecycleHint = getInsightsSnapshotLifecycleHint(mode);
+  const selectedEntryIdsInResult = React.useMemo(
+    () => (analysisState.status === 'success'
+      ? normalizeSelectedLogIds(
+        analysisState.data.entries.map((entry) => Number(entry.id)),
+      )
+      : []),
+    [analysisState],
+  );
+  const hasSelectionMismatch = analysisState.status === 'success'
+    && !areEqualNumberArrays(currentSelectedLogIds, selectedEntryIdsInResult);
+  const snapshotNotice = analysisState.status === 'success'
+    ? getInsightsSnapshotNotice(mode, isShowingHistoryResult, hasSelectionMismatch)
+    : null;
   const selectedWeekSeries = weeklyTrend ? weeklyTrend.seriesByMetric[weekMetric] : null;
   const weekChartModel = React.useMemo(() => {
     if (!selectedWeekSeries || selectedWeekSeries.points.length === 0) {
@@ -1123,6 +1147,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
               <p className="text-xs font-semibold text-[#4A453E]/55">
                 {modeScopeDescription}
               </p>
+              <div className="rounded-2xl border border-[#FF8A65]/20 bg-[#FFF7F2] px-4 py-3">
+                <p className="text-xs leading-6 text-[#4A453E]/70">
+                  {modeSnapshotLifecycleHint}
+                </p>
+              </div>
             </div>
 
             {filteredItems.length === 0 ? (
@@ -1642,6 +1671,26 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
 
             {analysisState.status === 'success' && (
               <div className="space-y-6">
+                {snapshotNotice && (
+                  <div
+                    className={`rounded-2xl border px-4 py-3 ${
+                      snapshotNotice.level === 'warning'
+                        ? 'border-[#FF8A65]/35 bg-[#FFF3EE]'
+                        : 'border-[#4A453E]/10 bg-[#FFFDF8]'
+                    }`}
+                  >
+                    <p
+                      className={`text-xs font-bold ${
+                        snapshotNotice.level === 'warning' ? 'text-[#C25235]' : 'text-[#4A453E]/70'
+                      }`}
+                    >
+                      {snapshotNotice.title}
+                    </p>
+                    <p className="mt-1 text-xs leading-6 text-[#4A453E]/65">
+                      {snapshotNotice.detail}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#4A453E]/35">
                     <span className="material-symbols-outlined text-[16px] text-[#FF8A65]">summarize</span>
