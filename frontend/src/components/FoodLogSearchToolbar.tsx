@@ -385,7 +385,7 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
                   <button
                     type="button"
                     onClick={handleFilterConfirm}
-                    className="rounded-full border border-[#DEB9A9] bg-[#FBF2EA] px-5 py-2 text-xs font-semibold text-[#5A463F] transition-all duration-200 ease-out hover:border-[#C88D76] hover:bg-[#F6E7DD] active:translate-y-[1px]"
+                    className="rounded-full border border-[#FF8A65] bg-[#FF8A65] px-5 py-2 text-xs font-semibold text-white shadow-[0_8px_18px_rgba(255,138,101,0.30)] transition-all duration-200 ease-out hover:bg-[#F57D59] active:translate-y-[1px]"
                   >
                     Confirm
                   </button>
@@ -416,13 +416,13 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
                   }}
                   className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-semibold transition-all duration-200 ease-out active:translate-y-[1px] ${
                     sort === option.value
-                      ? 'bg-[#FBF2EA] text-[#4A453E]'
+                      ? 'border border-[#FF8A65] bg-[#FF8A65] text-white shadow-[0_8px_18px_rgba(255,138,101,0.30)]'
                       : 'text-[#4A453E]/75 hover:bg-[#F4EFE7]'
                   }`}
                 >
                   <span>{option.label}</span>
                   {sort === option.value && (
-                    <span className="material-symbols-outlined text-[16px] text-[#8A5D4C]">check</span>
+                    <span className="material-symbols-outlined text-[16px] text-white">check</span>
                   )}
                 </button>
               ))}
@@ -463,15 +463,15 @@ const ToolbarTrigger: React.FC<ToolbarTriggerProps> = ({
     type="button"
     onClick={onClick}
     aria-expanded={open}
-    className={`group inline-flex h-[50px] min-w-[170px] items-center justify-between gap-3 rounded-full border px-4 text-left transition-all duration-200 ease-out active:translate-y-[1px] ${
+    className={`group inline-flex h-[50px] min-w-[170px] items-center justify-between gap-3 rounded-full border px-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-200 ease-out active:translate-y-[1px] ${
       open
-        ? 'border-[#E2875E] bg-[#E98F67] text-white shadow-[0_10px_20px_rgba(233,143,103,0.34)]'
+        ? 'border-[#FF8A65] bg-[#FF8A65] text-white shadow-[0_10px_20px_rgba(255,138,101,0.34)]'
         : selected
-          ? 'border-[#E5926D] bg-[#EA936D] text-white shadow-[0_8px_16px_rgba(233,143,103,0.28)]'
-          : 'border-[#E9D6CA] bg-[#F8EDE6] text-[#8D5F4A] hover:border-[#DFB7A2] hover:bg-[#F6E6DD]'
+          ? 'border-[#FF8A65] bg-[#FF8A65] text-white shadow-[0_8px_16px_rgba(255,138,101,0.30)]'
+          : 'border-[#E5DCCE] bg-[#FCFAF5] text-[#4A453E]/72 hover:border-[#D9CEBE] hover:bg-[#F7F3EA]'
     }`}
   >
-    <span className="min-w-0 truncate text-[13px] font-bold uppercase tracking-[0.02em]">
+    <span className="min-w-0 truncate text-[13px] font-semibold">
       {label}: {value}
     </span>
     <span className={`material-symbols-outlined text-[17px] transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
@@ -492,12 +492,12 @@ const SortIconTrigger: React.FC<SortIconTriggerProps> = ({ open, selected, onCli
     onClick={onClick}
     aria-expanded={open}
     aria-label="Sort options"
-    className={`inline-flex h-[50px] w-[50px] items-center justify-center rounded-full border transition-all duration-200 ease-out active:translate-y-[1px] ${
+    className={`inline-flex h-[50px] w-[50px] items-center justify-center rounded-full border shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-200 ease-out active:translate-y-[1px] ${
       open
-        ? 'border-[#E2875E] bg-[#E98F67] text-white shadow-[0_10px_20px_rgba(233,143,103,0.34)]'
+        ? 'border-[#FF8A65] bg-[#FF8A65] text-white shadow-[0_10px_20px_rgba(255,138,101,0.34)]'
         : selected
-          ? 'border-[#E5926D] bg-[#EA936D] text-white shadow-[0_8px_16px_rgba(233,143,103,0.28)]'
-          : 'border-[#E9D6CA] bg-[#F8EDE6] text-[#8D5F4A] hover:border-[#DFB7A2] hover:bg-[#F6E6DD]'
+          ? 'border-[#FF8A65] bg-[#FF8A65] text-white shadow-[0_8px_16px_rgba(255,138,101,0.30)]'
+          : 'border-[#E5DCCE] bg-[#FCFAF5] text-[#4A453E]/72 hover:border-[#D9CEBE] hover:bg-[#F7F3EA]'
     }`}
   >
     <span className="material-symbols-outlined text-[20px]">tune</span>
@@ -516,7 +516,7 @@ const PresetButton: React.FC<PresetButtonProps> = ({ label, active, onClick }) =
     onClick={onClick}
     className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200 ease-out active:translate-y-[1px] ${
       active
-        ? 'border-[#D9B8A9] bg-[#FBF2EA] text-[#5D4B43]'
+        ? 'border-[#FF8A65] bg-[#FF8A65] text-white shadow-[0_8px_16px_rgba(255,138,101,0.30)]'
         : 'border-[#4A453E]/12 bg-[#F4F1EB] text-[#4A453E]/66 hover:bg-[#ECE7DE]'
     }`}
   >
@@ -536,7 +536,7 @@ const FilterTypeButton: React.FC<FilterTypeButtonProps> = ({ label, selected, on
     onClick={onClick}
     className={`w-full rounded-xl border px-3 py-2 text-left text-sm font-semibold transition-all duration-200 ease-out active:translate-y-[1px] ${
       selected
-        ? 'border-[#D9B8A9] bg-[#FBF2EA] text-[#4A453E]'
+        ? 'border-[#FF8A65] bg-[#FF8A65] text-white shadow-[0_8px_16px_rgba(255,138,101,0.30)]'
         : 'border-transparent text-[#4A453E]/52 hover:border-[#4A453E]/10 hover:bg-[#F2EDE4]'
     }`}
   >
