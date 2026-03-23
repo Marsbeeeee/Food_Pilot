@@ -222,7 +222,7 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
       <style>{PANEL_ANIMATION_STYLE}</style>
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
-        <label className="group flex h-14 flex-1 items-center gap-3 rounded-full border border-[#E5DCCE] bg-[#FCFAF5] px-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-200 ease-out hover:border-[#D9CEBE] focus-within:border-[#FF8A65]/45 focus-within:shadow-[0_0_0_4px_rgba(255,138,101,0.10)]">
+        <label className="group flex h-14 flex-1 items-center gap-3 rounded-full border border-[#E5DCCE] bg-[#FCFAF5] px-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-200 ease-out hover:border-[#D9CEBE] focus-within:border-[#FF8A65]/45">
           <span className="material-symbols-outlined text-[20px] text-[#4A453E]/30 transition-colors duration-200 group-hover:text-[#4A453E]/45">
             search
           </span>
@@ -385,7 +385,7 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
                   <button
                     type="button"
                     onClick={handleFilterConfirm}
-                    className="rounded-full border border-[#FF8A65] bg-[#FF8A65] px-5 py-2 text-xs font-semibold text-white shadow-[0_8px_18px_rgba(255,138,101,0.30)] transition-all duration-200 ease-out hover:bg-[#F57D59] active:translate-y-[1px]"
+                    className="rounded-full border border-[#FF8A65] bg-[#FF8A65] px-5 py-2 text-xs font-semibold text-white transition-all duration-200 ease-out hover:bg-[#F57D59] active:translate-y-[1px]"
                   >
                     Confirm
                   </button>
@@ -416,13 +416,13 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
                   }}
                   className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-semibold transition-all duration-200 ease-out active:translate-y-[1px] ${
                     sort === option.value
-                      ? 'border border-[#FF8A65] bg-[#FF8A65] text-white shadow-[0_8px_18px_rgba(255,138,101,0.30)]'
+                      ? 'border border-[#FF8A65] bg-white text-[#FF8A65]'
                       : 'text-[#4A453E]/75 hover:bg-[#F4EFE7]'
                   }`}
                 >
                   <span>{option.label}</span>
                   {sort === option.value && (
-                    <span className="material-symbols-outlined text-[16px] text-white">check</span>
+                    <span className="material-symbols-outlined text-[16px] text-[#FF8A65]">check</span>
                   )}
                 </button>
               ))}
@@ -465,9 +465,9 @@ const ToolbarTrigger: React.FC<ToolbarTriggerProps> = ({
     aria-expanded={open}
     className={`group inline-flex h-[50px] min-w-[170px] items-center justify-between gap-3 rounded-full border px-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-200 ease-out active:translate-y-[1px] ${
       open
-        ? 'border-[#FF8A65] bg-[#FF8A65] text-white shadow-[0_10px_20px_rgba(255,138,101,0.34)]'
+        ? 'border-[#FF8A65] bg-white text-[#FF8A65]'
         : selected
-          ? 'border-[#FF8A65] bg-[#FF8A65] text-white shadow-[0_8px_16px_rgba(255,138,101,0.30)]'
+          ? 'border-[#FF8A65] bg-white text-[#FF8A65]'
           : 'border-[#E5DCCE] bg-[#FCFAF5] text-[#4A453E]/72 hover:border-[#D9CEBE] hover:bg-[#F7F3EA]'
     }`}
   >
@@ -494,9 +494,9 @@ const SortIconTrigger: React.FC<SortIconTriggerProps> = ({ open, selected, onCli
     aria-label="Sort options"
     className={`inline-flex h-[50px] w-[50px] items-center justify-center rounded-full border shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-200 ease-out active:translate-y-[1px] ${
       open
-        ? 'border-[#FF8A65] bg-[#FF8A65] text-white shadow-[0_10px_20px_rgba(255,138,101,0.34)]'
+        ? 'border-[#FF8A65] bg-white text-[#FF8A65]'
         : selected
-          ? 'border-[#FF8A65] bg-[#FF8A65] text-white shadow-[0_8px_16px_rgba(255,138,101,0.30)]'
+          ? 'border-[#FF8A65] bg-white text-[#FF8A65]'
           : 'border-[#E5DCCE] bg-[#FCFAF5] text-[#4A453E]/72 hover:border-[#D9CEBE] hover:bg-[#F7F3EA]'
     }`}
   >
@@ -516,7 +516,7 @@ const PresetButton: React.FC<PresetButtonProps> = ({ label, active, onClick }) =
     onClick={onClick}
     className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200 ease-out active:translate-y-[1px] ${
       active
-        ? 'border-[#FF8A65] bg-[#FF8A65] text-white shadow-[0_8px_16px_rgba(255,138,101,0.30)]'
+        ? 'border-[#FF8A65] bg-white text-[#FF8A65]'
         : 'border-[#4A453E]/12 bg-[#F4F1EB] text-[#4A453E]/66 hover:bg-[#ECE7DE]'
     }`}
   >
@@ -536,7 +536,7 @@ const FilterTypeButton: React.FC<FilterTypeButtonProps> = ({ label, selected, on
     onClick={onClick}
     className={`w-full rounded-xl border px-3 py-2 text-left text-sm font-semibold transition-all duration-200 ease-out active:translate-y-[1px] ${
       selected
-        ? 'border-[#FF8A65] bg-[#FF8A65] text-white shadow-[0_8px_16px_rgba(255,138,101,0.30)]'
+        ? 'border-[#FF8A65] bg-white text-[#FF8A65]'
         : 'border-transparent text-[#4A453E]/52 hover:border-[#4A453E]/10 hover:bg-[#F2EDE4]'
     }`}
   >
