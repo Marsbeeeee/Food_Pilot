@@ -203,6 +203,12 @@ npm run test:e2e
 python -m pytest backend/tests
 ```
 
+**中文食物知识库 RAG 校验**
+
+```bash
+python scripts/validate_food_kb_rag.py
+```
+
 **Release gate (recommended)**
 
 ```powershell

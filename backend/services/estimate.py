@@ -3,12 +3,17 @@ from typing import Any
 from urllib import error, request
 
 from backend.config.estimate import get_estimate_ai_config
-from backend.schemas.estimate import EstimateResult
+from backend.schemas.knowledge import KnowledgeReference
+from backend.schemas.estimate import EstimateItem, EstimateResult
 from backend.schemas.profile import ProfileOut
 from backend.services.ai_client import call_ai
 from backend.services.estimate_contract import (
     ESTIMATE_RESPONSE_INSTRUCTION,
     ESTIMATE_RESPONSE_SCHEMA,
+)
+from backend.services.food_knowledge import (
+    build_single_dish_ingredient_breakdown,
+    retrieve_food_knowledge,
 )
 from backend.services.estimate_parser import parse_estimate_payload
 from backend.services.profile_service import get_profile
@@ -81,10 +86,15 @@ def estimate_meal(
     profile_id: int | None = None,
     user_id: int | None = None,
 ) -> EstimateResult:
+    retrieved_knowledge = retrieve_food_knowledge(query, scenario="estimate")
     profile_context = _load_profile_context(profile_id, user_id)
-    raw_response = _call_ai_api(query, profile_context)
+    raw_response = _call_ai_api(
+        query,
+        profile_context,
+        food_knowledge_context=retrieved_knowledge.context_text if retrieved_knowledge.has_hits else None,
+    )
     try:
-        return parse_estimate_payload(raw_response)
+        parsed = parse_estimate_payload(raw_response)
     except ValueError as exc:
         if str(exc) in {
             "AI response is missing item details",
@@ -93,10 +103,51 @@ def estimate_meal(
             raise IncompleteAIResponseError(str(exc)) from exc
         raise InvalidAIResponseError(str(exc)) from exc
 
+    if _needs_multi_food_retry(parsed, retrieved_knowledge.hit_count):
+        retry_raw_response = _call_ai_api(
+            query,
+            profile_context,
+            food_knowledge_context=retrieved_knowledge.context_text if retrieved_knowledge.has_hits else None,
+            force_min_items=min(max(retrieved_knowledge.hit_count, 2), 3),
+        )
+        try:
+            retry_parsed = parse_estimate_payload(retry_raw_response)
+            if len(retry_parsed.items) > len(parsed.items):
+                parsed = retry_parsed
+        except ValueError:
+            # Keep the first valid parse to avoid breaking the main estimate flow.
+            pass
+
+    dish_breakdown = _maybe_build_single_dish_breakdown(parsed, query)
+    if dish_breakdown:
+        parsed = parsed.model_copy(
+            update={
+                "items": [
+                    EstimateItem.model_validate(item)
+                    for item in dish_breakdown
+                ],
+                "itemization_mode": "single_dish_ingredients",
+            }
+        )
+
+    if retrieved_knowledge.references:
+        parsed = parsed.model_copy(
+            update={
+                "knowledge_refs": [
+                    KnowledgeReference.model_validate(ref)
+                    for ref in retrieved_knowledge.references
+                ]
+            }
+        )
+    return parsed
+
 
 def _call_ai_api(
     query: str,
     profile_context: str | None = None,
+    *,
+    food_knowledge_context: str | None = None,
+    force_min_items: int | None = None,
 ) -> dict[str, Any]:
     config = get_estimate_ai_config()
     if not config.api_key:
@@ -105,6 +156,8 @@ def _call_ai_api(
     system_prompt = _build_estimate_system_instruction(
         config.system_prompt,
         profile_context,
+        food_knowledge_context=food_knowledge_context,
+        force_min_items=force_min_items,
     )
     try:
         return call_ai(
@@ -144,6 +197,9 @@ def _load_profile_context(
 def _build_estimate_system_instruction(
     system_prompt: str,
     profile_context: str | None = None,
+    *,
+    food_knowledge_context: str | None = None,
+    force_min_items: int | None = None,
 ) -> str:
     parts = [system_prompt.strip()]
 
@@ -160,8 +216,47 @@ def _build_estimate_system_instruction(
             ]
         )
 
+    if food_knowledge_context:
+        parts.extend(
+            [
+                (
+                    "You are given a retrieved Chinese food knowledge context. "
+                    "Use it as factual prior for dish/ingredient nutrition and portion assumptions."
+                ),
+                food_knowledge_context,
+            ]
+        )
+    if force_min_items and force_min_items > 1:
+        parts.append(
+            (
+                "Important formatting rule for this request: the user likely mentioned multiple foods. "
+                f"Return at least {force_min_items} distinct items in `items`, one major food per item. "
+                "Do not merge multiple foods into a single item row."
+            )
+        )
     parts.append(ESTIMATE_RESPONSE_INSTRUCTION)
     return "\n\n".join(parts)
+
+
+def _needs_multi_food_retry(result: EstimateResult, knowledge_hit_count: int) -> bool:
+    if knowledge_hit_count < 2:
+        return False
+    return len(result.items) < 2
+
+
+def _maybe_build_single_dish_breakdown(
+    result: EstimateResult,
+    query: str,
+) -> list[dict[str, str]] | None:
+    if len(result.items) != 1:
+        return None
+    primary_item = result.items[0]
+    return build_single_dish_ingredient_breakdown(
+        query,
+        primary_item_name=primary_item.name,
+        total_calories_text=result.total_calories,
+        primary_portion_text=primary_item.portion,
+    )
 
 
 def _build_profile_context(profile: ProfileOut) -> str:

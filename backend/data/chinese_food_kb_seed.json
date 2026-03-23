@@ -1,0 +1,296 @@
+{
+  "version": "2026-03-23",
+  "scope": "cn_core_v1",
+  "sources": [
+    {
+      "id": "cnfct-6th",
+      "name": "中国食物成分表（第6版）",
+      "type": "official_food_composition",
+      "updated_at": "2018-01-01"
+    },
+    {
+      "id": "dietary-guideline-2022",
+      "name": "中国居民膳食指南（2022）",
+      "type": "dietary_guideline",
+      "updated_at": "2022-04-26"
+    },
+    {
+      "id": "food-pilot-curated-portions-2026q1",
+      "name": "Food Pilot 份量经验库（2026Q1）",
+      "type": "internal_curated",
+      "updated_at": "2026-03-23"
+    }
+  ],
+  "foods": [
+    {
+      "id": "white-rice-cooked",
+      "canonical_name": "米饭",
+      "aliases": ["白米饭", "一碗米饭", "米饭(熟)"],
+      "category": "staple",
+      "nutrition_per_100g": { "kcal": 116, "protein_g": 2.6, "carbs_g": 25.9, "fat_g": 0.3 },
+      "portion_hints": [{ "name": "小碗", "grams": 150 }, { "name": "中碗", "grams": 200 }],
+      "cooking_notes": "蒸煮米饭热量较稳定，炒饭会因烹调油增加热量。",
+      "source_ids": ["cnfct-6th", "food-pilot-curated-portions-2026q1"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "noodle-cooked",
+      "canonical_name": "面条",
+      "aliases": ["挂面", "熟面条", "一碗面"],
+      "category": "staple",
+      "nutrition_per_100g": { "kcal": 137, "protein_g": 4.9, "carbs_g": 27.2, "fat_g": 0.8 },
+      "portion_hints": [{ "name": "一碗", "grams": 220 }],
+      "cooking_notes": "汤面和拌面差异主要来自汤底、浇头和油脂。",
+      "source_ids": ["cnfct-6th"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "mantou-steamed",
+      "canonical_name": "馒头",
+      "aliases": ["白馒头", "一个馒头"],
+      "category": "staple",
+      "nutrition_per_100g": { "kcal": 223, "protein_g": 7.0, "carbs_g": 47.0, "fat_g": 1.1 },
+      "portion_hints": [{ "name": "中等大小", "grams": 80 }],
+      "cooking_notes": "馒头属于高碳水主食，适合和蛋白类食物搭配。",
+      "source_ids": ["cnfct-6th"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "baozi-pork-cabbage",
+      "canonical_name": "猪肉白菜包子",
+      "aliases": ["包子", "肉包", "两个包子"],
+      "category": "dish",
+      "nutrition_per_100g": { "kcal": 230, "protein_g": 8.5, "carbs_g": 31.0, "fat_g": 8.0 },
+      "portion_hints": [{ "name": "1个", "grams": 90 }, { "name": "2个", "grams": 180 }],
+      "cooking_notes": "不同馅料和包子大小差异明显，份量需结合个数估算。",
+      "source_ids": ["cnfct-6th", "food-pilot-curated-portions-2026q1"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "dumpling-pork-cabbage",
+      "canonical_name": "猪肉白菜水饺",
+      "aliases": ["水饺", "饺子", "一盘饺子"],
+      "category": "dish",
+      "nutrition_per_100g": { "kcal": 218, "protein_g": 9.2, "carbs_g": 28.0, "fat_g": 7.6 },
+      "portion_hints": [{ "name": "10个", "grams": 250 }],
+      "cooking_notes": "蘸料会额外增加钠和热量，估算时应单独说明。",
+      "source_ids": ["cnfct-6th"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "chicken-breast-cooked",
+      "canonical_name": "鸡胸肉",
+      "aliases": ["鸡胸", "煎鸡胸", "烤鸡胸"],
+      "category": "protein",
+      "nutrition_per_100g": { "kcal": 165, "protein_g": 31.0, "carbs_g": 0.0, "fat_g": 3.6 },
+      "portion_hints": [{ "name": "一块", "grams": 120 }],
+      "cooking_notes": "同重量下鸡胸肉蛋白密度高，适合减脂与控能量方案。",
+      "source_ids": ["cnfct-6th", "dietary-guideline-2022"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "cucumber",
+      "canonical_name": "黄瓜",
+      "aliases": ["青瓜"],
+      "category": "vegetable",
+      "nutrition_per_100g": { "kcal": 15, "protein_g": 0.8, "carbs_g": 2.9, "fat_g": 0.2 },
+      "portion_hints": [{ "name": "1根中等黄瓜", "grams": 200 }],
+      "cooking_notes": "热量较低，主要提供体积和纤维。",
+      "source_ids": ["cnfct-6th"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "peanut",
+      "canonical_name": "花生米",
+      "aliases": ["花生", "熟花生"],
+      "category": "nut",
+      "nutrition_per_100g": { "kcal": 567, "protein_g": 25.8, "carbs_g": 16.1, "fat_g": 49.2 },
+      "portion_hints": [{ "name": "一小把", "grams": 20 }],
+      "cooking_notes": "能量密度高，少量即可显著增加脂肪与总热量。",
+      "source_ids": ["cnfct-6th"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "cooking-oil",
+      "canonical_name": "烹调油",
+      "aliases": ["食用油", "炒菜油"],
+      "category": "fat",
+      "nutrition_per_100g": { "kcal": 884, "protein_g": 0.0, "carbs_g": 0.0, "fat_g": 100.0 },
+      "portion_hints": [{ "name": "1汤匙", "grams": 10 }],
+      "cooking_notes": "烹调油会明显抬高菜品总热量，估算时应优先关注。",
+      "source_ids": ["cnfct-6th"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "egg-boiled",
+      "canonical_name": "鸡蛋",
+      "aliases": ["水煮蛋", "一个鸡蛋", "两个鸡蛋"],
+      "category": "protein",
+      "nutrition_per_100g": { "kcal": 144, "protein_g": 12.8, "carbs_g": 1.7, "fat_g": 9.6 },
+      "portion_hints": [{ "name": "1个", "grams": 50 }, { "name": "2个", "grams": 100 }],
+      "cooking_notes": "煎蛋通常较水煮蛋额外增加油脂。",
+      "source_ids": ["cnfct-6th"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "tofu-firm",
+      "canonical_name": "北豆腐",
+      "aliases": ["豆腐", "老豆腐", "一块豆腐"],
+      "category": "protein",
+      "nutrition_per_100g": { "kcal": 81, "protein_g": 8.1, "carbs_g": 1.9, "fat_g": 4.0 },
+      "portion_hints": [{ "name": "半盒", "grams": 150 }],
+      "cooking_notes": "豆腐是常见植物蛋白来源，烹调方式会显著影响总热量。",
+      "source_ids": ["cnfct-6th", "dietary-guideline-2022"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "beef-lean-cooked",
+      "canonical_name": "瘦牛肉",
+      "aliases": ["牛肉", "牛腱", "卤牛肉"],
+      "category": "protein",
+      "nutrition_per_100g": { "kcal": 187, "protein_g": 26.4, "carbs_g": 0.0, "fat_g": 8.2 },
+      "portion_hints": [{ "name": "一份", "grams": 120 }],
+      "cooking_notes": "牛肉蛋白含量高，肥瘦部位差异较大。",
+      "source_ids": ["cnfct-6th"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "salmon-cooked",
+      "canonical_name": "三文鱼",
+      "aliases": ["烤三文鱼", "煎三文鱼"],
+      "category": "protein",
+      "nutrition_per_100g": { "kcal": 208, "protein_g": 20.4, "carbs_g": 0.0, "fat_g": 13.4 },
+      "portion_hints": [{ "name": "一块", "grams": 120 }],
+      "cooking_notes": "三文鱼脂肪以不饱和脂肪酸为主，但仍需关注总量。",
+      "source_ids": ["cnfct-6th", "dietary-guideline-2022"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "kungpao-chicken",
+      "canonical_name": "宫保鸡丁",
+      "aliases": ["宫保鸡丁盖饭", "宫保鸡丁套餐"],
+      "category": "dish",
+      "nutrition_per_100g": { "kcal": 175, "protein_g": 12.0, "carbs_g": 8.0, "fat_g": 10.0 },
+      "portion_hints": [{ "name": "一份", "grams": 260 }],
+      "cooking_notes": "含油和糖调味较多，配米饭后总热量上升明显。",
+      "ingredient_breakdown": [
+        { "name": "鸡胸肉", "ratio": 0.5, "note": "主蛋白来源" },
+        { "name": "黄瓜", "ratio": 0.2, "note": "配菜，热量较低" },
+        { "name": "花生米", "ratio": 0.15, "note": "提供脂肪与口感" },
+        { "name": "烹调油", "ratio": 0.15, "note": "烹调和调味带来的额外热量" }
+      ],
+      "source_ids": ["cnfct-6th", "food-pilot-curated-portions-2026q1"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "mapo-tofu",
+      "canonical_name": "麻婆豆腐",
+      "aliases": ["一份麻婆豆腐", "麻婆豆腐盖饭"],
+      "category": "dish",
+      "nutrition_per_100g": { "kcal": 146, "protein_g": 7.5, "carbs_g": 5.8, "fat_g": 10.1 },
+      "portion_hints": [{ "name": "一份", "grams": 280 }],
+      "cooking_notes": "油脂和肉末比例影响热量，常与米饭一起食用。",
+      "source_ids": ["cnfct-6th", "food-pilot-curated-portions-2026q1"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "braised-pork-belly",
+      "canonical_name": "红烧肉",
+      "aliases": ["一份红烧肉", "红烧肉盖饭"],
+      "category": "dish",
+      "nutrition_per_100g": { "kcal": 430, "protein_g": 13.0, "carbs_g": 7.0, "fat_g": 39.0 },
+      "portion_hints": [{ "name": "一份", "grams": 180 }],
+      "cooking_notes": "脂肪含量高，估算时应优先确认分量和肥瘦比例。",
+      "source_ids": ["cnfct-6th"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "beef-noodle-soup",
+      "canonical_name": "牛肉面",
+      "aliases": ["一碗牛肉面", "牛肉汤面"],
+      "category": "dish",
+      "nutrition_per_100g": { "kcal": 132, "protein_g": 6.2, "carbs_g": 17.0, "fat_g": 4.0 },
+      "portion_hints": [{ "name": "一大碗", "grams": 550 }],
+      "cooking_notes": "牛肉面热量通常由面量、汤底油脂和浇头决定。",
+      "source_ids": ["cnfct-6th", "food-pilot-curated-portions-2026q1"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "hotpot-spicy-mix",
+      "canonical_name": "麻辣烫",
+      "aliases": ["一碗麻辣烫", "麻辣烫套餐"],
+      "category": "dish",
+      "nutrition_per_100g": { "kcal": 150, "protein_g": 7.5, "carbs_g": 10.5, "fat_g": 8.5 },
+      "portion_hints": [{ "name": "常见一碗", "grams": 500 }],
+      "cooking_notes": "不同食材组合差异巨大，估算需重点拆分食材和汤底。",
+      "source_ids": ["food-pilot-curated-portions-2026q1"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "xihongshi-jidan-noodle",
+      "canonical_name": "西红柿鸡蛋面",
+      "aliases": ["番茄鸡蛋面", "一碗番茄鸡蛋面"],
+      "category": "dish",
+      "nutrition_per_100g": { "kcal": 118, "protein_g": 4.8, "carbs_g": 16.2, "fat_g": 3.7 },
+      "portion_hints": [{ "name": "一碗", "grams": 480 }],
+      "cooking_notes": "油量和鸡蛋数量会影响整体热量与脂肪。",
+      "source_ids": ["food-pilot-curated-portions-2026q1"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "fried-dough-stick",
+      "canonical_name": "油条",
+      "aliases": ["一根油条", "两根油条"],
+      "category": "snack",
+      "nutrition_per_100g": { "kcal": 388, "protein_g": 6.9, "carbs_g": 47.2, "fat_g": 19.1 },
+      "portion_hints": [{ "name": "1根", "grams": 55 }],
+      "cooking_notes": "油炸食品能量密度高，早餐组合容易超标。",
+      "source_ids": ["cnfct-6th"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "soy-milk-unsweetened",
+      "canonical_name": "无糖豆浆",
+      "aliases": ["豆浆", "一杯豆浆"],
+      "category": "drink",
+      "nutrition_per_100g": { "kcal": 31, "protein_g": 2.8, "carbs_g": 1.8, "fat_g": 1.5 },
+      "portion_hints": [{ "name": "1杯", "grams": 300 }],
+      "cooking_notes": "含糖豆浆热量会明显高于无糖版本。",
+      "source_ids": ["cnfct-6th"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "bubble-tea-standard",
+      "canonical_name": "珍珠奶茶",
+      "aliases": ["奶茶", "全糖奶茶", "一杯奶茶"],
+      "category": "drink",
+      "nutrition_per_100g": { "kcal": 88, "protein_g": 0.6, "carbs_g": 18.8, "fat_g": 1.2 },
+      "portion_hints": [{ "name": "中杯", "grams": 500 }],
+      "cooking_notes": "糖度和配料（珍珠、奶盖）是热量差异的主要来源。",
+      "source_ids": ["food-pilot-curated-portions-2026q1"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "yogurt-plain",
+      "canonical_name": "原味酸奶",
+      "aliases": ["酸奶", "无糖酸奶", "一杯酸奶"],
+      "category": "snack",
+      "nutrition_per_100g": { "kcal": 72, "protein_g": 3.1, "carbs_g": 9.0, "fat_g": 2.7 },
+      "portion_hints": [{ "name": "1杯", "grams": 200 }],
+      "cooking_notes": "风味酸奶通常含糖更高，推荐优先无糖款。",
+      "source_ids": ["cnfct-6th", "dietary-guideline-2022"],
+      "updated_at": "2026-03-23"
+    },
+    {
+      "id": "banana",
+      "canonical_name": "香蕉",
+      "aliases": ["一根香蕉", "香蕉一根"],
+      "category": "fruit",
+      "nutrition_per_100g": { "kcal": 93, "protein_g": 1.4, "carbs_g": 22.0, "fat_g": 0.2 },
+      "portion_hints": [{ "name": "中等大小1根", "grams": 120 }],
+      "cooking_notes": "适合训练前后补充碳水，但应结合全天总量。",
+      "source_ids": ["cnfct-6th", "dietary-guideline-2022"],
+      "updated_at": "2026-03-23"
+    }
+  ]
+}

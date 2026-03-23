@@ -48,6 +48,17 @@ class EstimatePromptContextTests(unittest.TestCase):
         self.assertIn("Base prompt", system_instruction)
         self.assertNotIn("Use the following user profile context", system_instruction)
 
+    def test_system_instruction_includes_food_knowledge_context_when_available(self) -> None:
+        system_instruction = _build_estimate_system_instruction(
+            "Base prompt",
+            None,
+            food_knowledge_context="Chinese food knowledge context: 牛肉面 每100g 132 kcal",
+        )
+
+        self.assertIn("Base prompt", system_instruction)
+        self.assertIn("Chinese food knowledge context", system_instruction)
+        self.assertIn("牛肉面", system_instruction)
+
 
 if __name__ == "__main__":
     unittest.main()

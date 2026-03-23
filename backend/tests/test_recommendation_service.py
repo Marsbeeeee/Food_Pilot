@@ -68,6 +68,16 @@ class RecommendationServiceTests(unittest.TestCase):
         self.assertIn("auxiliary fallback", system_instruction)
         self.assertIn("Do not expand text requests into a third complex capability", system_instruction)
 
+    def test_build_guidance_system_instruction_includes_food_knowledge_context_when_available(self) -> None:
+        system_instruction = _build_guidance_system_instruction(
+            response_mode="meal_recommendation",
+            profile_context=None,
+            food_knowledge_context="Chinese food knowledge context: 珍珠奶茶 每100g 88 kcal",
+        )
+
+        self.assertIn("Chinese food knowledge context", system_instruction)
+        self.assertIn("珍珠奶茶", system_instruction)
+
     def test_build_profile_context_contains_constraints(self) -> None:
         profile = ProfileOut(
             id=8,

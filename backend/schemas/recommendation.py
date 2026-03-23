@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict, field_validator
+from backend.schemas.knowledge import KnowledgeReference
 
 
 class GuidanceReply(BaseModel):
@@ -7,6 +8,7 @@ class GuidanceReply(BaseModel):
     title: str
     description: str
     response: str
+    knowledge_refs: list[KnowledgeReference] | None = None
 
     @field_validator("title", "description", "response")
     @classmethod

@@ -10,6 +10,9 @@ def split_estimate_by_items(estimate: EstimateResult) -> list[EstimateResult]:
     When the estimate contains multiple food items, split into separate EstimateResult
     objects so each food can be displayed individually.
     """
+    if getattr(estimate, "itemization_mode", None) == "single_dish_ingredients":
+        return [estimate]
+
     if len(estimate.items) <= 1:
         return [estimate]
 

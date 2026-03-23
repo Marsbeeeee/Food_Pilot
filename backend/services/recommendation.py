@@ -6,8 +6,10 @@ from pydantic import ValidationError
 
 from backend.config.estimate import get_estimate_ai_config
 from backend.services.ai_client import call_ai
+from backend.schemas.knowledge import KnowledgeReference
 from backend.schemas.profile import ProfileOut
 from backend.schemas.recommendation import GuidanceReply
+from backend.services.food_knowledge import retrieve_food_knowledge
 from backend.services.profile_service import get_profile
 from backend.services.recommendation_contract import (
     GUIDANCE_RESPONSE_INSTRUCTIONS,
@@ -137,9 +139,15 @@ def _generate_guidance(
     # 统一在入口尝试加载 Profile：如果有 profile_id，则始终加载 Profile 对象；
     # 若未设置或加载失败，则使用显式的占位（profile=None），但仍以一致的方式向下传递。
     _, profile_context = _load_profile_and_context(profile_id, user_id)
-    raw_response = _call_ai_api(query, response_mode=response_mode, profile_context=profile_context)
+    retrieved_knowledge = retrieve_food_knowledge(query, scenario=response_mode)
+    raw_response = _call_ai_api(
+        query,
+        response_mode=response_mode,
+        profile_context=profile_context,
+        food_knowledge_context=retrieved_knowledge.context_text if retrieved_knowledge.has_hits else None,
+    )
     try:
-        return _parse_guidance_payload(raw_response, response_mode=response_mode)
+        result = _parse_guidance_payload(raw_response, response_mode=response_mode)
     except (InvalidAIResponseError, IncompleteAIResponseError):
         raise
     except ValueError as exc:
@@ -148,6 +156,16 @@ def _generate_guidance(
         raise InvalidAIResponseError(str(exc)) from exc
     except Exception as exc:
         raise InvalidAIResponseError(f"Unexpected error: {exc!s}") from exc
+    if retrieved_knowledge.references:
+        result = result.model_copy(
+            update={
+                "knowledge_refs": [
+                    KnowledgeReference.model_validate(ref)
+                    for ref in retrieved_knowledge.references
+                ]
+            }
+        )
+    return result
 
 
 def _call_ai_api(
@@ -155,6 +173,7 @@ def _call_ai_api(
     *,
     response_mode: str,
     profile_context: str | None = None,
+    food_knowledge_context: str | None = None,
 ) -> dict[str, Any]:
     config = get_estimate_ai_config()
     if not config.api_key:
@@ -163,6 +182,7 @@ def _call_ai_api(
     system_prompt = _build_guidance_system_instruction(
         response_mode=response_mode,
         profile_context=profile_context,
+        food_knowledge_context=food_knowledge_context,
     )
     try:
         return call_ai(
@@ -202,6 +222,7 @@ def _load_profile_and_context(
 def _build_guidance_system_instruction(
     response_mode: str,
     profile_context: str | None = None,
+    food_knowledge_context: str | None = None,
 ) -> str:
     """构建推荐/文本回复的系统指令。"""
     instructions = GUIDANCE_RESPONSE_INSTRUCTIONS.get(
@@ -211,6 +232,16 @@ def _build_guidance_system_instruction(
     parts = [DEFAULT_RECOMMENDATION_SYSTEM_PROMPT, instructions]
     if profile_context:
         parts.append(profile_context)
+    if food_knowledge_context:
+        parts.extend(
+            [
+                (
+                    "You are given a retrieved Chinese food knowledge context. "
+                    "Use it as factual prior when discussing Chinese ingredients and dishes."
+                ),
+                food_knowledge_context,
+            ]
+        )
     return "\n\n".join(parts)
 
 

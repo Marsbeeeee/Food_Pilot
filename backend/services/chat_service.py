@@ -624,6 +624,7 @@ def _build_meal_recommendation_response_with_conn(
                     title=warning_title,
                     description=warning_description,
                     content=warning_content,
+                    knowledge_refs=None,
                 )
 
     return _create_meal_recommendation_message_with_conn(
@@ -633,6 +634,7 @@ def _build_meal_recommendation_response_with_conn(
         title=recommendation.title,
         description=recommendation.description,
         content=recommendation.response,
+        knowledge_refs=getattr(recommendation, "knowledge_refs", None),
     )
 
 
@@ -650,6 +652,7 @@ def _build_text_response_with_conn(
         user_id,
         session_id,
         content=reply.response,
+        knowledge_refs=getattr(reply, "knowledge_refs", None),
     )
 
 
@@ -667,6 +670,7 @@ def _create_estimate_result_message_with_conn(
     # keep result_* as combined for Food Log save compatibility.
     estimates_list = estimates if estimates is not None else [estimate]
     payload_json: str | None = None
+    knowledge_refs = getattr(estimate, "knowledge_refs", None)
     if len(estimates_list) > 1:
         payload_obj = {
             "estimates": [
@@ -681,7 +685,22 @@ def _create_estimate_result_message_with_conn(
             ],
             "suggestion": estimate.suggestion,
         }
+        if knowledge_refs:
+            payload_obj["knowledge_refs"] = [
+                ref.model_dump() if hasattr(ref, "model_dump") else ref
+                for ref in knowledge_refs
+            ]
         payload_json = json.dumps(payload_obj, ensure_ascii=False)
+    elif knowledge_refs:
+        payload_json = json.dumps(
+            {
+                "knowledge_refs": [
+                    ref.model_dump() if hasattr(ref, "model_dump") else ref
+                    for ref in knowledge_refs
+                ]
+            },
+            ensure_ascii=False,
+        )
 
     assistant_message = create_message_record(
         conn,
@@ -713,14 +732,18 @@ def _create_meal_recommendation_message_with_conn(
     title: str,
     description: str,
     content: str,
+    knowledge_refs: list | None,
 ) -> dict[str, object]:
-    payload_json = json.dumps(
-        {
-            "title": title,
-            "description": description,
-        },
-        ensure_ascii=False,
-    )
+    payload_obj: dict[str, object] = {
+        "title": title,
+        "description": description,
+    }
+    if knowledge_refs:
+        payload_obj["knowledge_refs"] = [
+            ref.model_dump() if hasattr(ref, "model_dump") else ref
+            for ref in knowledge_refs
+        ]
+    payload_json = json.dumps(payload_obj, ensure_ascii=False)
     return create_message_record(
         conn,
         session_id,
@@ -738,7 +761,14 @@ def _create_text_message_with_conn(
     session_id: int,
     *,
     content: str,
+    knowledge_refs: list | None = None,
 ) -> dict[str, object]:
+    payload_obj: dict[str, object] = {"text": content}
+    if knowledge_refs:
+        payload_obj["knowledge_refs"] = [
+            ref.model_dump() if hasattr(ref, "model_dump") else ref
+            for ref in knowledge_refs
+        ]
     return create_message_record(
         conn,
         session_id,
@@ -746,6 +776,7 @@ def _create_text_message_with_conn(
         "assistant",
         TEXT_MESSAGE_TYPE,
         content=content,
+        payload_json=json.dumps(payload_obj, ensure_ascii=False),
     )
 
 

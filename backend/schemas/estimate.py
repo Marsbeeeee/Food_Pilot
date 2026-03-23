@@ -1,6 +1,7 @@
 from typing import Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from backend.schemas.knowledge import KnowledgeReference
 
 
 class EstimateRequest(BaseModel):
@@ -103,6 +104,16 @@ class EstimateResult(BaseModel):
         validation_alias=AliasChoices("total_calories", "totalCalories", "total"),
     )
     suggestion: str
+    itemization_mode: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("itemization_mode", "itemizationMode"),
+        serialization_alias="itemization_mode",
+    )
+    knowledge_refs: list[KnowledgeReference] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("knowledge_refs", "knowledgeRefs"),
+        serialization_alias="knowledge_refs",
+    )
 
 
 class EstimateErrorField(BaseModel):

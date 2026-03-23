@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from backend.schemas.estimate import EstimateItem
+from backend.schemas.knowledge import KnowledgeReference
 
 
 ChatMessageType = Literal["text", "meal_estimate", "meal_recommendation"]
@@ -82,6 +83,7 @@ class ChatMessagePayload(BaseModel):
     total: str | None = None
     estimates: list[EstimateBlockPayload] | None = None
     suggestion: str | None = None
+    knowledge_refs: list[KnowledgeReference] | None = None
 
 
 class ChatMessageOut(BaseModel):
