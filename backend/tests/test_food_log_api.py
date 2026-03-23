@@ -3,6 +3,8 @@ import os
 import unittest
 from unittest.mock import patch
 
+from fastapi import HTTPException
+
 from backend.database.init_db import init_db
 from backend.routers.food_log import (
     get_food_log_entry,
@@ -475,6 +477,110 @@ class FoodLogApiTests(unittest.TestCase):
         )
         self.assertEqual(len(entries), 1)
         self.assertEqual(entries[0].id, payload["foodLogId"])
+
+    def test_save_food_log_entry_with_image_defaults_audit_fields(self) -> None:
+        request = FoodLogSaveRequest.model_validate(
+            {
+                "sourceType": "manual",
+                "mealDescription": "beef bowl",
+                "resultTitle": "Beef Bowl",
+                "resultDescription": "Manual image save.",
+                "totalCalories": "430 kcal",
+                "ingredients": [],
+                "image": " https://img.example/beef.jpg ",
+                "isManual": True,
+            }
+        )
+
+        response = save_food_log_entry(
+            request=request,
+            current_user=self.user,
+        )
+        payload = response.model_dump(by_alias=True, exclude_none=True)
+
+        self.assertEqual(payload["image"], "https://img.example/beef.jpg")
+        self.assertEqual(payload["imageSource"], "manual")
+        self.assertEqual(payload["imageLicense"], "user_owned")
+
+    def test_save_food_log_entry_rejects_image_metadata_without_image(self) -> None:
+        request = FoodLogSaveRequest.model_validate(
+            {
+                "sourceType": "manual",
+                "mealDescription": "beef bowl",
+                "resultTitle": "Beef Bowl",
+                "resultDescription": "Invalid image metadata.",
+                "totalCalories": "430 kcal",
+                "ingredients": [],
+                "imageSource": "manual",
+                "imageLicense": "user_owned",
+                "isManual": True,
+            }
+        )
+
+        with self.assertRaises(HTTPException) as exc:
+            save_food_log_entry(
+                request=request,
+                current_user=self.user,
+            )
+
+        self.assertEqual(exc.exception.status_code, 400)
+        self.assertIn("require image", str(exc.exception.detail))
+
+    def test_patch_food_log_entry_clears_image_metadata_when_image_is_empty(self) -> None:
+        created = create_food_log(
+            self.user_id,
+            "manual",
+            meal_description="beef bowl",
+            result_title="Beef Bowl",
+            result_description="Manual image save.",
+            total_calories="430 kcal",
+            ingredients=[],
+            image="https://img.example/beef.jpg",
+            image_source="manual",
+            image_license="user_owned",
+            is_manual=True,
+        )
+
+        response = patch_food_log_entry(
+            int(created["id"]),
+            request=FoodLogPatchRequest.model_validate(
+                {
+                    "image": "",
+                }
+            ),
+            current_user=self.user,
+        )
+        payload = response.model_dump(by_alias=True, exclude_none=True)
+
+        self.assertNotIn("image", payload)
+        self.assertNotIn("imageSource", payload)
+        self.assertNotIn("imageLicense", payload)
+
+    def test_save_food_log_from_estimate_with_image_defaults_audit_fields(self) -> None:
+        request = FoodLogFromEstimateRequest.model_validate(
+            {
+                "mealDescription": "oatmeal bowl",
+                "clientRequestId": "estimate-with-image",
+                "estimate": _build_estimate_result(
+                    title="Oatmeal Bowl",
+                    description="Oats with banana and milk.",
+                    total_calories="320 kcal",
+                    suggestion="Add nuts for more texture.",
+                ).model_dump(),
+                "image": "https://img.example/oatmeal.jpg",
+                "mealOccurredAt": "2026-03-14 09:30:00",
+            }
+        )
+
+        response = save_food_log_from_estimate_entry(
+            request=request,
+            current_user=self.user,
+        )
+        payload = response.model_dump(by_alias=True, exclude_none=True)
+
+        self.assertEqual(payload["foodLog"]["image"], "https://img.example/oatmeal.jpg")
+        self.assertEqual(payload["foodLog"]["imageSource"], "estimate_api")
+        self.assertEqual(payload["foodLog"]["imageLicense"], "user_owned")
 
     def test_save_food_log_entry_from_chat_estimate_succeeds(self) -> None:
         """

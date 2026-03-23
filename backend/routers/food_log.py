@@ -65,12 +65,6 @@ def save_food_log_entry(
     current_user: UserOut = Depends(get_current_user),
 ) -> FoodLogEntryOut:
     try:
-        image_source = request.image_source
-        image_license = request.image_license
-        if request.image and image_source is None:
-            image_source = request.source_type
-        if request.image and image_license is None:
-            image_license = "user_owned"
         entry = save_food_log(
             current_user.id,
             request.source_type,
@@ -89,8 +83,8 @@ def save_food_log_entry(
             idempotency_key=request.idempotency_key,
             is_manual=request.is_manual,
             image=request.image,
-            image_source=image_source,
-            image_license=image_license,
+            image_source=request.image_source,
+            image_license=request.image_license,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -144,12 +138,6 @@ def save_food_log_from_estimate_entry(
     current_user: UserOut = Depends(get_current_user),
 ) -> FoodLogFromEstimateResponse:
     try:
-        image_source = request.image_source
-        image_license = request.image_license
-        if request.image and image_source is None:
-            image_source = "estimate_api"
-        if request.image and image_license is None:
-            image_license = "user_owned"
         entry = create_food_log_from_estimate(
             current_user.id,
             request.meal_description,
@@ -158,8 +146,8 @@ def save_food_log_from_estimate_entry(
             meal_occurred_at=request.meal_occurred_at,
             idempotency_key=build_estimate_api_idempotency_key(request.client_request_id),
             image=request.image,
-            image_source=image_source,
-            image_license=image_license,
+            image_source=request.image_source,
+            image_license=request.image_license,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

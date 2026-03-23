@@ -14,6 +14,46 @@ from backend.repositories.food_log_repository import (
     save_food_log as save_food_log_record,
 )
 
+IMAGE_DEFAULT_LICENSE = "user_owned"
+IMAGE_ALLOWED_SOURCES = {
+    "estimate_api",
+    "chat_message",
+    "manual",
+    "user_upload",
+    "camera_capture",
+    "gallery_upload",
+    "third_party",
+    "unknown",
+}
+IMAGE_ALLOWED_LICENSES = {
+    "user_owned",
+    "licensed",
+    "cc0",
+    "cc_by",
+    "cc_by_sa",
+    "public_domain",
+    "unknown",
+}
+IMAGE_SOURCE_ALIASES = {
+    "estimate": "estimate_api",
+    "estimateapi": "estimate_api",
+    "chat": "chat_message",
+    "chatmessage": "chat_message",
+    "manual_entry": "manual",
+    "upload": "user_upload",
+    "local_upload": "user_upload",
+    "camera": "camera_capture",
+    "gallery": "gallery_upload",
+    "thirdparty": "third_party",
+}
+IMAGE_LICENSE_ALIASES = {
+    "owned": "user_owned",
+    "user": "user_owned",
+    "copyrighted": "licensed",
+    "copyright": "licensed",
+    "publicdomain": "public_domain",
+}
+
 
 def create_food_log(
     user_id: int,
@@ -52,6 +92,14 @@ def create_food_log(
             source_message_id=source_message_id,
             is_manual=is_manual,
         )
+        resolved_image, resolved_image_source, resolved_image_license = (
+            _resolve_image_fields_for_write(
+                source_type=source_type,
+                image=image,
+                image_source=image_source,
+                image_license=image_license,
+            )
+        )
         return create_food_log_record(
             active_conn,
             user_id,
@@ -71,9 +119,9 @@ def create_food_log(
             status=status,
             idempotency_key=idempotency_key,
             is_manual=is_manual,
-            image=image,
-            image_source=image_source,
-            image_license=image_license,
+            image=resolved_image,
+            image_source=resolved_image_source,
+            image_license=resolved_image_license,
             auto_commit=auto_commit,
         )
     except Exception:
@@ -136,6 +184,14 @@ def save_food_log(
                 raise LookupError("source message not found")
             if not can_save_message_to_food_log(message):
                 raise ValueError("当前这条回复不包含可复用的菜品结果，无法保存到 Food Log。")
+        resolved_image, resolved_image_source, resolved_image_license = (
+            _resolve_image_fields_for_write(
+                source_type=source_type,
+                image=image,
+                image_source=image_source,
+                image_license=image_license,
+            )
+        )
         return save_food_log_record(
             active_conn,
             user_id,
@@ -156,9 +212,9 @@ def save_food_log(
             status=status,
             idempotency_key=idempotency_key,
             is_manual=is_manual,
-            image=image,
-            image_source=image_source,
-            image_license=image_license,
+            image=resolved_image,
+            image_source=resolved_image_source,
+            image_license=resolved_image_license,
             auto_commit=auto_commit,
         )
     except Exception:
@@ -317,6 +373,15 @@ def update_food_log_entry(
             raise LookupError("food log not found")
         if existing.get("status") == "deleted" or existing.get("deleted_at"):
             raise LookupError("food log entry has been deleted")
+        resolved_image, resolved_image_source, resolved_image_license = (
+            _resolve_image_fields_for_update(
+                existing=existing,
+                source_type=str(existing["source_type"]),
+                image=image,
+                image_source=image_source,
+                image_license=image_license,
+            )
+        )
 
         return save_food_log_record(
             active_conn,
@@ -373,21 +438,9 @@ def update_food_log_entry(
                 else None
             ),
             is_manual=bool(existing["is_manual"]),
-            image=(
-                existing.get("image")
-                if image is None
-                else image
-            ),
-            image_source=(
-                existing.get("image_source")
-                if image_source is None
-                else image_source
-            ),
-            image_license=(
-                existing.get("image_license")
-                if image_license is None
-                else image_license
-            ),
+            image=resolved_image,
+            image_source=resolved_image_source,
+            image_license=resolved_image_license,
             auto_commit=auto_commit,
         )
     except Exception:
@@ -561,3 +614,119 @@ def _validate_food_log_source(
 
     if source_message["role"] != "assistant" or source_message["message_type"] != "estimate_result":
         raise ValueError("source_message_id must reference an assistant estimate result")
+
+
+def _resolve_image_fields_for_write(
+    *,
+    source_type: str,
+    image: str | None,
+    image_source: str | None,
+    image_license: str | None,
+) -> tuple[str | None, str | None, str | None]:
+    normalized_image = _normalize_optional_text(image)
+    normalized_source = _normalize_optional_metadata_token(image_source)
+    normalized_license = _normalize_optional_metadata_token(image_license)
+    if normalized_image is None:
+        if normalized_source is not None or normalized_license is not None:
+            raise ValueError("image_source and image_license require image")
+        return None, None, None
+
+    resolved_source = _normalize_image_source(normalized_source or source_type)
+    resolved_license = _normalize_image_license(
+        normalized_license or IMAGE_DEFAULT_LICENSE
+    )
+    return normalized_image, resolved_source, resolved_license
+
+
+def _resolve_image_fields_for_update(
+    *,
+    existing: dict[str, object],
+    source_type: str,
+    image: str | None,
+    image_source: str | None,
+    image_license: str | None,
+) -> tuple[str | None, str | None, str | None]:
+    has_image_update = image is not None
+    has_source_update = image_source is not None
+    has_license_update = image_license is not None
+
+    if not has_image_update and not has_source_update and not has_license_update:
+        return (
+            _as_optional_text(existing.get("image")),
+            _as_optional_text(existing.get("image_source")),
+            _as_optional_text(existing.get("image_license")),
+        )
+
+    candidate_image = image if has_image_update else _as_optional_text(existing.get("image"))
+    normalized_image = _normalize_optional_text(candidate_image)
+    normalized_source_update = _normalize_optional_metadata_token(image_source)
+    normalized_license_update = _normalize_optional_metadata_token(image_license)
+
+    if normalized_image is None:
+        if normalized_source_update is not None or normalized_license_update is not None:
+            raise ValueError(
+                "image_source and image_license must be empty when image is empty"
+            )
+        return None, None, None
+
+    if has_source_update:
+        resolved_source = _normalize_image_source(normalized_source_update or source_type)
+    elif has_image_update:
+        resolved_source = _normalize_image_source(source_type)
+    else:
+        existing_source = _normalize_optional_text(existing.get("image_source"))
+        resolved_source = existing_source or _normalize_image_source(source_type)
+
+    if has_license_update:
+        resolved_license = _normalize_image_license(
+            normalized_license_update or IMAGE_DEFAULT_LICENSE
+        )
+    elif has_image_update:
+        resolved_license = IMAGE_DEFAULT_LICENSE
+    else:
+        existing_license = _normalize_optional_text(existing.get("image_license"))
+        resolved_license = existing_license or IMAGE_DEFAULT_LICENSE
+
+    return normalized_image, resolved_source, resolved_license
+
+
+def _normalize_optional_text(value: object) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _as_optional_text(value: object) -> str | None:
+    if value is None:
+        return None
+    return str(value)
+
+
+def _normalize_optional_metadata_token(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = "_".join(value.strip().lower().replace("-", "_").split())
+    return normalized or None
+
+
+def _normalize_image_source(value: str) -> str:
+    normalized = _normalize_optional_metadata_token(value)
+    if normalized is None:
+        raise ValueError("image_source cannot be empty when image is set")
+    resolved = IMAGE_SOURCE_ALIASES.get(normalized, normalized)
+    if resolved not in IMAGE_ALLOWED_SOURCES:
+        supported = ", ".join(sorted(IMAGE_ALLOWED_SOURCES))
+        raise ValueError(f"image_source must be one of: {supported}")
+    return resolved
+
+
+def _normalize_image_license(value: str) -> str:
+    normalized = _normalize_optional_metadata_token(value)
+    if normalized is None:
+        raise ValueError("image_license cannot be empty when image is set")
+    resolved = IMAGE_LICENSE_ALIASES.get(normalized, normalized)
+    if resolved not in IMAGE_ALLOWED_LICENSES:
+        supported = ", ".join(sorted(IMAGE_ALLOWED_LICENSES))
+        raise ValueError(f"image_license must be one of: {supported}")
+    return resolved

@@ -8,6 +8,7 @@ from backend.database.init_db import init_db
 from backend.schemas.estimate import EstimateRequest, EstimateResult
 from backend.services.chat_service import create_empty_session, send_message_in_session
 from backend.services.estimate_service import create_estimate_response
+from backend.services.food_log_service import save_food_log
 
 
 class FoodLogServiceTests(unittest.TestCase):
@@ -123,6 +124,53 @@ class FoodLogServiceTests(unittest.TestCase):
         self.assertIsNone(response.food_log_id)
         self.assertEqual(response.save_status, "not_saved")
         self.assertEqual(len(_list_food_log_entries()), 0)
+
+    def test_save_food_log_defaults_image_source_and_license(self) -> None:
+        entry = save_food_log(
+            self.user_id,
+            "manual",
+            meal_description="beef bowl",
+            result_title="Beef Bowl",
+            result_description="Manual save with image.",
+            total_calories="430 kcal",
+            ingredients=[],
+            image=" https://img.example/beef.jpg ",
+        )
+
+        self.assertEqual(entry["image"], "https://img.example/beef.jpg")
+        self.assertEqual(entry["image_source"], "manual")
+        self.assertEqual(entry["image_license"], "user_owned")
+
+    def test_save_food_log_rejects_image_metadata_without_image(self) -> None:
+        with self.assertRaises(ValueError):
+            save_food_log(
+                self.user_id,
+                "manual",
+                meal_description="beef bowl",
+                result_title="Beef Bowl",
+                result_description="Manual save with invalid metadata.",
+                total_calories="430 kcal",
+                ingredients=[],
+                image_source="manual",
+                image_license="user_owned",
+            )
+
+    def test_save_food_log_normalizes_image_source_and_license_aliases(self) -> None:
+        entry = save_food_log(
+            self.user_id,
+            "manual",
+            meal_description="beef bowl",
+            result_title="Beef Bowl",
+            result_description="Manual save with aliases.",
+            total_calories="430 kcal",
+            ingredients=[],
+            image="https://img.example/beef.jpg",
+            image_source="camera",
+            image_license="CC-BY",
+        )
+
+        self.assertEqual(entry["image_source"], "camera_capture")
+        self.assertEqual(entry["image_license"], "cc_by")
 
     def test_init_db_does_not_backfill_existing_estimate_result_messages(self) -> None:
         conn = get_db_connection()
