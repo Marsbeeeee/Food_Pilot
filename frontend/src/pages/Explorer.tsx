@@ -480,25 +480,6 @@ export const Explorer: React.FC<ExplorerProps> = ({
             </p>
           </div>
 
-          <div className="mb-10 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <SummaryCard
-              label={hasActiveFilters ? 'Matching Entries' : 'Saved Entries'}
-              value={String(filteredEntries.length)}
-              unit="items"
-              accent
-            />
-            <SummaryCard
-              label="Updated This Week"
-              value={String(collectionStats.updatedThisWeek)}
-              unit="items"
-            />
-            <SummaryCard
-              label="Chat-Linked"
-              value={String(collectionStats.chatLinked)}
-              unit="items"
-            />
-          </div>
-
           <div className="flex flex-col gap-4">
             <FoodLogSearchToolbar
               searchQuery={searchQuery}
@@ -567,7 +548,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                       } ${
                         isActive
                           ? 'bg-[#FFF4EC]'
-                          : 'bg-transparent hover:bg-[#FFF8F1]'
+                          : 'bg-transparent hover:bg-[#F7F3E9]'
                       }`}
                     >
                       <div className="mb-2 h-40 w-full overflow-hidden rounded-[16px] border border-[#E7DDD0] bg-[#F8F2E8] md:mb-0 md:h-14 md:w-14 md:shrink-0">
@@ -1763,14 +1744,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   );
 };
 
-interface SummaryCardProps {
-  label: string;
-  value: string;
-  unit: string;
-  accent?: boolean;
-  className?: string;
-}
-
 interface SelectedEntryPanelProps {
   entry: FoodLogEntry;
   isEditing: boolean;
@@ -2058,40 +2031,6 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
     </div>
   );
 };
-
-const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, unit, accent = false, className = '' }) => (
-  <div
-    className={`rounded-[24px] border p-5 shadow-[0_8px_24px_rgba(74,69,62,0.08)] ${
-      accent
-        ? 'border-[#FF8A65]/18 bg-[#FFF2EC]'
-        : 'border-[#E7DED0] bg-white/92'
-    } ${className}`}
-  >
-    <span
-      className={`mb-2 block text-[10px] font-bold uppercase tracking-widest ${
-        accent ? 'text-[#FF8A65]/70' : 'text-[#4A453E]/40'
-      }`}
-    >
-      {label}
-    </span>
-    <div className="flex items-baseline gap-1">
-      <span
-        className={`font-serif-brand text-3xl font-bold leading-none ${
-          accent ? 'text-[#FF8A65]' : 'text-[#4A453E]'
-        }`}
-      >
-        {value}
-      </span>
-      <span
-        className={`text-xs font-bold uppercase ${
-          accent ? 'text-[#FF8A65]/50' : 'text-[#4A453E]/30'
-        }`}
-      >
-        {unit}
-      </span>
-    </div>
-  </div>
-);
 
 interface NutritionFactsLabelProps {
   protein?: string | null;
