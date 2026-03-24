@@ -25,6 +25,7 @@ MIN_FOOD_COUNT = 60
 REQUIRED_NUTRITION_KEYS = ("kcal", "protein_g", "carbs_g", "fat_g")
 RELATIVE_IMPROVEMENT_THRESHOLD = 0.10
 EPSILON = 1e-9
+ALLOWED_SCENE_TAG_CHARS = set("abcdefghijklmnopqrstuvwxyz0123456789_")
 
 
 @dataclass(frozen=True)
@@ -242,6 +243,8 @@ def build_case_outcome(
         or (bool(matched_foods) and matched_foods[0] == case.expected_top1)
     )
     citation_complete = bool(references) and all(
+        _optional_non_empty_text(ref.get("food_id"))
+        and
         _optional_non_empty_text(ref.get("food_name"))
         and _optional_non_empty_text(ref.get("source_id"))
         and _optional_non_empty_text(ref.get("source_name"))
@@ -452,7 +455,11 @@ def validate_dataset_payload(payload: dict[str, Any], dataset: Any) -> list[str]
         failures.append(f"duplicate canonical names: {', '.join(sorted(duplicate_names))}")
 
     duplicate_ids = _find_duplicates(
-        str(food.get("id", "")).strip() for food in raw_foods if isinstance(food, dict)
+        (
+            str(food.get("food_id") or food.get("id") or "").strip()
+            for food in raw_foods
+            if isinstance(food, dict)
+        )
     )
     if duplicate_ids:
         failures.append(f"duplicate food ids: {', '.join(sorted(duplicate_ids))}")
@@ -467,19 +474,44 @@ def validate_dataset_payload(payload: dict[str, Any], dataset: Any) -> list[str]
 
         food_label = f"foods[{index}]"
         canonical_name = food.get("canonical_name")
+        food_id = food.get("food_id") or food.get("id")
+        category = food.get("category")
         aliases = food.get("aliases")
+        portion_hints = food.get("portion_hints")
+        scene_tags = food.get("scene_tags")
+        region_tags = food.get("region_tags")
         source_ids = food.get("source_ids")
         updated_at = food.get("updated_at")
         nutrition = food.get("nutrition_per_100g")
+        ingredient_breakdown = food.get("ingredient_breakdown")
 
+        if not _is_non_empty_text(food_id):
+            failures.append(f"{food_label}.food_id (or legacy id) is required")
+            missing_critical_fields += 1
         if not _is_non_empty_text(canonical_name):
             failures.append(f"{food_label}.canonical_name is required")
+            missing_critical_fields += 1
+        if not _is_non_empty_text(category):
+            failures.append(f"{food_label}.category is required")
             missing_critical_fields += 1
         if not isinstance(aliases, list) or not aliases or not all(_is_non_empty_text(alias) for alias in aliases):
             failures.append(f"{food_label}.aliases must be a non-empty list of strings")
             missing_critical_fields += 1
         elif len({str(alias).strip() for alias in aliases}) != len(aliases):
             failures.append(f"{food_label}.aliases must not contain duplicates")
+        if not isinstance(portion_hints, list) or not portion_hints:
+            failures.append(f"{food_label}.portion_hints must be a non-empty list")
+            missing_critical_fields += 1
+        else:
+            for hint_index, hint in enumerate(portion_hints):
+                if not isinstance(hint, dict):
+                    failures.append(f"{food_label}.portion_hints[{hint_index}] must be an object")
+                    continue
+                if not _is_non_empty_text(hint.get("name")):
+                    failures.append(f"{food_label}.portion_hints[{hint_index}].name is required")
+                grams = hint.get("grams")
+                if not isinstance(grams, (int, float)) or grams <= 0:
+                    failures.append(f"{food_label}.portion_hints[{hint_index}].grams must be a positive number")
         if not isinstance(source_ids, list) or not source_ids or not all(_is_non_empty_text(item) for item in source_ids):
             failures.append(f"{food_label}.source_ids must be a non-empty list of strings")
             missing_critical_fields += 1
@@ -509,6 +541,59 @@ def validate_dataset_payload(payload: dict[str, Any], dataset: Any) -> list[str]
                 if not isinstance(value, (int, float)) or value < 0:
                     failures.append(f"{food_label}.nutrition_per_100g.{key} must be a non-negative number")
                     break
+
+        if scene_tags is not None:
+            if not isinstance(scene_tags, list) or not scene_tags:
+                failures.append(f"{food_label}.scene_tags must be a non-empty list when provided")
+            else:
+                invalid_scene_tags = [
+                    str(tag)
+                    for tag in scene_tags
+                    if not _is_valid_normalized_tag(tag)
+                ]
+                if invalid_scene_tags:
+                    failures.append(
+                        f"{food_label}.scene_tags must use lowercase underscore tags: {', '.join(invalid_scene_tags)}"
+                    )
+
+        if region_tags is not None:
+            if not isinstance(region_tags, list) or not region_tags:
+                failures.append(f"{food_label}.region_tags must be a non-empty list when provided")
+            else:
+                invalid_region_tags = [
+                    str(tag)
+                    for tag in region_tags
+                    if not _is_valid_normalized_tag(tag)
+                ]
+                if invalid_region_tags:
+                    failures.append(
+                        f"{food_label}.region_tags must use lowercase underscore tags: {', '.join(invalid_region_tags)}"
+                    )
+
+        if ingredient_breakdown is not None:
+            if not isinstance(ingredient_breakdown, list) or len(ingredient_breakdown) < 2:
+                failures.append(f"{food_label}.ingredient_breakdown must contain at least 2 components when provided")
+            else:
+                total_ratio = 0.0
+                for component_index, component in enumerate(ingredient_breakdown):
+                    if not isinstance(component, dict):
+                        failures.append(
+                            f"{food_label}.ingredient_breakdown[{component_index}] must be an object"
+                        )
+                        continue
+                    if not _is_non_empty_text(component.get("name")):
+                        failures.append(
+                            f"{food_label}.ingredient_breakdown[{component_index}].name is required"
+                        )
+                    ratio = component.get("ratio")
+                    if not isinstance(ratio, (int, float)) or ratio <= 0:
+                        failures.append(
+                            f"{food_label}.ingredient_breakdown[{component_index}].ratio must be a positive number"
+                        )
+                        continue
+                    total_ratio += float(ratio)
+                if total_ratio > 1.05:
+                    failures.append(f"{food_label}.ingredient_breakdown total ratio must not exceed 1.05")
 
     if missing_critical_fields:
         failures.append(f"critical field missing count must be 0, got {missing_critical_fields}")
@@ -557,6 +642,13 @@ def _find_duplicates(values: Iterable[str]) -> set[str]:
             continue
         seen.add(value)
     return duplicates
+
+
+def _is_valid_normalized_tag(value: Any) -> bool:
+    if not _is_non_empty_text(value):
+        return False
+    normalized = str(value).strip()
+    return all(char in ALLOWED_SCENE_TAG_CHARS for char in normalized)
 
 
 def _optional_non_empty_text(value: Any) -> str | None:

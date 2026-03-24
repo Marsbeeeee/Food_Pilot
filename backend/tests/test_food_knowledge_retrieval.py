@@ -35,6 +35,7 @@ class FoodKnowledgeRetrievalTests(unittest.TestCase):
         self.assertGreaterEqual(result.hit_count, 1)
         self.assertIn("Chinese food knowledge context", result.context_text)
         self.assertTrue(any(ref["food_name"] == "牛肉面" for ref in result.references))
+        self.assertTrue(all(ref.get("food_id") for ref in result.references))
         self.assertTrue(all(ref.get("source_name") for ref in result.references))
 
     def test_retrieve_returns_non_chinese_reason_for_english_query(self) -> None:
@@ -65,8 +66,10 @@ class FoodKnowledgeRetrievalTests(unittest.TestCase):
 
         source_ids = {source["id"] for source in payload["sources"]}
         for food in foods:
+            self.assertTrue((food.get("food_id") or food.get("id") or "").strip())
             self.assertTrue(food["canonical_name"].strip())
             self.assertTrue(food["aliases"])
+            self.assertTrue(food["portion_hints"])
             self.assertTrue(food["source_ids"])
             self.assertTrue(food["updated_at"].strip())
             self.assertEqual(set(food["nutrition_per_100g"]), {"kcal", "protein_g", "carbs_g", "fat_g"})
@@ -78,7 +81,12 @@ class FoodKnowledgeRetrievalTests(unittest.TestCase):
 
         self.assertTrue(result.has_hits)
         self.assertTrue(any(ref["food_name"] == "低糖珍珠奶茶" for ref in result.references))
-        self.assertTrue(all(ref.get("food_name") and ref.get("source_id") and ref.get("source_name") for ref in result.references))
+        self.assertTrue(
+            all(
+                ref.get("food_id") and ref.get("food_name") and ref.get("source_id") and ref.get("source_name")
+                for ref in result.references
+            )
+        )
 
     def test_retrieve_hits_local_alias_for_lanzhou_beef_noodle(self) -> None:
         with self._patch_config():
@@ -123,6 +131,22 @@ class FoodKnowledgeRetrievalTests(unittest.TestCase):
         self.assertIn("花生米", names)
         self.assertTrue(all("energy" in item for item in items))
         self.assertTrue(all("portion" in item for item in items))
+
+    def test_retrieve_hits_convenience_store_tuna_sandwich(self) -> None:
+        with self._patch_config():
+            result = retrieve_food_knowledge("便利店金枪鱼全麦三明治热量高吗", scenario="estimate")
+
+        self.assertTrue(result.has_hits)
+        self.assertEqual(result.references[0]["food_name"], "金枪鱼全麦三明治")
+        self.assertEqual(result.references[0]["food_id"], "tuna-wholewheat-sandwich")
+
+    def test_retrieve_hits_fitness_meal_for_brown_rice_chicken_bowl(self) -> None:
+        with self._patch_config():
+            result = retrieve_food_knowledge("糙米鸡胸健身餐适合减脂吗", scenario="meal_recommendation")
+
+        self.assertTrue(result.has_hits)
+        self.assertEqual(result.references[0]["food_name"], "糙米鸡胸健身餐")
+        self.assertEqual(result.references[0]["food_id"], "brown-rice-chicken-fitness-bowl")
 
 
 if __name__ == "__main__":

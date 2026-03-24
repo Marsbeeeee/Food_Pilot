@@ -1868,6 +1868,241 @@
         "food-pilot-curated-portions-2026q1"
       ],
       "updated_at": "2026-03-24"
+    },
+    {
+      "id": "tea-egg",
+      "food_id": "tea-egg",
+      "canonical_name": "茶叶蛋",
+      "aliases": [
+        "一个茶叶蛋",
+        "两个茶叶蛋",
+        "便利店茶叶蛋"
+      ],
+      "category": "protein",
+      "scene_tags": [
+        "breakfast",
+        "convenience_store"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 144,
+        "protein_g": 12.7,
+        "carbs_g": 1.5,
+        "fat_g": 9.8
+      },
+      "portion_hints": [
+        {
+          "name": "1个",
+          "grams": 55
+        },
+        {
+          "name": "2个",
+          "grams": 110
+        }
+      ],
+      "cooking_notes": "茶叶蛋蛋白密度较高，适合作为早餐或加餐中的补蛋白选项。",
+      "source_ids": [
+        "cnfct-6th",
+        "food-pilot-curated-portions-2026q1"
+      ],
+      "updated_at": "2026-03-24"
+    },
+    {
+      "id": "oden",
+      "food_id": "oden",
+      "canonical_name": "关东煮",
+      "aliases": [
+        "便利店关东煮",
+        "一杯关东煮",
+        "关东煮加萝卜"
+      ],
+      "category": "dish",
+      "scene_tags": [
+        "convenience_store",
+        "breakfast"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 68,
+        "protein_g": 4.2,
+        "carbs_g": 6.1,
+        "fat_g": 3.0
+      },
+      "portion_hints": [
+        {
+          "name": "小份",
+          "grams": 180
+        },
+        {
+          "name": "大份",
+          "grams": 300
+        }
+      ],
+      "cooking_notes": "热量差异主要来自丸类、鱼豆腐和汤底中的加工制品占比。",
+      "source_ids": [
+        "food-pilot-curated-portions-2026q1"
+      ],
+      "updated_at": "2026-03-24"
+    },
+    {
+      "id": "tuna-wholewheat-sandwich",
+      "food_id": "tuna-wholewheat-sandwich",
+      "canonical_name": "金枪鱼全麦三明治",
+      "aliases": [
+        "全麦金枪鱼三明治",
+        "便利店金枪鱼三明治",
+        "一个金枪鱼全麦三明治"
+      ],
+      "category": "snack",
+      "scene_tags": [
+        "convenience_store",
+        "light_meal"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 228,
+        "protein_g": 11.2,
+        "carbs_g": 24.5,
+        "fat_g": 9.1
+      },
+      "portion_hints": [
+        {
+          "name": "1份",
+          "grams": 170
+        }
+      ],
+      "cooking_notes": "蛋黄酱和夹馅酱料会明显抬高脂肪与总热量，全麦面包能提升饱腹感。",
+      "source_ids": [
+        "food-pilot-curated-portions-2026q1"
+      ],
+      "updated_at": "2026-03-24"
+    },
+    {
+      "id": "high-protein-unsweetened-yogurt",
+      "food_id": "high-protein-unsweetened-yogurt",
+      "canonical_name": "高蛋白无糖酸奶",
+      "aliases": [
+        "高蛋白酸奶",
+        "无糖高蛋白酸奶",
+        "便利店高蛋白酸奶"
+      ],
+      "category": "drink",
+      "scene_tags": [
+        "convenience_store",
+        "fitness_meal"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 72,
+        "protein_g": 8.5,
+        "carbs_g": 4.6,
+        "fat_g": 2.1
+      },
+      "portion_hints": [
+        {
+          "name": "1杯",
+          "grams": 200
+        }
+      ],
+      "cooking_notes": "相比普通风味酸奶，这类产品通常蛋白更高、添加糖更低，适合减脂期加餐。",
+      "source_ids": [
+        "food-pilot-curated-portions-2026q1"
+      ],
+      "updated_at": "2026-03-24"
+    },
+    {
+      "id": "chicken-salad",
+      "food_id": "chicken-salad",
+      "canonical_name": "鸡胸肉沙拉",
+      "aliases": [
+        "鸡肉沙拉",
+        "轻食鸡胸沙拉",
+        "一份鸡胸肉沙拉"
+      ],
+      "category": "dish",
+      "scene_tags": [
+        "light_meal",
+        "fitness_meal"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 118,
+        "protein_g": 10.5,
+        "carbs_g": 5.8,
+        "fat_g": 5.6
+      },
+      "portion_hints": [
+        {
+          "name": "1份",
+          "grams": 260
+        }
+      ],
+      "cooking_notes": "热量高低主要取决于酱汁、坚果和谷物配料，去掉高脂酱汁后更适合减脂。",
+      "source_ids": [
+        "cnfct-6th",
+        "food-pilot-curated-portions-2026q1"
+      ],
+      "updated_at": "2026-03-24"
+    },
+    {
+      "id": "brown-rice-chicken-fitness-bowl",
+      "food_id": "brown-rice-chicken-fitness-bowl",
+      "canonical_name": "糙米鸡胸健身餐",
+      "aliases": [
+        "鸡胸糙米饭",
+        "健身鸡胸饭",
+        "一份糙米鸡胸健身餐"
+      ],
+      "category": "dish",
+      "scene_tags": [
+        "fitness_meal",
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 132,
+        "protein_g": 11.8,
+        "carbs_g": 12.4,
+        "fat_g": 3.6
+      },
+      "portion_hints": [
+        {
+          "name": "1份",
+          "grams": 350
+        }
+      ],
+      "cooking_notes": "常见搭配为糙米、鸡胸肉和西兰花，属于高蛋白、相对稳妥的外卖健身餐组合。",
+      "source_ids": [
+        "cnfct-6th",
+        "food-pilot-curated-portions-2026q1"
+      ],
+      "updated_at": "2026-03-24",
+      "ingredient_breakdown": [
+        {
+          "name": "糙米饭",
+          "ratio": 0.46
+        },
+        {
+          "name": "鸡胸肉",
+          "ratio": 0.34
+        },
+        {
+          "name": "西兰花",
+          "ratio": 0.20
+        }
+      ]
     }
   ],
   "change_summary": [
@@ -1875,7 +2110,7 @@
       "version": "2026-03-24",
       "updated_at": "2026-03-24",
       "summary": "新增 43 条高频与次高频中文食物条目，覆盖地方菜、外卖常见菜和饮品变体，并补齐结构化来源追溯。",
-      "added_food_count": 43
+      "added_food_count": 49
     }
   ]
 }

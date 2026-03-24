@@ -4,13 +4,14 @@ from pydantic import BaseModel, ConfigDict, field_validator
 class KnowledgeReference(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    food_id: str
     food_name: str
     source_id: str
     source_name: str
     note: str | None = None
     updated_at: str | None = None
 
-    @field_validator("food_name", "source_id", "source_name")
+    @field_validator("food_id", "food_name", "source_id", "source_name")
     @classmethod
     def validate_required_text(cls, value: str) -> str:
         normalized = value.strip()

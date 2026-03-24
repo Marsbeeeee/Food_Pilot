@@ -290,6 +290,30 @@
     "expected_any": ["牛肉米线", "酸辣粉"]
   },
   {
+    "id": "estimate_convenience_store_tuna_sandwich",
+    "query": "便利店金枪鱼全麦三明治热量高吗",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "金枪鱼全麦三明治",
+    "expected_any": ["金枪鱼全麦三明治"]
+  },
+  {
+    "id": "estimate_light_meal_chicken_salad",
+    "query": "轻食鸡胸沙拉大概多少热量",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "鸡胸肉沙拉",
+    "expected_any": ["鸡胸肉沙拉"]
+  },
+  {
+    "id": "rec_fitness_bowl",
+    "query": "糙米鸡胸健身餐适合减脂吗",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "糙米鸡胸健身餐",
+    "expected_any": ["糙米鸡胸健身餐"]
+  },
+  {
     "id": "negative_english_query",
     "query": "how many calories in chicken salad",
     "scenario": "estimate",

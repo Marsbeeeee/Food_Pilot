@@ -106,10 +106,12 @@ class FoodKnowledgeSource:
 
 @dataclass(frozen=True)
 class FoodKnowledgeEntry:
-    entry_id: str
+    food_id: str
     canonical_name: str
     aliases: tuple[str, ...]
     category: str
+    scene_tags: tuple[str, ...]
+    region_tags: tuple[str, ...]
     nutrition_per_100g: dict[str, float]
     portion_hints: tuple[dict[str, Any], ...]
     cooking_notes: str
@@ -274,7 +276,11 @@ def _load_dataset(path: Path) -> FoodKnowledgeDataset:
         canonical_name = _optional_text(food.get("canonical_name"))
         if not canonical_name:
             continue
-        entry_id = _optional_text(food.get("id")) or canonical_name
+        food_id = (
+            _optional_text(food.get("food_id"))
+            or _optional_text(food.get("id"))
+            or canonical_name
+        )
         aliases = tuple(
             alias
             for alias in (
@@ -295,6 +301,10 @@ def _load_dataset(path: Path) -> FoodKnowledgeDataset:
             for hint in portion_hints_raw
             if isinstance(hint, dict) and _optional_text(hint.get("name"))
         )
+        scene_tags = _normalize_tag_list(food.get("scene_tags"))
+        if not scene_tags:
+            scene_tags = _derive_scene_tags_from_category(_optional_text(food.get("category")) or "unknown")
+        region_tags = _normalize_tag_list(food.get("region_tags"))
         source_ids = tuple(
             source_id
             for source_id in (
@@ -307,10 +317,12 @@ def _load_dataset(path: Path) -> FoodKnowledgeDataset:
         ingredient_breakdown = _normalize_ingredient_breakdown(food.get("ingredient_breakdown"))
         foods.append(
             FoodKnowledgeEntry(
-                entry_id=entry_id,
+                food_id=food_id,
                 canonical_name=canonical_name,
                 aliases=aliases,
                 category=_optional_text(food.get("category")) or "unknown",
+                scene_tags=scene_tags,
+                region_tags=region_tags,
                 nutrition_per_100g=nutrition_per_100g,
                 portion_hints=portion_hints,
                 cooking_notes=_optional_text(food.get("cooking_notes")) or "",
@@ -341,6 +353,36 @@ def _normalize_nutrition(raw: dict[str, Any]) -> dict[str, float]:
             return {}
         normalized[key] = number
     return normalized
+
+
+def _normalize_tag_list(raw: Any) -> tuple[str, ...]:
+    if not isinstance(raw, list):
+        return ()
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        value = _optional_text(item)
+        if not value:
+            continue
+        tag = value.strip().lower().replace("-", "_").replace(" ", "_")
+        if tag in seen:
+            continue
+        seen.add(tag)
+        normalized.append(tag)
+    return tuple(normalized)
+
+
+def _derive_scene_tags_from_category(category: str) -> tuple[str, ...]:
+    category_to_scene = {
+        "staple": ("home_cooking",),
+        "protein": ("home_cooking", "fitness_meal"),
+        "vegetable": ("home_cooking",),
+        "dish": ("home_cooking", "takeout"),
+        "drink": ("branded_drink",),
+        "snack": ("breakfast", "street_food"),
+        "dessert": ("branded_drink",),
+    }
+    return category_to_scene.get(category, ("general_cn",))
 
 
 def _score_entries(
@@ -701,6 +743,7 @@ def _build_references(
         source = sources.get(source_id)
         references.append(
             {
+                "food_id": scored.entry.food_id,
                 "food_name": scored.entry.canonical_name,
                 "source_id": source_id,
                 "source_name": source.name if source else "Unknown source",
