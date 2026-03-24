@@ -15,6 +15,85 @@ CHINESE_CHAR_RE = re.compile(r"[\u4e00-\u9fff]")
 NON_TEXT_RE = re.compile(r"[^0-9a-z\u4e00-\u9fff]+")
 FLOAT_RE = re.compile(r"(\d+(?:\.\d+)?)")
 GRAM_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(?:g|克)", re.IGNORECASE)
+QUANTITY_NOISE_TERMS = (
+    "一大碗",
+    "一小碗",
+    "一碗",
+    "一份",
+    "一个",
+    "一杯",
+    "一盘",
+    "一盒",
+    "一根",
+    "一笼",
+    "两个",
+    "两根",
+    "大杯",
+    "中杯",
+    "小杯",
+)
+QUERY_INTENT_NOISE_TERMS = (
+    "大概多少热量",
+    "大概多少卡路里",
+    "大概多少卡",
+    "多少热量",
+    "多少卡路里",
+    "多少卡",
+    "热量高吗",
+    "热量高不高",
+    "适不适合减脂",
+    "更适合减脂",
+    "更适合控糖",
+    "有没有更健康的平替",
+    "有没有更健康的替代",
+    "有没有更轻的点法",
+    "外卖怎么点更稳妥",
+    "是不是更高热量",
+    "是不是很油",
+    "会不会太多",
+    "适合当早餐吗",
+    "还能喝吗",
+    "大概",
+    "多少",
+    "热量",
+    "卡路里",
+    "推荐",
+    "平替",
+    "替代",
+    "点法",
+    "怎么点",
+    "适合",
+    "减脂",
+    "控糖",
+    "比较",
+    "对比",
+    "哪个",
+    "还是",
+    "会不会",
+    "是不是",
+    "高吗",
+    "吗",
+)
+COMPARISON_HINT_TERMS = ("和", "还是", "哪个", "对比", "比较", "选哪个")
+BEVERAGE_HINT_TERMS = ("茶", "咖啡", "拿铁", "美式", "豆浆", "甘露", "奶茶")
+DISH_SHAPE_HINT_TERMS = ("面", "粉", "饭", "粥", "馍", "饼", "卷", "包", "锅", "鱼", "鸡")
+SYNONYM_REPLACEMENTS = (
+    ("波霸", "珍珠"),
+    ("啵啵", "珍珠"),
+    ("豆腐花", "豆腐脑"),
+    ("豆花", "豆腐脑"),
+    ("番茄", "西红柿"),
+    ("青瓜", "黄瓜"),
+    ("云吞", "馄饨"),
+)
+MODIFIER_GROUPS = {
+    "low_sugar": ("低糖", "少糖", "半糖", "三分糖", "微糖", "无糖"),
+    "clear_broth": ("清汤",),
+    "fried": ("炸", "油炸"),
+    "spicy": ("麻辣", "香辣"),
+    "iced": ("冰",),
+    "hot": ("热",),
+}
 
 
 @dataclass(frozen=True)
@@ -67,6 +146,23 @@ class FoodKnowledgeDataset:
     version: str
     sources: dict[str, FoodKnowledgeSource]
     foods: tuple[FoodKnowledgeEntry, ...]
+
+
+@dataclass(frozen=True)
+class PreparedSearchText:
+    normalized: str
+    canonical: str
+    core: str
+    chars: frozenset[str]
+    ngrams: frozenset[str]
+    modifiers: frozenset[str]
+
+
+@dataclass(frozen=True)
+class QueryFeatures(PreparedSearchText):
+    has_comparison_hint: bool
+    has_beverage_hint: bool
+    has_dish_hint: bool
 
 
 def retrieve_food_knowledge(
@@ -252,11 +348,24 @@ def _score_entries(
     normalized_query: str,
     *,
     scenario: str,
+    scorer: str = "enhanced",
 ) -> list[ScoredKnowledgeEntry]:
     ranked: list[ScoredKnowledgeEntry] = []
-    query_chars = set(normalized_query)
+    query_features = _prepare_query_features(normalized_query)
     for entry in entries:
-        score, matched_terms = _score_entry(entry, normalized_query, query_chars=query_chars, scenario=scenario)
+        if scorer == "legacy":
+            score, matched_terms = _score_entry_legacy(
+                entry,
+                normalized_query,
+                query_chars=set(normalized_query),
+                scenario=scenario,
+            )
+        else:
+            score, matched_terms = _score_entry(
+                entry,
+                query_features,
+                scenario=scenario,
+            )
         if score <= 0:
             continue
         ranked.append(ScoredKnowledgeEntry(entry=entry, score=score, matched_terms=matched_terms))
@@ -265,6 +374,40 @@ def _score_entries(
 
 
 def _score_entry(
+    entry: FoodKnowledgeEntry,
+    query: QueryFeatures,
+    *,
+    scenario: str,
+) -> tuple[float, tuple[str, ...]]:
+    best_score = 0.0
+    best_term_len = 0
+    matched_terms: list[str] = []
+    strong_matches = 0
+
+    for term in entry.search_terms:
+        prepared_term = _prepare_term_features(term)
+        term_score = _score_term_against_query(query, prepared_term)
+        if term_score >= 2.6:
+            matched_terms.append(term)
+            strong_matches += 1
+        if term_score > best_score:
+            best_score = term_score
+            best_term_len = len(prepared_term.core or prepared_term.canonical)
+
+    if best_score <= 0:
+        return 0.0, ()
+
+    score = best_score + _category_boost(entry.category, scenario=scenario, query=query)
+    if strong_matches > 1:
+        score += min(0.9, 0.25 * (strong_matches - 1))
+    if best_term_len >= 4:
+        score += 0.35
+    score += _query_alignment_boost(entry, query)
+    score -= _generic_partial_penalty(entry, query, best_term_len)
+    return max(score, 0.0), tuple(dict.fromkeys(matched_terms))
+
+
+def _score_entry_legacy(
     entry: FoodKnowledgeEntry,
     normalized_query: str,
     *,
@@ -296,8 +439,7 @@ def _score_entry(
         if best_overlap >= 0.55:
             score += best_overlap * 2.2
 
-    category_boost = _category_boost(entry.category, scenario=scenario)
-    score += category_boost
+    score += _legacy_category_boost(entry.category, scenario=scenario)
 
     if matched:
         longest_match = max((len(_normalize_text(term)) for term in matched), default=0)
@@ -311,7 +453,34 @@ def _score_entry(
     return score, tuple(dict.fromkeys(matched))
 
 
-def _category_boost(category: str, *, scenario: str) -> float:
+def _category_boost(category: str, *, scenario: str, query: QueryFeatures) -> float:
+    if scenario == "estimate":
+        if category in {"dish", "snack", "staple", "drink"}:
+            score = 0.42
+        elif category == "protein":
+            score = 0.16
+        else:
+            score = 0.08
+    elif scenario in {"meal_recommendation", "text"}:
+        if category in {"dish", "snack", "drink"}:
+            score = 0.45
+        elif category == "staple":
+            score = 0.28
+        elif category == "protein":
+            score = 0.14
+        else:
+            score = 0.08
+    else:
+        score = 0.0
+
+    if query.has_comparison_hint and category in {"dish", "snack", "drink", "staple"}:
+        score += 0.12
+    if query.has_beverage_hint and category == "drink":
+        score += 0.18
+    return score
+
+
+def _legacy_category_boost(category: str, *, scenario: str) -> float:
     if scenario == "estimate":
         if category in {"dish", "staple"}:
             return 0.25
@@ -328,6 +497,151 @@ def _dice_similarity(left: set[str], right: set[str]) -> float:
         return 0.0
     intersection = len(left.intersection(right))
     return (2.0 * intersection) / (len(left) + len(right))
+
+
+def _score_term_against_query(query: QueryFeatures, term: PreparedSearchText) -> float:
+    score = 0.0
+    strongest_term = term.core or term.canonical
+    strongest_query = query.core or query.canonical
+    if not strongest_term:
+        return 0.0
+
+    if strongest_query and strongest_term == strongest_query:
+        score += 8.2
+    elif strongest_query and strongest_term in strongest_query:
+        score += 5.6 + min(len(strongest_term) * 0.18, 1.8)
+    elif term.canonical and term.canonical in query.canonical:
+        score += 4.0 + min(len(term.canonical) * 0.12, 1.3)
+    elif strongest_query and strongest_query in strongest_term:
+        score += 3.2 + min(len(strongest_query) * 0.16, 1.2)
+
+    ngram_recall = _overlap_ratio(query.ngrams, term.ngrams)
+    ngram_precision = _overlap_ratio(term.ngrams, query.ngrams)
+    if ngram_recall >= 0.34 or ngram_precision >= 0.2:
+        score += ngram_recall * 2.7 + ngram_precision * 1.5
+
+    dice = _dice_similarity(set(query.chars), set(term.chars))
+    if dice >= 0.45:
+        score += dice * 1.1
+
+    modifier_alignment = _modifier_alignment_score(query.modifiers, term.modifiers)
+    score += modifier_alignment
+
+    if len(strongest_term) <= 2 and len(strongest_query) >= 4 and strongest_term not in strongest_query:
+        score -= 0.8
+    return max(score, 0.0)
+
+
+def _query_alignment_boost(entry: FoodKnowledgeEntry, query: QueryFeatures) -> float:
+    score = 0.0
+    if query.has_comparison_hint and entry.category in {"dish", "snack", "drink", "staple"}:
+        score += 0.18
+    if query.has_beverage_hint and entry.category == "drink":
+        score += 0.22
+    if query.has_dish_hint and entry.category in {"dish", "snack", "staple"}:
+        score += 0.16
+    return score
+
+
+def _generic_partial_penalty(
+    entry: FoodKnowledgeEntry,
+    query: QueryFeatures,
+    best_term_len: int,
+) -> float:
+    penalty = 0.0
+    if query.has_comparison_hint and entry.category == "protein":
+        penalty += 0.28
+    if query.has_dish_hint and entry.category in {"protein", "vegetable", "fruit", "fat", "nut"}:
+        penalty += 0.22
+    if len(query.core) >= 5 and best_term_len <= 2:
+        penalty += 0.18
+    return penalty
+
+
+def _modifier_alignment_score(query_modifiers: frozenset[str], term_modifiers: frozenset[str]) -> float:
+    if not query_modifiers:
+        return 0.0
+    shared = len(query_modifiers.intersection(term_modifiers))
+    if shared:
+        return 0.45 * shared
+    return -0.18 if term_modifiers else 0.0
+
+
+def _overlap_ratio(left: frozenset[str], right: frozenset[str]) -> float:
+    if not left or not right:
+        return 0.0
+    overlap = len(left.intersection(right))
+    return overlap / len(right)
+
+
+def _prepare_query_features(normalized_query: str) -> QueryFeatures:
+    canonical = _canonicalize_synonyms(normalized_query)
+    quantity_stripped = _strip_known_terms(canonical, QUANTITY_NOISE_TERMS)
+    core = _strip_known_terms(quantity_stripped, QUERY_INTENT_NOISE_TERMS)
+    core = core or quantity_stripped or canonical
+    return QueryFeatures(
+        normalized=normalized_query,
+        canonical=canonical,
+        core=core,
+        chars=frozenset(core),
+        ngrams=frozenset(_build_ngrams(core)),
+        modifiers=frozenset(_extract_modifiers(canonical)),
+        has_comparison_hint=any(term in canonical for term in COMPARISON_HINT_TERMS),
+        has_beverage_hint=any(term in canonical for term in BEVERAGE_HINT_TERMS),
+        has_dish_hint=any(term in canonical for term in DISH_SHAPE_HINT_TERMS),
+    )
+
+
+@lru_cache(maxsize=512)
+def _prepare_term_features(term: str) -> PreparedSearchText:
+    normalized = _normalize_text(term)
+    canonical = _canonicalize_synonyms(normalized)
+    core = _strip_known_terms(canonical, QUANTITY_NOISE_TERMS) or canonical
+    return PreparedSearchText(
+        normalized=normalized,
+        canonical=canonical,
+        core=core,
+        chars=frozenset(core),
+        ngrams=frozenset(_build_ngrams(core)),
+        modifiers=frozenset(_extract_modifiers(canonical)),
+    )
+
+
+def _canonicalize_synonyms(value: str) -> str:
+    normalized = value
+    for source, target in SYNONYM_REPLACEMENTS:
+        normalized = normalized.replace(source, target)
+    return normalized
+
+
+def _strip_known_terms(value: str, terms: tuple[str, ...]) -> str:
+    normalized = value
+    for term in sorted(terms, key=len, reverse=True):
+        normalized = normalized.replace(term, "")
+    return normalized
+
+
+def _build_ngrams(value: str) -> set[str]:
+    if not value:
+        return set()
+    if len(value) < 2:
+        return {value}
+
+    ngrams: set[str] = set()
+    for size in (2, 3, 4):
+        if len(value) < size:
+            continue
+        for index in range(len(value) - size + 1):
+            ngrams.add(value[index : index + size])
+    return ngrams or {value}
+
+
+def _extract_modifiers(value: str) -> set[str]:
+    modifiers: set[str] = set()
+    for label, keywords in MODIFIER_GROUPS.items():
+        if any(keyword in value for keyword in keywords):
+            modifiers.add(label)
+    return modifiers
 
 
 def _build_context(

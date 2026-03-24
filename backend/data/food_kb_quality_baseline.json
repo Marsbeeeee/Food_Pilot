@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-03-24",
+  "dataset_version": "2026-03-24",
+  "case_count": 41,
+  "thresholds": {
+    "top1_relative_improvement_min": 0.1,
+    "topk_recall_relative_improvement_min": 0.1,
+    "citation_completeness_rate_min": 1.0,
+    "negative_pass_rate_min": 1.0
+  },
+  "metrics": {
+    "legacy": {
+      "case_count": 41,
+      "positive_case_count": 37,
+      "negative_case_count": 4,
+      "hit_rate": 1.0,
+      "top1_accuracy": 0.7741935483870968,
+      "topk_recall": 0.9,
+      "citation_completeness_rate": 1.0,
+      "no_hit_rate": 0.0975609756097561,
+      "negative_pass_rate": 1.0
+    },
+    "enhanced": {
+      "case_count": 41,
+      "positive_case_count": 37,
+      "negative_case_count": 4,
+      "hit_rate": 1.0,
+      "top1_accuracy": 1.0,
+      "topk_recall": 1.0,
+      "citation_completeness_rate": 1.0,
+      "no_hit_rate": 0.0975609756097561,
+      "negative_pass_rate": 1.0
+    }
+  }
+}

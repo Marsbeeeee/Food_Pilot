@@ -12,6 +12,9 @@ if (-not (Test-Path $python)) {
 Write-Host "[gate] backend tests: pytest backend/tests"
 & $python -m pytest backend/tests
 
+Write-Host "[gate] retrieval quality: validate_food_kb_rag.py"
+& $python scripts\validate_food_kb_rag.py
+
 Write-Host "[gate] frontend tests: npm.cmd test"
 Push-Location $frontendDir
 try {

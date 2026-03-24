@@ -88,6 +88,23 @@ class FoodKnowledgeRetrievalTests(unittest.TestCase):
         self.assertTrue(any(ref["food_name"] == "兰州牛肉面" for ref in result.references))
         self.assertTrue(all(ref.get("source_name") for ref in result.references))
 
+    def test_retrieve_prefers_low_sugar_variant_for_half_sugar_milk_tea(self) -> None:
+        with self._patch_config():
+            result = retrieve_food_knowledge("半糖珍珠奶茶热量高吗", scenario="estimate")
+
+        self.assertTrue(result.has_hits)
+        self.assertEqual(result.references[0]["food_name"], "低糖珍珠奶茶")
+        self.assertIn("珍珠奶茶", [ref["food_name"] for ref in result.references])
+
+    def test_retrieve_prefers_doufunao_alias_over_generic_tofu_in_breakfast_compare(self) -> None:
+        with self._patch_config():
+            result = retrieve_food_knowledge("豆腐花和云吞哪个更适合早餐", scenario="meal_recommendation")
+
+        self.assertTrue(result.has_hits)
+        foods = [ref["food_name"] for ref in result.references]
+        self.assertEqual(foods[0], "豆腐脑")
+        self.assertIn("馄饨", foods)
+
     def test_build_single_dish_ingredient_breakdown_for_kungpao_chicken(self) -> None:
         with self._patch_config():
             items = build_single_dish_ingredient_breakdown(

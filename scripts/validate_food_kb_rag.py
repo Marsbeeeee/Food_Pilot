@@ -1,120 +1,396 @@
 from __future__ import annotations
 
+import argparse
 import json
 import sys
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any, Iterable
-from unittest.mock import patch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from backend.config.food_knowledge import FoodKnowledgeConfig
-from backend.services.food_knowledge import _load_dataset, retrieve_food_knowledge
+from backend.services.food_knowledge import (
+    CHINESE_CHAR_RE,
+    _build_references,
+    _load_dataset,
+    _normalize_text,
+    _score_entries,
+)
 
 MIN_FOOD_COUNT = 60
-COVERAGE_THRESHOLD = 0.85
 REQUIRED_NUTRITION_KEYS = ("kcal", "protein_g", "carbs_g", "fat_g")
+RELATIVE_IMPROVEMENT_THRESHOLD = 0.10
+EPSILON = 1e-9
 
 
 @dataclass(frozen=True)
 class RetrievalCase:
+    case_id: str
     query: str
     scenario: str
-    expected_food: str
+    expected_hit: bool
+    expected_top1: str | None
+    expected_any: tuple[str, ...]
 
 
-CASES = [
-    RetrievalCase("一碗牛肉面大概多少热量", "estimate", "牛肉面"),
-    RetrievalCase("早饭两个包子一杯豆浆热量高吗", "estimate", "猪肉白菜包子"),
-    RetrievalCase("奶茶有没有更健康的平替", "meal_recommendation", "珍珠奶茶"),
-    RetrievalCase("麻辣烫和宫保鸡丁哪个更适合减脂", "meal_recommendation", "麻辣烫"),
-    RetrievalCase("兰州拉面热量高吗", "estimate", "兰州牛肉面"),
-    RetrievalCase("三分糖波霸奶茶还能喝吗", "meal_recommendation", "低糖珍珠奶茶"),
-    RetrievalCase("武汉热干面适合当早餐吗", "meal_recommendation", "热干面"),
-    RetrievalCase("柳州螺蛳粉一碗大概多少卡", "estimate", "螺蛳粉"),
-    RetrievalCase("一个肉夹馍大概多少热量", "estimate", "肉夹馍"),
-    RetrievalCase("黄焖鸡米饭外卖怎么点更稳妥", "meal_recommendation", "黄焖鸡米饭"),
-    RetrievalCase("鱼香肉丝盖饭是不是很油", "meal_recommendation", "鱼香肉丝"),
-    RetrievalCase("生椰拿铁是不是比拿铁更高热量", "meal_recommendation", "生椰拿铁"),
-    RetrievalCase("手打柠檬茶有什么更轻的点法", "meal_recommendation", "柠檬茶"),
-    RetrievalCase("晚上吃酸菜鱼配米饭会不会太多", "meal_recommendation", "酸菜鱼"),
-    RetrievalCase("豆花算不算低热量", "meal_recommendation", "豆腐脑"),
-    RetrievalCase("老北京鸡肉卷大概多少卡", "estimate", "老北京鸡肉卷"),
-    RetrievalCase("老北京炸酱面一碗多少热量", "estimate", "炸酱面"),
-    RetrievalCase("清汤牛肉米线和酸辣粉哪个更适合减脂", "meal_recommendation", "牛肉米线"),
-    RetrievalCase("煎饼果子加鸡蛋热量高吗", "estimate", "煎饼果子"),
-    RetrievalCase("冰美式和杨枝甘露哪个更适合控糖", "meal_recommendation", "杨枝甘露"),
-]
+@dataclass(frozen=True)
+class CaseOutcome:
+    case: RetrievalCase
+    scorer: str
+    reason: str
+    hit_count: int
+    matched_foods: tuple[str, ...]
+    top1_ok: bool
+    recall_hits: int
+    recall_total: int
+    citation_complete: bool
+    expected_hit_ok: bool
+
+
+@dataclass(frozen=True)
+class MetricSummary:
+    case_count: int
+    positive_case_count: int
+    negative_case_count: int
+    hit_rate: float
+    top1_accuracy: float
+    topk_recall: float
+    citation_completeness_rate: float
+    no_hit_rate: float
+    negative_pass_rate: float
 
 
 def main() -> int:
-    data_path = Path(__file__).resolve().parents[1] / "backend" / "data" / "chinese_food_kb_seed.json"
+    parser = argparse.ArgumentParser(description="Validate food KB retrieval quality and regression baseline.")
+    parser.add_argument(
+        "--update-baseline",
+        action="store_true",
+        help="Write the current metrics snapshot into the baseline JSON file.",
+    )
+    args = parser.parse_args()
+
+    data_path = PROJECT_ROOT / "backend" / "data" / "chinese_food_kb_seed.json"
+    eval_case_path = PROJECT_ROOT / "backend" / "data" / "food_kb_eval_cases.json"
+    baseline_path = PROJECT_ROOT / "backend" / "data" / "food_kb_quality_baseline.json"
+
     if not data_path.exists():
         print(f"[FAIL] dataset missing: {data_path}")
+        return 1
+    if not eval_case_path.exists():
+        print(f"[FAIL] eval cases missing: {eval_case_path}")
         return 1
 
     raw_payload = json.loads(data_path.read_text(encoding="utf-8"))
     dataset = _load_dataset(data_path)
-
     structural_failures = validate_dataset_payload(raw_payload, dataset)
     if structural_failures:
         for failure in structural_failures:
             print(f"[FAIL] {failure}")
         return 1
 
+    cases = load_eval_cases(eval_case_path)
     print(
         "[INFO] "
         f"dataset version={dataset.version}, foods={len(dataset.foods)}, sources={len(dataset.sources)}, "
-        f"coverage_target={COVERAGE_THRESHOLD:.0%}"
+        f"eval_cases={len(cases)}"
     )
 
     config = FoodKnowledgeConfig(
         enabled=True,
         data_path=data_path,
         top_k=3,
-        min_score=1.0,
+        min_score=1.35,
         max_context_chars=1200,
         only_chinese=True,
     )
 
-    passed = 0
-    with patch("backend.services.food_knowledge.get_food_knowledge_config", return_value=config):
-        for case in CASES:
-            result = retrieve_food_knowledge(case.query, scenario=case.scenario)
-            matched_foods = [ref["food_name"] for ref in result.references]
-            has_traceable_refs = bool(result.references) and all(
-                _is_non_empty_text(ref.get("food_name"))
-                and _is_non_empty_text(ref.get("source_id"))
-                and _is_non_empty_text(ref.get("source_name"))
-                and ref["source_id"] in dataset.sources
-                for ref in result.references
-            )
-            ok = result.has_hits and case.expected_food in matched_foods and has_traceable_refs
-            if ok:
-                passed += 1
-                print(
-                    f"[PASS] {case.query} -> {matched_foods} "
-                    f"(reason={result.reason}, hits={result.hit_count})"
-                )
-            else:
-                print(
-                    f"[FAIL] {case.query} -> {matched_foods} "
-                    f"(reason={result.reason}, hits={result.hit_count}), "
-                    f"expected contains: {case.expected_food}, traceable={has_traceable_refs}"
-                )
+    legacy_outcomes = evaluate_cases(dataset, cases, config=config, scorer="legacy")
+    enhanced_outcomes = evaluate_cases(dataset, cases, config=config, scorer="enhanced")
+    legacy_metrics = summarize_metrics(legacy_outcomes)
+    enhanced_metrics = summarize_metrics(enhanced_outcomes)
 
-    coverage = passed / len(CASES)
-    print(f"[INFO] retrieval coverage={coverage:.0%} ({passed}/{len(CASES)})")
-    if coverage < COVERAGE_THRESHOLD:
-        print(f"[FAIL] retrieval coverage below threshold {COVERAGE_THRESHOLD:.0%}")
+    print_metric_summary("legacy", legacy_metrics)
+    print_metric_summary("enhanced", enhanced_metrics)
+    print_case_deltas(legacy_outcomes, enhanced_outcomes)
+
+    baseline_payload = build_baseline_payload(
+        dataset_version=dataset.version,
+        case_count=len(cases),
+        legacy_metrics=legacy_metrics,
+        enhanced_metrics=enhanced_metrics,
+    )
+
+    failures = validate_metric_thresholds(legacy_metrics, enhanced_metrics)
+    if baseline_path.exists():
+        failures.extend(validate_against_baseline(baseline_path, enhanced_metrics))
+
+    if failures:
+        for failure in failures:
+            print(f"[FAIL] {failure}")
         return 1
 
-    print("[OK] food knowledge RAG validation passed")
+    if args.update_baseline:
+        baseline_path.write_text(
+            json.dumps(baseline_payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(f"[OK] baseline updated: {baseline_path}")
+    else:
+        print("[OK] food knowledge retrieval validation passed")
     return 0
+
+
+def load_eval_cases(path: Path) -> list[RetrievalCase]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, list) or not payload:
+        raise ValueError("eval cases must be a non-empty list")
+
+    cases: list[RetrievalCase] = []
+    for index, raw_case in enumerate(payload):
+        if not isinstance(raw_case, dict):
+            raise ValueError(f"eval case {index} must be an object")
+
+        case_id = str(raw_case.get("id", "")).strip()
+        query = str(raw_case.get("query", "")).strip()
+        scenario = str(raw_case.get("scenario", "")).strip()
+        expected_hit = bool(raw_case.get("expected_hit", True))
+        expected_top1 = _optional_non_empty_text(raw_case.get("expected_top1"))
+        expected_any = tuple(
+            item
+            for item in (
+                _optional_non_empty_text(value)
+                for value in raw_case.get("expected_any", [])
+                if isinstance(value, str) or value is not None
+            )
+            if item
+        )
+
+        if not case_id:
+            raise ValueError(f"eval case {index} is missing id")
+        if not query:
+            raise ValueError(f"eval case {case_id} is missing query")
+        if scenario not in {"estimate", "meal_recommendation", "text"}:
+            raise ValueError(f"eval case {case_id} has unsupported scenario: {scenario}")
+        if expected_hit and not expected_any and expected_top1 is None:
+            raise ValueError(f"eval case {case_id} must declare expected_top1 or expected_any")
+        if expected_top1 and expected_any and expected_top1 not in expected_any:
+            expected_any = (expected_top1, *expected_any)
+
+        cases.append(
+            RetrievalCase(
+                case_id=case_id,
+                query=query,
+                scenario=scenario,
+                expected_hit=expected_hit,
+                expected_top1=expected_top1,
+                expected_any=expected_any,
+            )
+        )
+    return cases
+
+
+def evaluate_cases(
+    dataset: Any,
+    cases: list[RetrievalCase],
+    *,
+    config: FoodKnowledgeConfig,
+    scorer: str,
+) -> list[CaseOutcome]:
+    return [
+        evaluate_case(dataset, case, config=config, scorer=scorer)
+        for case in cases
+    ]
+
+
+def evaluate_case(
+    dataset: Any,
+    case: RetrievalCase,
+    *,
+    config: FoodKnowledgeConfig,
+    scorer: str,
+) -> CaseOutcome:
+    normalized_query = _normalize_text(case.query)
+    if not normalized_query:
+        return build_case_outcome(case, scorer, reason="empty_query", references=[])
+    if config.only_chinese and not CHINESE_CHAR_RE.search(case.query):
+        return build_case_outcome(case, scorer, reason="non_chinese_query", references=[])
+
+    ranked = _score_entries(dataset.foods, normalized_query, scenario=case.scenario, scorer=scorer)
+    shortlisted = [item for item in ranked if item.score >= config.min_score][: config.top_k]
+    references = _build_references(shortlisted, dataset.sources) if shortlisted else []
+    reason = "ok" if shortlisted else "no_match"
+    return build_case_outcome(case, scorer, reason=reason, references=references)
+
+
+def build_case_outcome(
+    case: RetrievalCase,
+    scorer: str,
+    *,
+    reason: str,
+    references: list[dict[str, str]],
+) -> CaseOutcome:
+    matched_foods = tuple(ref["food_name"] for ref in references)
+    expected_items = case.expected_any
+    recall_hits = len([item for item in expected_items if item in matched_foods]) if case.expected_hit else 0
+    recall_total = len(expected_items) if case.expected_hit else 0
+    top1_ok = (not case.expected_hit) or (
+        case.expected_top1 is None
+        or (bool(matched_foods) and matched_foods[0] == case.expected_top1)
+    )
+    citation_complete = bool(references) and all(
+        _optional_non_empty_text(ref.get("food_name"))
+        and _optional_non_empty_text(ref.get("source_id"))
+        and _optional_non_empty_text(ref.get("source_name"))
+        for ref in references
+    )
+    expected_hit_ok = bool(references) if case.expected_hit else not bool(references)
+    return CaseOutcome(
+        case=case,
+        scorer=scorer,
+        reason=reason,
+        hit_count=len(references),
+        matched_foods=matched_foods,
+        top1_ok=top1_ok,
+        recall_hits=recall_hits,
+        recall_total=recall_total,
+        citation_complete=citation_complete,
+        expected_hit_ok=expected_hit_ok,
+    )
+
+
+def summarize_metrics(outcomes: list[CaseOutcome]) -> MetricSummary:
+    positive_cases = [outcome for outcome in outcomes if outcome.case.expected_hit]
+    negative_cases = [outcome for outcome in outcomes if not outcome.case.expected_hit]
+    positive_hits = sum(1 for outcome in positive_cases if outcome.hit_count > 0)
+    top1_total = sum(1 for outcome in positive_cases if outcome.case.expected_top1 is not None)
+    top1_hits = sum(1 for outcome in positive_cases if outcome.case.expected_top1 is not None and outcome.top1_ok)
+    recall_total = sum(outcome.recall_total for outcome in positive_cases)
+    recall_hits = sum(outcome.recall_hits for outcome in positive_cases)
+    hit_outcomes = [outcome for outcome in outcomes if outcome.hit_count > 0]
+    citation_hits = sum(1 for outcome in hit_outcomes if outcome.citation_complete)
+    no_hit_count = sum(1 for outcome in outcomes if outcome.hit_count == 0)
+    negative_passes = sum(1 for outcome in negative_cases if outcome.expected_hit_ok)
+
+    return MetricSummary(
+        case_count=len(outcomes),
+        positive_case_count=len(positive_cases),
+        negative_case_count=len(negative_cases),
+        hit_rate=(positive_hits / len(positive_cases)) if positive_cases else 1.0,
+        top1_accuracy=(top1_hits / top1_total) if top1_total else 1.0,
+        topk_recall=(recall_hits / recall_total) if recall_total else 1.0,
+        citation_completeness_rate=(citation_hits / len(hit_outcomes)) if hit_outcomes else 1.0,
+        no_hit_rate=no_hit_count / len(outcomes) if outcomes else 0.0,
+        negative_pass_rate=(negative_passes / len(negative_cases)) if negative_cases else 1.0,
+    )
+
+
+def validate_metric_thresholds(
+    legacy: MetricSummary,
+    enhanced: MetricSummary,
+) -> list[str]:
+    failures: list[str] = []
+    top1_improvement = relative_improvement(legacy.top1_accuracy, enhanced.top1_accuracy)
+    recall_improvement = relative_improvement(legacy.topk_recall, enhanced.topk_recall)
+
+    if top1_improvement + EPSILON < RELATIVE_IMPROVEMENT_THRESHOLD:
+        failures.append(
+            "Top-1 accuracy relative improvement is below threshold: "
+            f"{top1_improvement:.1%} < {RELATIVE_IMPROVEMENT_THRESHOLD:.0%}"
+        )
+    if recall_improvement + EPSILON < RELATIVE_IMPROVEMENT_THRESHOLD:
+        failures.append(
+            "Top-K recall relative improvement is below threshold: "
+            f"{recall_improvement:.1%} < {RELATIVE_IMPROVEMENT_THRESHOLD:.0%}"
+        )
+    if enhanced.citation_completeness_rate + EPSILON < 1.0:
+        failures.append("citation completeness rate must remain 100% on hit samples")
+    if enhanced.no_hit_rate > legacy.no_hit_rate + EPSILON:
+        failures.append(
+            f"no-hit rate regressed: enhanced={enhanced.no_hit_rate:.1%}, legacy={legacy.no_hit_rate:.1%}"
+        )
+    if enhanced.negative_pass_rate + EPSILON < 1.0:
+        failures.append("negative eval cases must keep 100% no-hit pass rate")
+    return failures
+
+
+def validate_against_baseline(path: Path, current: MetricSummary) -> list[str]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    metrics = payload.get("metrics", {})
+    baseline = metrics.get("enhanced", {})
+    failures: list[str] = []
+
+    for field in ("hit_rate", "top1_accuracy", "topk_recall", "citation_completeness_rate", "negative_pass_rate"):
+        baseline_value = float(baseline.get(field, 0.0))
+        current_value = float(getattr(current, field))
+        if current_value + EPSILON < baseline_value:
+            failures.append(
+                f"{field} regressed from baseline: current={current_value:.1%}, baseline={baseline_value:.1%}"
+            )
+
+    baseline_no_hit_rate = float(baseline.get("no_hit_rate", 1.0))
+    if current.no_hit_rate > baseline_no_hit_rate + EPSILON:
+        failures.append(
+            f"no_hit_rate regressed from baseline: current={current.no_hit_rate:.1%}, baseline={baseline_no_hit_rate:.1%}"
+        )
+    return failures
+
+
+def build_baseline_payload(
+    *,
+    dataset_version: str,
+    case_count: int,
+    legacy_metrics: MetricSummary,
+    enhanced_metrics: MetricSummary,
+) -> dict[str, Any]:
+    return {
+        "generated_at": date.today().isoformat(),
+        "dataset_version": dataset_version,
+        "case_count": case_count,
+        "thresholds": {
+            "top1_relative_improvement_min": RELATIVE_IMPROVEMENT_THRESHOLD,
+            "topk_recall_relative_improvement_min": RELATIVE_IMPROVEMENT_THRESHOLD,
+            "citation_completeness_rate_min": 1.0,
+            "negative_pass_rate_min": 1.0,
+        },
+        "metrics": {
+            "legacy": asdict(legacy_metrics),
+            "enhanced": asdict(enhanced_metrics),
+        },
+    }
+
+
+def print_metric_summary(label: str, metrics: MetricSummary) -> None:
+    print(
+        f"[INFO] {label}: "
+        f"hit_rate={metrics.hit_rate:.1%}, "
+        f"top1_accuracy={metrics.top1_accuracy:.1%}, "
+        f"topk_recall={metrics.topk_recall:.1%}, "
+        f"citation_completeness={metrics.citation_completeness_rate:.1%}, "
+        f"no_hit_rate={metrics.no_hit_rate:.1%}, "
+        f"negative_pass_rate={metrics.negative_pass_rate:.1%}"
+    )
+
+
+def print_case_deltas(legacy_outcomes: list[CaseOutcome], enhanced_outcomes: list[CaseOutcome]) -> None:
+    for legacy, enhanced in zip(legacy_outcomes, enhanced_outcomes):
+        if legacy.case.case_id != enhanced.case.case_id:
+            continue
+        if legacy.matched_foods == enhanced.matched_foods:
+            continue
+        print(
+            f"[CASE] {legacy.case.case_id}: "
+            f"legacy={list(legacy.matched_foods)} -> enhanced={list(enhanced.matched_foods)}"
+        )
+
+
+def relative_improvement(baseline: float, current: float) -> float:
+    if baseline <= EPSILON:
+        return 1.0 if current > baseline else 0.0
+    return (current - baseline) / baseline
 
 
 def validate_dataset_payload(payload: dict[str, Any], dataset: Any) -> list[str]:
@@ -208,7 +484,9 @@ def validate_dataset_payload(payload: dict[str, Any], dataset: Any) -> list[str]
             failures.append(f"{food_label}.source_ids must be a non-empty list of strings")
             missing_critical_fields += 1
         else:
-            unknown_source_ids = sorted({str(item).strip() for item in source_ids if str(item).strip() not in known_source_ids})
+            unknown_source_ids = sorted(
+                {str(item).strip() for item in source_ids if str(item).strip() not in known_source_ids}
+            )
             if unknown_source_ids:
                 failures.append(
                     f"{food_label}.source_ids reference unknown sources: {', '.join(unknown_source_ids)}"
@@ -279,6 +557,13 @@ def _find_duplicates(values: Iterable[str]) -> set[str]:
             continue
         seen.add(value)
     return duplicates
+
+
+def _optional_non_empty_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
 
 
 def _is_non_empty_text(value: Any) -> bool:

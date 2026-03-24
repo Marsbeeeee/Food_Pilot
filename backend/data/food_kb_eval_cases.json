@@ -1,0 +1,316 @@
+[
+  {
+    "id": "estimate_beef_noodle",
+    "query": "一碗牛肉面大概多少热量",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "牛肉面",
+    "expected_any": ["牛肉面"]
+  },
+  {
+    "id": "estimate_tomato_egg_noodle",
+    "query": "番茄鸡蛋面大概多少卡",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "西红柿鸡蛋面",
+    "expected_any": ["西红柿鸡蛋面"]
+  },
+  {
+    "id": "estimate_lanzhou_noodle",
+    "query": "兰州拉面热量高吗",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "兰州牛肉面",
+    "expected_any": ["兰州牛肉面"]
+  },
+  {
+    "id": "estimate_luosifen",
+    "query": "柳州螺蛳粉一碗多少卡",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "螺蛳粉",
+    "expected_any": ["螺蛳粉"]
+  },
+  {
+    "id": "estimate_roujiamo",
+    "query": "西安肉夹馍大概多少热量",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "肉夹馍",
+    "expected_any": ["肉夹馍"]
+  },
+  {
+    "id": "estimate_jianbing_egg",
+    "query": "煎饼果子加鸡蛋热量高吗",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "煎饼果子",
+    "expected_any": ["煎饼果子", "鸡蛋"]
+  },
+  {
+    "id": "estimate_douhua",
+    "query": "豆花热量高吗",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "豆腐脑",
+    "expected_any": ["豆腐脑"]
+  },
+  {
+    "id": "estimate_shengye_latte",
+    "query": "生椰拿铁一杯多少卡",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "生椰拿铁",
+    "expected_any": ["生椰拿铁"]
+  },
+  {
+    "id": "estimate_half_sugar_milk_tea",
+    "query": "半糖珍珠奶茶热量高吗",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "低糖珍珠奶茶",
+    "expected_any": ["低糖珍珠奶茶", "珍珠奶茶"]
+  },
+  {
+    "id": "estimate_chicken_wrap",
+    "query": "老北京鸡肉卷大概多少卡",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "老北京鸡肉卷",
+    "expected_any": ["老北京鸡肉卷"]
+  },
+  {
+    "id": "estimate_breakfast_combo",
+    "query": "早饭两个肉包一杯豆浆大概多少热量",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_any": ["猪肉白菜包子", "无糖豆浆"]
+  },
+  {
+    "id": "rec_milk_tea_swap",
+    "query": "奶茶有没有更健康的平替",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "珍珠奶茶",
+    "expected_any": ["珍珠奶茶"]
+  },
+  {
+    "id": "rec_low_sugar_boba",
+    "query": "三分糖波霸奶茶还能喝吗",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "低糖珍珠奶茶",
+    "expected_any": ["低糖珍珠奶茶", "珍珠奶茶"]
+  },
+  {
+    "id": "rec_boba_vs_americano",
+    "query": "半糖波霸奶茶和冰美式哪个更适合控糖",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "低糖珍珠奶茶",
+    "expected_any": ["低糖珍珠奶茶", "美式咖啡"]
+  },
+  {
+    "id": "rec_lemon_tea_alias",
+    "query": "鸭屎香柠檬茶有什么更轻的点法",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "柠檬茶",
+    "expected_any": ["柠檬茶"]
+  },
+  {
+    "id": "rec_cheese_foam_alias",
+    "query": "芝士奶盖茶有没有平替",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "奶盖茶",
+    "expected_any": ["奶盖茶"]
+  },
+  {
+    "id": "rec_hot_latte_vs_coconut_latte",
+    "query": "热拿铁和生椰拿铁哪个更适合控糖",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "生椰拿铁",
+    "expected_any": ["生椰拿铁", "拿铁咖啡"]
+  },
+  {
+    "id": "rec_beef_rice_noodle_vs_sour_spicy",
+    "query": "清汤牛肉米线和酸辣粉哪个更适合减脂",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "牛肉米线",
+    "expected_any": ["牛肉米线", "酸辣粉"]
+  },
+  {
+    "id": "rec_malatang_vs_kungpao",
+    "query": "麻辣烫和宫保鸡丁哪个更适合减脂",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "宫保鸡丁",
+    "expected_any": ["麻辣烫", "宫保鸡丁"]
+  },
+  {
+    "id": "rec_yuxiang_oily",
+    "query": "鱼香肉丝盖饭是不是很油",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "鱼香肉丝",
+    "expected_any": ["鱼香肉丝"]
+  },
+  {
+    "id": "rec_huangmenji_takeout",
+    "query": "黄焖鸡米饭外卖怎么点更稳妥",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "黄焖鸡米饭",
+    "expected_any": ["黄焖鸡米饭"]
+  },
+  {
+    "id": "rec_shengye_vs_latte",
+    "query": "生椰拿铁是不是比拿铁更高热量",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "生椰拿铁",
+    "expected_any": ["生椰拿铁", "拿铁咖啡"]
+  },
+  {
+    "id": "rec_suancaiyu_rice",
+    "query": "晚上吃酸菜鱼配米饭会不会太多",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "酸菜鱼",
+    "expected_any": ["酸菜鱼", "米饭"]
+  },
+  {
+    "id": "rec_americano_vs_mango",
+    "query": "冰美式和杨枝甘露哪个更适合控糖",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "杨枝甘露",
+    "expected_any": ["美式咖啡", "杨枝甘露"]
+  },
+  {
+    "id": "rec_wonton_vs_xiaolongbao",
+    "query": "云吞和小笼包哪个更适合减脂早餐",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_any": ["馄饨", "小笼包"]
+  },
+  {
+    "id": "rec_roujiamo_vs_wrap",
+    "query": "西安肉夹馍和老北京鸡肉卷哪个更适合午饭",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_any": ["肉夹馍", "老北京鸡肉卷"]
+  },
+  {
+    "id": "rec_doufuhua_vs_liangpi",
+    "query": "豆腐花和凉皮哪个更适合早餐",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "豆腐脑",
+    "expected_any": ["豆腐脑", "凉皮"]
+  },
+  {
+    "id": "rec_doufuhua_vs_wonton",
+    "query": "豆腐花和云吞哪个更适合早餐",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "豆腐脑",
+    "expected_any": ["豆腐脑", "馄饨"]
+  },
+  {
+    "id": "rec_doufuhua_vs_tomato_egg_noodle",
+    "query": "豆腐花和番茄鸡蛋面哪个更适合早餐",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_any": ["豆腐脑", "西红柿鸡蛋面"]
+  },
+  {
+    "id": "rec_doufuhua_vs_cheese_foam",
+    "query": "豆腐花和芝士奶盖茶哪个更适合控糖",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_any": ["豆腐脑", "奶盖茶"]
+  },
+  {
+    "id": "rec_doufuhua_vs_americano",
+    "query": "豆腐花和冰美式哪个更适合控糖",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_any": ["豆腐脑", "美式咖啡"]
+  },
+  {
+    "id": "rec_half_sugar_vs_cheese_foam",
+    "query": "半糖珍珠奶茶和芝士奶盖绿茶哪个更适合控糖",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "低糖珍珠奶茶",
+    "expected_any": ["低糖珍珠奶茶", "奶盖茶"]
+  },
+  {
+    "id": "text_shengye_reason",
+    "query": "为什么更推荐生椰拿铁而不是奶茶",
+    "scenario": "text",
+    "expected_hit": true,
+    "expected_top1": "生椰拿铁",
+    "expected_any": ["生椰拿铁", "珍珠奶茶"]
+  },
+  {
+    "id": "text_yuxiang_reason",
+    "query": "为什么说鱼香肉丝盖饭比较油",
+    "scenario": "text",
+    "expected_hit": true,
+    "expected_top1": "鱼香肉丝",
+    "expected_any": ["鱼香肉丝"]
+  },
+  {
+    "id": "text_low_sugar_reason",
+    "query": "为什么低糖珍珠奶茶也不能多喝",
+    "scenario": "text",
+    "expected_hit": true,
+    "expected_top1": "低糖珍珠奶茶",
+    "expected_any": ["低糖珍珠奶茶", "珍珠奶茶"]
+  },
+  {
+    "id": "text_wrap_vs_roujiamo_reason",
+    "query": "老北京鸡肉卷为什么不如肉夹馍顶饱",
+    "scenario": "text",
+    "expected_hit": true,
+    "expected_top1": "老北京鸡肉卷",
+    "expected_any": ["老北京鸡肉卷", "肉夹馍"]
+  },
+  {
+    "id": "text_rice_noodle_reason",
+    "query": "为什么说清汤牛肉米线比酸辣粉更稳妥",
+    "scenario": "text",
+    "expected_hit": true,
+    "expected_top1": "牛肉米线",
+    "expected_any": ["牛肉米线", "酸辣粉"]
+  },
+  {
+    "id": "negative_english_query",
+    "query": "how many calories in chicken salad",
+    "scenario": "estimate",
+    "expected_hit": false
+  },
+  {
+    "id": "negative_missing_food",
+    "query": "寿司拼盘和沙拉哪个更适合减脂",
+    "scenario": "meal_recommendation",
+    "expected_hit": false
+  },
+  {
+    "id": "negative_non_food_text",
+    "query": "推荐一家附近健身房",
+    "scenario": "text",
+    "expected_hit": false
+  },
+  {
+    "id": "negative_weather",
+    "query": "帮我查一下明天上海天气",
+    "scenario": "text",
+    "expected_hit": false
+  }
+]
