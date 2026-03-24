@@ -1,3 +1,4 @@
+import json
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -51,6 +52,41 @@ class FoodKnowledgeRetrievalTests(unittest.TestCase):
         self.assertTrue(result.has_hits)
         self.assertTrue(any(ref["food_name"] == "珍珠奶茶" for ref in result.references))
         self.assertIn("References:", result.context_text)
+        self.assertTrue(all(ref.get("source_id") for ref in result.references))
+        self.assertTrue(all(ref.get("source_name") for ref in result.references))
+
+    def test_dataset_has_required_fields_traceability_and_minimum_size(self) -> None:
+        payload = json.loads(self.data_path.read_text(encoding="utf-8"))
+        foods = payload["foods"]
+        self.assertGreaterEqual(len(foods), 60)
+        self.assertEqual(len({food["canonical_name"] for food in foods}), len(foods))
+        self.assertEqual(payload["version"], "2026-03-24")
+        self.assertTrue(any(item["version"] == payload["version"] for item in payload["change_summary"]))
+
+        source_ids = {source["id"] for source in payload["sources"]}
+        for food in foods:
+            self.assertTrue(food["canonical_name"].strip())
+            self.assertTrue(food["aliases"])
+            self.assertTrue(food["source_ids"])
+            self.assertTrue(food["updated_at"].strip())
+            self.assertEqual(set(food["nutrition_per_100g"]), {"kcal", "protein_g", "carbs_g", "fat_g"})
+            self.assertTrue(set(food["source_ids"]).issubset(source_ids))
+
+    def test_retrieve_hits_low_sugar_milk_tea_variant_with_traceable_refs(self) -> None:
+        with self._patch_config():
+            result = retrieve_food_knowledge("三分糖珍珠奶茶是不是更轻一点", scenario="meal_recommendation")
+
+        self.assertTrue(result.has_hits)
+        self.assertTrue(any(ref["food_name"] == "低糖珍珠奶茶" for ref in result.references))
+        self.assertTrue(all(ref.get("food_name") and ref.get("source_id") and ref.get("source_name") for ref in result.references))
+
+    def test_retrieve_hits_local_alias_for_lanzhou_beef_noodle(self) -> None:
+        with self._patch_config():
+            result = retrieve_food_knowledge("兰州拉面热量高吗", scenario="estimate")
+
+        self.assertTrue(result.has_hits)
+        self.assertTrue(any(ref["food_name"] == "兰州牛肉面" for ref in result.references))
+        self.assertTrue(all(ref.get("source_name") for ref in result.references))
 
     def test_build_single_dish_ingredient_breakdown_for_kungpao_chicken(self) -> None:
         with self._patch_config():
