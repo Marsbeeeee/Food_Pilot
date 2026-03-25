@@ -14,6 +14,9 @@ from backend.routers.chat import router as chat_router
 from backend.routers.food_log import router as food_log_router
 from backend.routers.insights import router as insights_router
 from backend.services.estimate_service import create_estimate_validation_error_response
+from backend.services.standard_dish_image_generation_service import (
+    recover_and_dispatch_image_generation_jobs,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +41,11 @@ app.include_router(auth_router)
 app.include_router(chat_router)
 app.include_router(food_log_router)
 app.include_router(insights_router)
+
+
+@app.on_event("startup")
+async def start_background_orchestration() -> None:
+    recover_and_dispatch_image_generation_jobs()
 
 
 def _cors_headers(request: Request | None = None) -> dict[str, str]:

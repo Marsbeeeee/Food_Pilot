@@ -76,7 +76,7 @@ def get_standard_dish_by_id(
         """,
         (standard_dish_id,),
     )
-    return _row_to_standard_dish(cursor.fetchone())
+    return _row_to_standard_dish(conn, cursor.fetchone())
 
 
 def get_standard_dish_by_name(
@@ -96,7 +96,7 @@ def get_standard_dish_by_name(
         """,
         (normalized_name,),
     )
-    return _row_to_standard_dish(cursor.fetchone())
+    return _row_to_standard_dish(conn, cursor.fetchone())
 
 
 def list_standard_dishes_ready_for_image_generation(
@@ -112,12 +112,17 @@ def list_standard_dishes_ready_for_image_generation(
         FROM standard_dishes
         WHERE (image_url IS NULL OR trim(image_url) = '')
           AND COALESCE(image_status, '') != ?
+          AND id NOT IN (
+              SELECT standard_dish_id
+              FROM image_generation_jobs
+              WHERE status IN ('queued', 'running')
+          )
         ORDER BY updated_at DESC, id DESC
         LIMIT COALESCE(?, -1)
         """,
         (PENDING_IMAGE_STATUS, limit),
     )
-    return [_row_to_standard_dish(row) for row in cursor.fetchall()]
+    return [_row_to_standard_dish(conn, row) for row in cursor.fetchall()]
 
 
 def can_trigger_standard_dish_image_generation(
@@ -415,14 +420,22 @@ def _get_dish_image_for_standard_dish(
     return _row_to_dish_image(cursor.fetchone())
 
 
-def _row_to_standard_dish(row: sqlite3.Row | None) -> dict[str, object] | None:
+def _row_to_standard_dish(
+    conn: sqlite3.Connection,
+    row: sqlite3.Row | None,
+) -> dict[str, object] | None:
     if row is None:
         return None
     standard_dish = dict(row)
     standard_dish["has_official_image"] = _has_official_image(standard_dish)
+    standard_dish["has_active_image_generation_job"] = _has_active_image_generation_job(
+        conn,
+        int(standard_dish["id"]),
+    )
     standard_dish["can_trigger_image_generation"] = (
         not standard_dish["has_official_image"]
         and standard_dish.get("image_status") != PENDING_IMAGE_STATUS
+        and not standard_dish["has_active_image_generation_job"]
     )
     return standard_dish
 
@@ -462,6 +475,24 @@ def _has_official_image(standard_dish: dict[str, object]) -> bool:
         and bool(image_url.strip())
         and image_status == APPROVED_IMAGE_STATUS
     )
+
+
+def _has_active_image_generation_job(
+    conn: sqlite3.Connection,
+    standard_dish_id: int,
+) -> bool:
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT 1
+        FROM image_generation_jobs
+        WHERE standard_dish_id = ?
+          AND status IN ('queued', 'running')
+        LIMIT 1
+        """,
+        (standard_dish_id,),
+    )
+    return cursor.fetchone() is not None
 
 
 def _current_timestamp() -> str:

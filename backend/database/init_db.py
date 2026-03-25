@@ -15,6 +15,7 @@ def init_db():
     _ensure_messages_table(cursor)
     _ensure_standard_dishes_table(cursor)
     _ensure_dish_images_table(cursor)
+    _ensure_image_generation_jobs_table(cursor)
     _ensure_food_logs_table(cursor)
     _ensure_insights_analysis_table(cursor)
     _ensure_insights_basket_state_table(cursor)
@@ -785,6 +786,140 @@ def _ensure_dish_images_table(cursor) -> None:
         WHEN NEW.updated_at = OLD.updated_at
         BEGIN
             UPDATE dish_images
+            SET updated_at = CURRENT_TIMESTAMP
+            WHERE id = NEW.id;
+        END;
+        """
+    )
+
+
+def _ensure_image_generation_jobs_table(cursor) -> None:
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS image_generation_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            standard_dish_id INTEGER NOT NULL REFERENCES standard_dishes(id) ON DELETE CASCADE,
+            dish_image_id INTEGER REFERENCES dish_images(id) ON DELETE SET NULL,
+            retry_of_job_id INTEGER REFERENCES image_generation_jobs(id) ON DELETE SET NULL,
+            status TEXT NOT NULL DEFAULT 'queued',
+            prompt_version TEXT NOT NULL,
+            prompt_text TEXT NOT NULL,
+            error_message TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            started_at TEXT,
+            finished_at TEXT,
+            CHECK (status IN ('queued', 'running', 'completed', 'failed', 'timed_out')),
+            CHECK (length(trim(prompt_version)) > 0),
+            CHECK (length(trim(prompt_text)) > 0),
+            CHECK (error_message IS NULL OR length(trim(error_message)) > 0),
+            CHECK (
+                (status = 'queued' AND started_at IS NULL AND finished_at IS NULL)
+                OR (status = 'running' AND started_at IS NOT NULL AND finished_at IS NULL)
+                OR (status IN ('completed', 'failed', 'timed_out') AND started_at IS NOT NULL AND finished_at IS NOT NULL)
+            )
+        );
+        """
+    )
+    job_columns = _get_table_columns(cursor, "image_generation_jobs")
+    if "dish_image_id" not in job_columns:
+        cursor.execute(
+            """
+            ALTER TABLE image_generation_jobs
+            ADD COLUMN dish_image_id INTEGER REFERENCES dish_images(id) ON DELETE SET NULL
+            """
+        )
+    if "retry_of_job_id" not in job_columns:
+        cursor.execute(
+            """
+            ALTER TABLE image_generation_jobs
+            ADD COLUMN retry_of_job_id INTEGER REFERENCES image_generation_jobs(id) ON DELETE SET NULL
+            """
+        )
+    if "status" not in job_columns:
+        cursor.execute(
+            """
+            ALTER TABLE image_generation_jobs
+            ADD COLUMN status TEXT NOT NULL DEFAULT 'queued'
+            """
+        )
+    if "prompt_version" not in job_columns:
+        cursor.execute(
+            """
+            ALTER TABLE image_generation_jobs
+            ADD COLUMN prompt_version TEXT
+            """
+        )
+    if "prompt_text" not in job_columns:
+        cursor.execute(
+            """
+            ALTER TABLE image_generation_jobs
+            ADD COLUMN prompt_text TEXT
+            """
+        )
+    if "error_message" not in job_columns:
+        cursor.execute(
+            """
+            ALTER TABLE image_generation_jobs
+            ADD COLUMN error_message TEXT
+            """
+        )
+    if "created_at" not in job_columns:
+        cursor.execute(
+            """
+            ALTER TABLE image_generation_jobs
+            ADD COLUMN created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            """
+        )
+    if "updated_at" not in job_columns:
+        cursor.execute(
+            """
+            ALTER TABLE image_generation_jobs
+            ADD COLUMN updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            """
+        )
+    if "started_at" not in job_columns:
+        cursor.execute(
+            """
+            ALTER TABLE image_generation_jobs
+            ADD COLUMN started_at TEXT
+            """
+        )
+    if "finished_at" not in job_columns:
+        cursor.execute(
+            """
+            ALTER TABLE image_generation_jobs
+            ADD COLUMN finished_at TEXT
+            """
+        )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_image_generation_jobs_standard_dish_created_at
+        ON image_generation_jobs(standard_dish_id, created_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_image_generation_jobs_status
+        ON image_generation_jobs(status, created_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_image_generation_jobs_one_active_per_dish
+        ON image_generation_jobs(standard_dish_id)
+        WHERE status IN ('queued', 'running');
+        """
+    )
+    cursor.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS image_generation_jobs_set_updated_at
+        AFTER UPDATE ON image_generation_jobs
+        FOR EACH ROW
+        WHEN NEW.updated_at = OLD.updated_at
+        BEGIN
+            UPDATE image_generation_jobs
             SET updated_at = CURRENT_TIMESTAMP
             WHERE id = NEW.id;
         END;
