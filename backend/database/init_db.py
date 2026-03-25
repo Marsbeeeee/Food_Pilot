@@ -13,6 +13,8 @@ def init_db():
     _ensure_profiles_table(cursor)
     _ensure_chat_sessions_table(cursor)
     _ensure_messages_table(cursor)
+    _ensure_standard_dishes_table(cursor)
+    _ensure_dish_images_table(cursor)
     _ensure_food_logs_table(cursor)
     _ensure_insights_analysis_table(cursor)
     _ensure_insights_basket_state_table(cursor)
@@ -546,6 +548,243 @@ def _ensure_food_logs_table(cursor) -> None:
         WHEN NEW.updated_at = OLD.updated_at
         BEGIN
             UPDATE food_logs
+            SET updated_at = CURRENT_TIMESTAMP
+            WHERE id = NEW.id;
+        END;
+        """
+    )
+
+
+def _ensure_standard_dishes_table(cursor) -> None:
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS standard_dishes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            canonical_name TEXT NOT NULL,
+            normalized_name TEXT NOT NULL,
+            image_url TEXT,
+            image_status TEXT,
+            image_prompt_version TEXT,
+            image_updated_at TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CHECK (length(trim(canonical_name)) > 0),
+            CHECK (length(trim(normalized_name)) > 0),
+            CHECK (image_url IS NULL OR length(trim(image_url)) > 0),
+            CHECK (image_prompt_version IS NULL OR length(trim(image_prompt_version)) > 0),
+            CHECK (image_status IS NULL OR image_status IN ('pending', 'approved', 'rejected')),
+            CHECK (
+                (
+                    image_status = 'approved'
+                    AND image_url IS NOT NULL
+                    AND length(trim(image_url)) > 0
+                )
+                OR (
+                    image_status IN ('pending', 'rejected')
+                    AND image_url IS NULL
+                )
+                OR (
+                    image_status IS NULL
+                    AND image_url IS NULL
+                )
+            )
+        );
+        """
+    )
+    standard_dish_columns = _get_table_columns(cursor, "standard_dishes")
+    if "normalized_name" not in standard_dish_columns:
+        cursor.execute(
+            """
+            ALTER TABLE standard_dishes
+            ADD COLUMN normalized_name TEXT
+            """
+        )
+    if "image_url" not in standard_dish_columns:
+        cursor.execute(
+            """
+            ALTER TABLE standard_dishes
+            ADD COLUMN image_url TEXT
+            """
+        )
+    if "image_status" not in standard_dish_columns:
+        cursor.execute(
+            """
+            ALTER TABLE standard_dishes
+            ADD COLUMN image_status TEXT
+            """
+        )
+    if "image_prompt_version" not in standard_dish_columns:
+        cursor.execute(
+            """
+            ALTER TABLE standard_dishes
+            ADD COLUMN image_prompt_version TEXT
+            """
+        )
+    if "image_updated_at" not in standard_dish_columns:
+        cursor.execute(
+            """
+            ALTER TABLE standard_dishes
+            ADD COLUMN image_updated_at TEXT
+            """
+        )
+    if "created_at" not in standard_dish_columns:
+        cursor.execute(
+            """
+            ALTER TABLE standard_dishes
+            ADD COLUMN created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            """
+        )
+    if "updated_at" not in standard_dish_columns:
+        cursor.execute(
+            """
+            ALTER TABLE standard_dishes
+            ADD COLUMN updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            """
+        )
+
+    cursor.execute(
+        """
+        UPDATE standard_dishes
+        SET normalized_name = lower(trim(canonical_name))
+        WHERE normalized_name IS NULL OR trim(normalized_name) = ''
+        """
+    )
+
+    cursor.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_standard_dishes_normalized_name_unique
+        ON standard_dishes(normalized_name);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_standard_dishes_image_status
+        ON standard_dishes(image_status);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_standard_dishes_image_updated_at
+        ON standard_dishes(image_updated_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS standard_dishes_set_updated_at
+        AFTER UPDATE ON standard_dishes
+        FOR EACH ROW
+        WHEN NEW.updated_at = OLD.updated_at
+        BEGIN
+            UPDATE standard_dishes
+            SET updated_at = CURRENT_TIMESTAMP
+            WHERE id = NEW.id;
+        END;
+        """
+    )
+
+
+def _ensure_dish_images_table(cursor) -> None:
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS dish_images (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            standard_dish_id INTEGER NOT NULL REFERENCES standard_dishes(id) ON DELETE CASCADE,
+            image_url TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            prompt_version TEXT,
+            review_note TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            reviewed_at TEXT,
+            CHECK (length(trim(image_url)) > 0),
+            CHECK (status IN ('pending', 'approved', 'rejected')),
+            CHECK (prompt_version IS NULL OR length(trim(prompt_version)) > 0),
+            CHECK (review_note IS NULL OR length(trim(review_note)) > 0),
+            CHECK (
+                (status = 'pending' AND reviewed_at IS NULL)
+                OR (status IN ('approved', 'rejected') AND reviewed_at IS NOT NULL)
+            )
+        );
+        """
+    )
+    dish_image_columns = _get_table_columns(cursor, "dish_images")
+    if "status" not in dish_image_columns:
+        cursor.execute(
+            """
+            ALTER TABLE dish_images
+            ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'
+            """
+        )
+    if "prompt_version" not in dish_image_columns:
+        cursor.execute(
+            """
+            ALTER TABLE dish_images
+            ADD COLUMN prompt_version TEXT
+            """
+        )
+    if "review_note" not in dish_image_columns:
+        cursor.execute(
+            """
+            ALTER TABLE dish_images
+            ADD COLUMN review_note TEXT
+            """
+        )
+    if "created_at" not in dish_image_columns:
+        cursor.execute(
+            """
+            ALTER TABLE dish_images
+            ADD COLUMN created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            """
+        )
+    if "updated_at" not in dish_image_columns:
+        cursor.execute(
+            """
+            ALTER TABLE dish_images
+            ADD COLUMN updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            """
+        )
+    if "reviewed_at" not in dish_image_columns:
+        cursor.execute(
+            """
+            ALTER TABLE dish_images
+            ADD COLUMN reviewed_at TEXT
+            """
+        )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_dish_images_standard_dish_created_at
+        ON dish_images(standard_dish_id, created_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_dish_images_status
+        ON dish_images(status, created_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_dish_images_one_pending_per_dish
+        ON dish_images(standard_dish_id)
+        WHERE status = 'pending';
+        """
+    )
+    cursor.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_dish_images_one_approved_per_dish
+        ON dish_images(standard_dish_id)
+        WHERE status = 'approved';
+        """
+    )
+    cursor.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS dish_images_set_updated_at
+        AFTER UPDATE ON dish_images
+        FOR EACH ROW
+        WHEN NEW.updated_at = OLD.updated_at
+        BEGIN
+            UPDATE dish_images
             SET updated_at = CURRENT_TIMESTAMP
             WHERE id = NEW.id;
         END;
