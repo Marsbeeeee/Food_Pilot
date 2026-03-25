@@ -354,6 +354,7 @@ def _ensure_food_logs_table(cursor) -> None:
             user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             session_id INTEGER REFERENCES chat_sessions(id) ON DELETE SET NULL,
             source_message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
+            standard_dish_id INTEGER REFERENCES standard_dishes(id) ON DELETE SET NULL,
             meal_description TEXT NOT NULL,
             normalized_query TEXT NOT NULL DEFAULT '',
             meal_occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -473,6 +474,13 @@ def _ensure_food_logs_table(cursor) -> None:
             ADD COLUMN image_license TEXT
             """
         )
+    if "standard_dish_id" not in food_log_columns:
+        cursor.execute(
+            """
+            ALTER TABLE food_logs
+            ADD COLUMN standard_dish_id INTEGER REFERENCES standard_dishes(id) ON DELETE SET NULL
+            """
+        )
 
     cursor.execute(
         """
@@ -532,6 +540,13 @@ def _ensure_food_logs_table(cursor) -> None:
         CREATE INDEX IF NOT EXISTS idx_food_logs_source_message_id
         ON food_logs(source_message_id)
         WHERE source_message_id IS NOT NULL;
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_food_logs_standard_dish_id
+        ON food_logs(standard_dish_id)
+        WHERE standard_dish_id IS NOT NULL;
         """
     )
     cursor.execute(

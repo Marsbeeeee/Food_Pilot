@@ -10,43 +10,52 @@ ACTIVE_FOOD_LOG_STATUS = "active"
 DELETED_FOOD_LOG_STATUS = "deleted"
 
 FOOD_LOG_SELECT_COLUMNS = """
-    id,
-    user_id,
-    session_id,
-    source_message_id,
-    meal_description,
-    normalized_query,
-    meal_occurred_at,
-    logged_at,
-    status,
-    result_title,
-    result_confidence,
-    result_description,
-    total_calories,
-    ingredients_json,
-    source_type,
-    is_manual,
-    idempotency_key,
-    assistant_suggestion,
-    image,
-    image_source,
-    image_license,
-    created_at,
-    updated_at,
-    deleted_at
+    fl.id,
+    fl.user_id,
+    fl.session_id,
+    fl.source_message_id,
+    fl.standard_dish_id,
+    fl.meal_description,
+    fl.normalized_query,
+    fl.meal_occurred_at,
+    fl.logged_at,
+    fl.status,
+    fl.result_title,
+    fl.result_confidence,
+    fl.result_description,
+    fl.total_calories,
+    fl.ingredients_json,
+    fl.source_type,
+    fl.is_manual,
+    fl.idempotency_key,
+    fl.assistant_suggestion,
+    fl.image,
+    fl.image_source,
+    fl.image_license,
+    sd.canonical_name AS standard_dish_name,
+    sd.image_url AS standard_dish_image_url,
+    sd.image_status AS standard_dish_image_status,
+    fl.created_at,
+    fl.updated_at,
+    fl.deleted_at
 """
 
 FOOD_LOG_ACTIVE_FILTER = (
-    f"status = '{ACTIVE_FOOD_LOG_STATUS}' AND deleted_at IS NULL"
+    f"fl.status = '{ACTIVE_FOOD_LOG_STATUS}' AND fl.deleted_at IS NULL"
 )
-FOOD_LOG_CREATED_DESC_ORDER_BY = "created_at DESC, id DESC"
-FOOD_LOG_CREATED_ASC_ORDER_BY = "created_at ASC, id ASC"
+FOOD_LOG_CREATED_DESC_ORDER_BY = "fl.created_at DESC, fl.id DESC"
+FOOD_LOG_CREATED_ASC_ORDER_BY = "fl.created_at ASC, fl.id ASC"
 FOOD_LOG_DEFAULT_SORT = "created_desc"
 FOOD_LOG_DEFAULT_ORDER_BY = FOOD_LOG_CREATED_DESC_ORDER_BY
 FOOD_LOG_SORT_OPTIONS: dict[str, str] = {
     "created_desc": FOOD_LOG_CREATED_DESC_ORDER_BY,
     "created_asc": FOOD_LOG_CREATED_ASC_ORDER_BY,
 }
+FOOD_LOG_FROM_CLAUSE = """
+    FROM food_logs AS fl
+    LEFT JOIN standard_dishes AS sd
+        ON sd.id = fl.standard_dish_id
+"""
 
 
 def create_food_log(
@@ -61,6 +70,7 @@ def create_food_log(
     ingredients: str | Sequence[dict[str, object]],
     session_id: int | None = None,
     source_message_id: int | None = None,
+    standard_dish_id: int | None = None,
     result_confidence: str | None = None,
     assistant_suggestion: str | None = None,
     meal_occurred_at: str | None = None,
@@ -110,6 +120,7 @@ def create_food_log(
                 ingredients=ingredients,
                 session_id=session_id,
                 source_message_id=source_message_id,
+                standard_dish_id=standard_dish_id,
                 result_confidence=result_confidence,
                 assistant_suggestion=assistant_suggestion,
                 meal_occurred_at=meal_occurred_at,
@@ -136,6 +147,7 @@ def create_food_log(
             user_id,
             session_id,
             source_message_id,
+            standard_dish_id,
             meal_description,
             normalized_query,
             meal_occurred_at,
@@ -157,7 +169,7 @@ def create_food_log(
             updated_at,
             deleted_at
         ) VALUES (
-            ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), COALESCE(?, CURRENT_TIMESTAMP), ?,
+            ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), COALESCE(?, CURRENT_TIMESTAMP), ?,
             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), COALESCE(?, CURRENT_TIMESTAMP), ?
         )
         """,
@@ -165,6 +177,7 @@ def create_food_log(
             user_id,
             session_id,
             source_message_id,
+            standard_dish_id,
             meal_description,
             normalized_query,
             resolved_meal_occurred_at,
@@ -213,6 +226,7 @@ def save_food_log(
     food_log_id: int | None = None,
     session_id: int | None = None,
     source_message_id: int | None = None,
+    standard_dish_id: int | None = None,
     result_confidence: str | None = None,
     assistant_suggestion: str | None = None,
     meal_occurred_at: str | None = None,
@@ -239,6 +253,7 @@ def save_food_log(
             ingredients=ingredients,
             session_id=session_id,
             source_message_id=source_message_id,
+            standard_dish_id=standard_dish_id,
             result_confidence=result_confidence,
             assistant_suggestion=assistant_suggestion,
             meal_occurred_at=meal_occurred_at,
@@ -263,6 +278,7 @@ def save_food_log(
         ingredients=ingredients,
         session_id=session_id,
         source_message_id=source_message_id,
+        standard_dish_id=standard_dish_id,
         result_confidence=result_confidence,
         assistant_suggestion=assistant_suggestion,
         meal_occurred_at=meal_occurred_at,
@@ -291,6 +307,7 @@ def update_food_log(
     ingredients: str | Sequence[dict[str, object]],
     session_id: int | None = None,
     source_message_id: int | None = None,
+    standard_dish_id: int | None = None,
     result_confidence: str | None = None,
     assistant_suggestion: str | None = None,
     meal_occurred_at: str | None = None,
@@ -318,6 +335,11 @@ def update_food_log(
         existing["source_message_id"]
         if source_message_id is None
         else source_message_id
+    )
+    resolved_standard_dish_id = (
+        existing["standard_dish_id"]
+        if standard_dish_id is None
+        else standard_dish_id
     )
     resolved_result_confidence = (
         existing["result_confidence"]
@@ -373,6 +395,7 @@ def update_food_log(
         SET
             session_id = ?,
             source_message_id = ?,
+            standard_dish_id = ?,
             meal_description = ?,
             normalized_query = ?,
             meal_occurred_at = ?,
@@ -396,6 +419,7 @@ def update_food_log(
         (
             resolved_session_id,
             resolved_source_message_id,
+            resolved_standard_dish_id,
             meal_description,
             normalized_query,
             resolved_meal_occurred_at,
@@ -444,8 +468,8 @@ def get_food_log_by_id(
     query = f"""
         SELECT
             {FOOD_LOG_SELECT_COLUMNS}
-        FROM food_logs
-        WHERE id = ? AND user_id = ?
+        {FOOD_LOG_FROM_CLAUSE}
+        WHERE fl.id = ? AND fl.user_id = ?
     """
     parameters: list[object] = [food_log_id, user_id]
     if not include_deleted:
@@ -475,30 +499,51 @@ def list_food_logs_by_user(
     sql = f"""
         SELECT
             {FOOD_LOG_SELECT_COLUMNS}
-        FROM food_logs
-        WHERE user_id = ? AND {FOOD_LOG_ACTIVE_FILTER}
+        {FOOD_LOG_FROM_CLAUSE}
+        WHERE fl.user_id = ? AND {FOOD_LOG_ACTIVE_FILTER}
     """
     parameters: list[object] = [user_id]
 
     if session_id is not None:
-        sql += " AND session_id = ?"
+        sql += " AND fl.session_id = ?"
         parameters.append(session_id)
 
     if source_type is not None:
-        sql += " AND source_type = ?"
+        sql += " AND fl.source_type = ?"
         parameters.append(source_type)
 
     if has_image is True:
-        sql += " AND image IS NOT NULL AND TRIM(image) != ''"
+        sql += (
+            " AND ("
+            "(fl.image IS NOT NULL AND TRIM(fl.image) != '')"
+            " OR "
+            "("
+            "sd.image_status = 'approved'"
+            " AND sd.image_url IS NOT NULL"
+            " AND TRIM(sd.image_url) != ''"
+            ")"
+            ")"
+        )
     elif has_image is False:
-        sql += " AND (image IS NULL OR TRIM(image) = '')"
+        sql += (
+            " AND ("
+            "(fl.image IS NULL OR TRIM(fl.image) = '')"
+            " AND "
+            "("
+            "sd.image_status != 'approved'"
+            " OR sd.image_status IS NULL"
+            " OR sd.image_url IS NULL"
+            " OR TRIM(sd.image_url) = ''"
+            ")"
+            ")"
+        )
 
     if date_from is not None:
-        sql += " AND meal_occurred_at >= ?"
+        sql += " AND fl.meal_occurred_at >= ?"
         parameters.append(f"{date_from.isoformat()} 00:00:00")
 
     if date_to is not None:
-        sql += " AND meal_occurred_at < ?"
+        sql += " AND fl.meal_occurred_at < ?"
         parameters.append(f"{(date_to + timedelta(days=1)).isoformat()} 00:00:00")
 
     keyword_input = query_text if query_text is not None else meal
@@ -507,8 +552,8 @@ def list_food_logs_by_user(
         if normalized_keyword:
             escaped_keyword = _escape_like_value(normalized_keyword)
             sql += (
-                " AND (normalized_query LIKE ? ESCAPE '\\' "
-                "OR LOWER(result_title) LIKE ? ESCAPE '\\')"
+                " AND (fl.normalized_query LIKE ? ESCAPE '\\' "
+                "OR LOWER(fl.result_title) LIKE ? ESCAPE '\\')"
             )
             keyword = f"%{escaped_keyword}%"
             parameters.extend([keyword, keyword])
@@ -536,8 +581,8 @@ def list_food_logs_by_session(
         f"""
         SELECT
             {FOOD_LOG_SELECT_COLUMNS}
-        FROM food_logs
-        WHERE user_id = ? AND session_id = ? AND {FOOD_LOG_ACTIVE_FILTER}
+        {FOOD_LOG_FROM_CLAUSE}
+        WHERE fl.user_id = ? AND fl.session_id = ? AND {FOOD_LOG_ACTIVE_FILTER}
         ORDER BY {FOOD_LOG_DEFAULT_ORDER_BY}
         LIMIT COALESCE(?, -1) OFFSET ?
         """,
@@ -575,7 +620,7 @@ def delete_food_log(
         SET
             status = '{DELETED_FOOD_LOG_STATUS}',
             deleted_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND user_id = ? AND {FOOD_LOG_ACTIVE_FILTER}
+        WHERE id = ? AND user_id = ? AND status = '{ACTIVE_FOOD_LOG_STATUS}' AND deleted_at IS NULL
         """,
         (food_log_id, user_id),
     )
@@ -631,6 +676,11 @@ def _row_to_food_log(row: sqlite3.Row | None) -> dict[str, object] | None:
     food_log = dict(row)
     if "is_manual" in food_log:
         food_log["is_manual"] = bool(food_log["is_manual"])
+    (
+        food_log["display_image"],
+        food_log["display_image_source"],
+        food_log["display_image_license"],
+    ) = _resolve_display_image_fields(food_log)
     return food_log
 
 
@@ -664,15 +714,38 @@ def _get_food_log_by_idempotency_key(
     query = f"""
         SELECT
             {FOOD_LOG_SELECT_COLUMNS}
-        FROM food_logs
-        WHERE user_id = ? AND idempotency_key = ?
+        {FOOD_LOG_FROM_CLAUSE}
+        WHERE fl.user_id = ? AND fl.idempotency_key = ?
     """
     parameters: list[object] = [user_id, normalized_key]
     if not include_deleted:
         query += f" AND {FOOD_LOG_ACTIVE_FILTER}"
-    query += " ORDER BY id DESC LIMIT 1"
+    query += " ORDER BY fl.id DESC LIMIT 1"
     cursor.execute(query, tuple(parameters))
     return _row_to_food_log(cursor.fetchone())
+
+
+def _resolve_display_image_fields(
+    food_log: dict[str, object],
+) -> tuple[str | None, str | None, str | None]:
+    image = food_log.get("image")
+    if isinstance(image, str) and image.strip():
+        return (
+            image,
+            food_log.get("image_source"),
+            food_log.get("image_license"),
+        )
+
+    standard_dish_image_url = food_log.get("standard_dish_image_url")
+    standard_dish_image_status = food_log.get("standard_dish_image_status")
+    if (
+        standard_dish_image_status == "approved"
+        and isinstance(standard_dish_image_url, str)
+        and standard_dish_image_url.strip()
+    ):
+        return standard_dish_image_url, None, None
+
+    return None, None, None
 
 
 def _resolve_idempotency_key(

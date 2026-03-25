@@ -170,6 +170,8 @@ export interface FoodLogEntry {
   image?: string;
   imageSource?: string;
   imageLicense?: string;
+  standardDishId?: string;
+  standardDishName?: string;
   protein?: string;
   carbs?: string;
   fat?: string;

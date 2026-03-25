@@ -2,7 +2,6 @@ import sqlite3
 from datetime import date
 
 from backend.database.connection import get_db_connection
-from backend.repositories.message_repository import get_message_by_id as get_message_by_id_record
 from backend.repositories.food_log_repository import (
     create_food_log as create_food_log_record,
     delete_food_log as delete_food_log_record,
@@ -12,6 +11,14 @@ from backend.repositories.food_log_repository import (
     list_food_logs_by_user_recent as list_food_logs_by_user_recent_record,
     restore_food_log as restore_food_log_record,
     save_food_log as save_food_log_record,
+)
+from backend.repositories.message_repository import get_message_by_id as get_message_by_id_record
+from backend.repositories.standard_dish_repository import (
+    get_or_create_standard_dish as get_or_create_standard_dish_record,
+)
+from backend.services.food_knowledge import find_exact_standard_dish_name
+from backend.services.standard_dish_image_generation_service import (
+    enqueue_standard_dish_image_generation,
 )
 
 IMAGE_DEFAULT_LICENSE = "user_owned"
@@ -53,6 +60,7 @@ IMAGE_LICENSE_ALIASES = {
     "copyright": "licensed",
     "publicdomain": "public_domain",
 }
+HIGH_CONFIDENCE_TOKENS = {"high", "高", "高置信", "高可信"}
 
 
 def create_food_log(
@@ -100,7 +108,14 @@ def create_food_log(
                 image_license=image_license,
             )
         )
-        return create_food_log_record(
+        standard_dish_id = _resolve_standard_dish_id(
+            active_conn,
+            source_type=source_type,
+            meal_description=meal_description,
+            result_title=result_title,
+            result_confidence=result_confidence,
+        )
+        food_log = create_food_log_record(
             active_conn,
             user_id,
             source_type=source_type,
@@ -111,6 +126,7 @@ def create_food_log(
             ingredients=ingredients,
             session_id=session_id,
             source_message_id=source_message_id,
+            standard_dish_id=standard_dish_id,
             result_confidence=result_confidence,
             assistant_suggestion=assistant_suggestion,
             meal_occurred_at=meal_occurred_at,
@@ -124,6 +140,9 @@ def create_food_log(
             image_license=resolved_image_license,
             auto_commit=auto_commit,
         )
+        if auto_commit and standard_dish_id is not None:
+            _enqueue_standard_dish_image_generation_if_needed(standard_dish_id)
+        return food_log
     except Exception:
         if owns_connection:
             active_conn.rollback()
@@ -192,7 +211,14 @@ def save_food_log(
                 image_license=image_license,
             )
         )
-        return save_food_log_record(
+        standard_dish_id = _resolve_standard_dish_id(
+            active_conn,
+            source_type=source_type,
+            meal_description=meal_description,
+            result_title=result_title,
+            result_confidence=result_confidence,
+        )
+        food_log = save_food_log_record(
             active_conn,
             user_id,
             source_type=source_type,
@@ -204,6 +230,7 @@ def save_food_log(
             food_log_id=food_log_id,
             session_id=session_id,
             source_message_id=source_message_id,
+            standard_dish_id=standard_dish_id,
             result_confidence=result_confidence,
             assistant_suggestion=assistant_suggestion,
             meal_occurred_at=meal_occurred_at,
@@ -217,6 +244,9 @@ def save_food_log(
             image_license=resolved_image_license,
             auto_commit=auto_commit,
         )
+        if auto_commit and standard_dish_id is not None:
+            _enqueue_standard_dish_image_generation_if_needed(standard_dish_id)
+        return food_log
     except Exception:
         if owns_connection:
             active_conn.rollback()
@@ -274,6 +304,9 @@ def create_food_log_from_estimate(
         )
         if owns_connection:
             active_conn.commit()
+        standard_dish_id = food_log.get("standard_dish_id")
+        if standard_dish_id is not None:
+            _enqueue_standard_dish_image_generation_if_needed(int(standard_dish_id))
         return food_log
     except Exception:
         if owns_connection:
@@ -382,44 +415,58 @@ def update_food_log_entry(
                 image_license=image_license,
             )
         )
+        resolved_meal_description = (
+            str(existing["meal_description"])
+            if meal_description is None
+            else meal_description
+        )
+        resolved_result_title = (
+            str(existing["result_title"])
+            if result_title is None
+            else result_title
+        )
+        resolved_result_description = (
+            str(existing["result_description"])
+            if result_description is None
+            else result_description
+        )
+        resolved_total_calories = (
+            str(existing["total_calories"])
+            if total_calories is None
+            else total_calories
+        )
+        resolved_ingredients = (
+            str(existing["ingredients_json"])
+            if ingredients is None
+            else ingredients
+        )
+        resolved_result_confidence = (
+            existing["result_confidence"]
+            if result_confidence is None
+            else result_confidence
+        )
+        resolved_standard_dish_id = _resolve_standard_dish_id(
+            active_conn,
+            source_type=str(existing["source_type"]),
+            meal_description=resolved_meal_description,
+            result_title=resolved_result_title,
+            result_confidence=resolved_result_confidence,
+        )
 
-        return save_food_log_record(
+        food_log = save_food_log_record(
             active_conn,
             user_id,
             source_type=str(existing["source_type"]),
-            meal_description=(
-                str(existing["meal_description"])
-                if meal_description is None
-                else meal_description
-            ),
-            result_title=(
-                str(existing["result_title"])
-                if result_title is None
-                else result_title
-            ),
-            result_description=(
-                str(existing["result_description"])
-                if result_description is None
-                else result_description
-            ),
-            total_calories=(
-                str(existing["total_calories"])
-                if total_calories is None
-                else total_calories
-            ),
-            ingredients=(
-                str(existing["ingredients_json"])
-                if ingredients is None
-                else ingredients
-            ),
+            meal_description=resolved_meal_description,
+            result_title=resolved_result_title,
+            result_description=resolved_result_description,
+            total_calories=resolved_total_calories,
+            ingredients=resolved_ingredients,
             food_log_id=food_log_id,
             session_id=existing["session_id"],
             source_message_id=existing["source_message_id"],
-            result_confidence=(
-                existing["result_confidence"]
-                if result_confidence is None
-                else result_confidence
-            ),
+            standard_dish_id=resolved_standard_dish_id,
+            result_confidence=resolved_result_confidence,
             assistant_suggestion=(
                 existing["assistant_suggestion"]
                 if assistant_suggestion is None
@@ -443,6 +490,9 @@ def update_food_log_entry(
             image_license=resolved_image_license,
             auto_commit=auto_commit,
         )
+        if auto_commit and resolved_standard_dish_id is not None:
+            _enqueue_standard_dish_image_generation_if_needed(resolved_standard_dish_id)
+        return food_log
     except Exception:
         if owns_connection:
             active_conn.rollback()
@@ -730,3 +780,48 @@ def _normalize_image_license(value: str) -> str:
         supported = ", ".join(sorted(IMAGE_ALLOWED_LICENSES))
         raise ValueError(f"image_license must be one of: {supported}")
     return resolved
+
+
+def _resolve_standard_dish_id(
+    conn: sqlite3.Connection,
+    *,
+    source_type: str,
+    meal_description: str,
+    result_title: str,
+    result_confidence: str | None,
+) -> int | None:
+    if source_type != "manual" and not _is_high_confidence(result_confidence):
+        return None
+
+    canonical_name = (
+        find_exact_standard_dish_name(result_title)
+        or find_exact_standard_dish_name(meal_description)
+    )
+    if canonical_name is None:
+        return None
+
+    standard_dish = get_or_create_standard_dish_record(
+        conn,
+        canonical_name,
+        auto_commit=False,
+    )
+    return int(standard_dish["id"])
+
+
+def _is_high_confidence(value: object) -> bool:
+    normalized = _normalize_optional_metadata_token(str(value)) if value is not None else None
+    if normalized is None:
+        return False
+    return normalized in HIGH_CONFIDENCE_TOKENS
+
+
+def _enqueue_standard_dish_image_generation_if_needed(standard_dish_id: int) -> None:
+    try:
+        enqueue_standard_dish_image_generation(
+            standard_dish_id,
+            dispatch_async=False,
+        )
+    except Exception:
+        # Image generation is a non-blocking enhancement layer and must not
+        # reduce Food Log save success.
+        return

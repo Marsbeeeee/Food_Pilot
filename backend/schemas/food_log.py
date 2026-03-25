@@ -52,6 +52,16 @@ class FoodLogEntryOut(BaseModel):
         validation_alias=AliasChoices("image_license", "imageLicense"),
         serialization_alias="imageLicense",
     )
+    standard_dish_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("standard_dish_id", "standardDishId"),
+        serialization_alias="standardDishId",
+    )
+    standard_dish_name: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("standard_dish_name", "standardDishName"),
+        serialization_alias="standardDishName",
+    )
     protein: str | None = None
     carbs: str | None = None
     fat: str | None = None
@@ -489,9 +499,15 @@ def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
             "date": _format_entry_date(timestamp),
             "time": _format_entry_time(timestamp),
             "breakdown": breakdown,
-            "image": entry.get("image"),
-            "image_source": entry.get("image_source"),
-            "image_license": entry.get("image_license"),
+            "image": entry.get("display_image"),
+            "image_source": entry.get("display_image_source"),
+            "image_license": entry.get("display_image_license"),
+            "standard_dish_id": (
+                str(entry["standard_dish_id"])
+                if entry.get("standard_dish_id") is not None
+                else None
+            ),
+            "standard_dish_name": entry.get("standard_dish_name"),
             "protein": protein,
             "carbs": carbs,
             "fat": fat,

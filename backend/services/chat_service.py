@@ -13,6 +13,7 @@ from backend.repositories.message_repository import (
     list_messages_by_session as list_messages_by_session_record,
 )
 from backend.services.estimate_parser import split_estimate_by_items
+from backend.services.food_knowledge import query_needs_standard_dish_clarification
 from backend.services.recommendation import (
     generate_meal_recommendation,
     generate_text_reply,
@@ -136,6 +137,16 @@ CLARIFICATION_MESSAGE = (
 FOOD_QUANTITY_PATTERNS = (
     "一碗", "两碗", "一份", "两份", "一杯", "两杯",
     "一个", "两个", "半个", "一根", "两根",
+)
+AMBIGUOUS_STANDARD_DISH_ESTIMATE_HINTS = (
+    "热量",
+    "营养",
+    "蛋白质",
+    "碳水",
+    "脂肪",
+    "多少卡",
+    "多少热量",
+    "多少",
 )
 ADDITIONAL_RECOMMENDATION_ROUTE_PHRASES = (
     "更值得选",
@@ -501,7 +512,12 @@ def resolve_message_type(
     if _is_explanatory_follow_up(normalized_content, has_text_signal=is_text_request):
         return TEXT_MESSAGE_TYPE
 
+    if _needs_standard_dish_estimate_clarification(normalized_content):
+        return CLARIFICATION_NEEDED
+
     if is_estimate_request:
+        if query_needs_standard_dish_clarification(normalized_content):
+            return CLARIFICATION_NEEDED
         return DEFAULT_RESOLVED_MESSAGE_TYPE
 
     if is_recommendation_request:
@@ -860,6 +876,12 @@ def _has_nutrition_quantity_question(value: str) -> bool:
 def _looks_like_food_description(value: str) -> bool:
     """输入是否像食物描述（含量词或典型食物词），用于避免将「一碗面吃什么」误判为需澄清。"""
     return _contains_any_phrase(value, FOOD_QUANTITY_PATTERNS)
+
+
+def _needs_standard_dish_estimate_clarification(value: str) -> bool:
+    if not query_needs_standard_dish_clarification(value):
+        return False
+    return _contains_any_phrase(value, AMBIGUOUS_STANDARD_DISH_ESTIMATE_HINTS)
 
 
 def estimate_meal(query: str, profile_id: int | None, user_id: int):

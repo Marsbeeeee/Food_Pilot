@@ -404,6 +404,71 @@ class FoodLogRepositoryTests(unittest.TestCase):
         )
         self.assertEqual([entry["result_title"] for entry in combined], ["Salmon Bowl"])
 
+    def test_list_food_logs_has_image_filter_includes_approved_standard_dish_images(self) -> None:
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO standard_dishes (
+                    canonical_name,
+                    normalized_name,
+                    image_url,
+                    image_status
+                ) VALUES (?, ?, ?, ?)
+                """,
+                (
+                    "鱼香肉丝",
+                    "鱼香肉丝",
+                    "https://img.example/yuxiang.jpg",
+                    "approved",
+                ),
+            )
+            standard_dish_id = cursor.lastrowid
+
+            create_food_log(
+                conn,
+                self.user_id,
+                source_type="estimate_api",
+                meal_description="鱼香肉丝热量",
+                result_title="鱼香肉丝",
+                result_description="Official image should be reused.",
+                total_calories="430 kcal",
+                ingredients=[],
+                standard_dish_id=standard_dish_id,
+                meal_occurred_at="2026-03-18 12:00:00",
+                created_at="2026-03-18 12:00:00",
+            )
+            create_food_log(
+                conn,
+                self.user_id,
+                source_type="estimate_api",
+                meal_description="oatmeal breakfast",
+                result_title="Oatmeal Bowl",
+                result_description="No image fallback.",
+                total_calories="320 kcal",
+                ingredients=[],
+                meal_occurred_at="2026-03-19 08:00:00",
+                created_at="2026-03-19 08:00:00",
+            )
+
+            with_image = list_food_logs_by_user(
+                conn,
+                self.user_id,
+                has_image=True,
+            )
+            without_image = list_food_logs_by_user(
+                conn,
+                self.user_id,
+                has_image=False,
+            )
+        finally:
+            conn.close()
+
+        self.assertEqual([entry["result_title"] for entry in with_image], ["鱼香肉丝"])
+        self.assertEqual(with_image[0]["display_image"], "https://img.example/yuxiang.jpg")
+        self.assertEqual([entry["result_title"] for entry in without_image], ["Oatmeal Bowl"])
+
     def test_save_food_log_is_idempotent_for_same_chat_message_source(self) -> None:
         conn = get_db_connection()
         try:

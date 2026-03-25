@@ -331,6 +331,7 @@ class FoodLogServiceTests(unittest.TestCase):
                 "idx_food_logs_user_meal_occurred_at",
                 "idx_food_logs_user_updated_at",
                 "idx_food_logs_source_message_id",
+                "idx_food_logs_standard_dish_id",
                 "idx_food_logs_user_idempotency_key_unique",
             }.issubset(index_names)
         )
@@ -340,8 +341,57 @@ class FoodLogServiceTests(unittest.TestCase):
                 ("user_id", "users", "id", "CASCADE"),
                 ("session_id", "chat_sessions", "id", "SET NULL"),
                 ("source_message_id", "messages", "id", "SET NULL"),
+                ("standard_dish_id", "standard_dishes", "id", "SET NULL"),
             },
         )
+
+    def test_save_food_log_binds_exact_standard_dish_and_enqueues_generation_job(self) -> None:
+        entry = save_food_log(
+            self.user_id,
+            "estimate_api",
+            meal_description="鱼香肉丝热量",
+            result_title="鱼香肉丝",
+            result_description="Classic Sichuan stir-fry.",
+            total_calories="430 kcal",
+            ingredients=[],
+            result_confidence="high",
+        )
+
+        self.assertIsNotNone(entry["standard_dish_id"])
+
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT status
+                FROM image_generation_jobs
+                WHERE standard_dish_id = ?
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (int(entry["standard_dish_id"]),),
+            )
+            job = cursor.fetchone()
+        finally:
+            conn.close()
+
+        self.assertIsNotNone(job)
+        self.assertEqual(job["status"], "queued")
+
+    def test_save_food_log_does_not_bind_ambiguous_standard_dish_name(self) -> None:
+        entry = save_food_log(
+            self.user_id,
+            "estimate_api",
+            meal_description="炒面热量",
+            result_title="炒面",
+            result_description="Generic fried noodles.",
+            total_calories="520 kcal",
+            ingredients=[],
+            result_confidence="high",
+        )
+
+        self.assertIsNone(entry["standard_dish_id"])
 
     def test_user_idempotency_key_unique_index_blocks_duplicate_food_logs(self) -> None:
         conn = get_db_connection()

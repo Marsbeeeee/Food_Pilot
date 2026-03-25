@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from fastapi import HTTPException
 
+from backend.database.connection import get_db_connection
 from backend.database.init_db import init_db
 from backend.routers.food_log import (
     get_food_log_entry,
@@ -320,6 +321,46 @@ class FoodLogApiTests(unittest.TestCase):
             current_user=self.user,
         )
         self.assertEqual([entry.name for entry in combined_entries], ["Salmon Bowl"])
+
+    def test_get_food_log_entry_reuses_approved_standard_dish_image(self) -> None:
+        created = create_food_log(
+            self.user_id,
+            "estimate_api",
+            meal_description="鱼香肉丝热量",
+            result_title="鱼香肉丝",
+            result_description="Classic Sichuan dish.",
+            total_calories="430 kcal",
+            ingredients=[],
+            result_confidence="high",
+        )
+
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE standard_dishes
+                SET image_url = ?, image_status = ?
+                WHERE id = ?
+                """,
+                (
+                    "https://img.example/yuxiang-approved.jpg",
+                    "approved",
+                    int(created["standard_dish_id"]),
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        payload = get_food_log_entry(
+            int(created["id"]),
+            current_user=self.user,
+        ).model_dump(by_alias=True, exclude_none=True)
+
+        self.assertEqual(payload["image"], "https://img.example/yuxiang-approved.jpg")
+        self.assertEqual(payload["standardDishId"], str(created["standard_dish_id"]))
+        self.assertEqual(payload["standardDishName"], "鱼香肉丝")
 
     def test_get_food_log_entry_returns_single_entry(self) -> None:
         created = create_food_log(

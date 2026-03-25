@@ -418,6 +418,19 @@ class ChatServiceTests(unittest.TestCase):
         self.assertIn("估算", exchange["assistant_message"]["content"])
         self.assertEqual(exchange["assistant_message"]["content"], CLARIFICATION_MESSAGE)
 
+    def test_send_message_in_session_returns_clarification_for_ambiguous_standard_dish_estimate(self) -> None:
+        with patch("backend.services.chat_service.estimate_meal") as mocked_estimate:
+            exchange = create_session_and_reply(
+                self.user_id,
+                "炒面热量",
+                profile_id=12,
+            )
+
+        self.assertIsNotNone(exchange)
+        self.assertEqual(exchange["assistant_message"]["message_type"], "text")
+        self.assertEqual(exchange["assistant_message"]["content"], CLARIFICATION_MESSAGE)
+        mocked_estimate.assert_not_called()
+
     def test_send_message_in_session_persists_text_reply_for_explanatory_follow_up(self) -> None:
         session = create_empty_session(self.user_id)
 

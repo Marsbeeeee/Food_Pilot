@@ -77,6 +77,16 @@ QUERY_INTENT_NOISE_TERMS = (
 COMPARISON_HINT_TERMS = ("和", "还是", "哪个", "对比", "比较", "选哪个")
 BEVERAGE_HINT_TERMS = ("茶", "咖啡", "拿铁", "美式", "豆浆", "甘露", "奶茶")
 DISH_SHAPE_HINT_TERMS = ("面", "粉", "饭", "粥", "馍", "饼", "卷", "包", "锅", "鱼", "鸡")
+AMBIGUOUS_STANDARD_DISH_TERMS = (
+    "炒面",
+    "盖饭",
+    "套餐",
+    "炒饭",
+    "拌饭",
+    "盖浇饭",
+    "米线",
+)
+MULTI_FOOD_CONNECTOR_TERMS = ("和", "加", "配", "搭配", "还有", "以及", "、")
 SYNONYM_REPLACEMENTS = (
     ("波霸", "珍珠"),
     ("啵啵", "珍珠"),
@@ -202,6 +212,50 @@ def retrieve_food_knowledge(
         hit_count=len(shortlisted),
         reason="ok",
     )
+
+
+def find_exact_standard_dish_name(query: str) -> str | None:
+    config = get_food_knowledge_config()
+    if not config.enabled:
+        return None
+
+    normalized_query = _normalize_text(query)
+    if not normalized_query:
+        return None
+
+    try:
+        dataset = _load_dataset(config.data_path)
+    except Exception as exc:
+        logger.warning("Food knowledge dataset unavailable: %s", exc)
+        return None
+
+    query_features = _prepare_query_features(normalized_query)
+    if _is_ambiguous_standard_dish_core(query_features.core):
+        return None
+    for entry in dataset.foods:
+        if entry.category not in {"dish", "snack", "drink", "dessert"}:
+            continue
+        if _matches_exact_standard_dish_term(entry, query_features):
+            return entry.canonical_name
+    return None
+
+
+def query_needs_standard_dish_clarification(query: str) -> bool:
+    normalized_query = _normalize_text(query)
+    if not normalized_query:
+        return False
+
+    query_features = _prepare_query_features(normalized_query)
+    core = query_features.core
+    if not core:
+        return False
+    if any(connector in core for connector in MULTI_FOOD_CONNECTOR_TERMS):
+        return False
+    if _is_ambiguous_standard_dish_core(core):
+        return True
+    if find_exact_standard_dish_name(query) is not None:
+        return False
+    return any(term in core for term in AMBIGUOUS_STANDARD_DISH_TERMS)
 
 
 def build_single_dish_ingredient_breakdown(
@@ -632,6 +686,36 @@ def _prepare_query_features(normalized_query: str) -> QueryFeatures:
         has_beverage_hint=any(term in canonical for term in BEVERAGE_HINT_TERMS),
         has_dish_hint=any(term in canonical for term in DISH_SHAPE_HINT_TERMS),
     )
+
+
+def _matches_exact_standard_dish_term(
+    entry: FoodKnowledgeEntry,
+    query: QueryFeatures,
+) -> bool:
+    comparable_values = {
+        query.normalized,
+        query.canonical,
+        query.core,
+    }
+    comparable_values.discard("")
+    for term in entry.search_terms:
+        prepared_term = _prepare_term_features(term)
+        if comparable_values.intersection(
+            {
+                prepared_term.normalized,
+                prepared_term.canonical,
+                prepared_term.core,
+            }
+        ):
+            return True
+    return False
+
+
+def _is_ambiguous_standard_dish_core(value: str) -> bool:
+    normalized = value.strip()
+    if not normalized:
+        return False
+    return normalized in AMBIGUOUS_STANDARD_DISH_TERMS
 
 
 @lru_cache(maxsize=512)
