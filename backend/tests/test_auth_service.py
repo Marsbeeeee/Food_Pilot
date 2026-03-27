@@ -70,6 +70,25 @@ class AuthServiceTests(unittest.TestCase):
         with self.assertRaises(DuplicateEmailError):
             register_user(request)
 
+    def test_register_marks_user_as_admin_when_admin_email_is_configured(self) -> None:
+        def fake_read_env_file(_path, key: str) -> str:
+            if key == "ADMIN_EMAILS":
+                return "alice@example.com"
+            return ""
+
+        with patch("backend.config.auth._read_env_file", side_effect=fake_read_env_file):
+            response = register_user(
+                RegisterRequest.model_validate(
+                    {
+                        "email": "alice@example.com",
+                        "password": "password123",
+                        "displayName": "Alice",
+                    }
+                )
+            )
+
+        self.assertTrue(response.user.is_admin)
+
     def test_login_rejects_invalid_password(self) -> None:
         register_user(
             RegisterRequest.model_validate(
