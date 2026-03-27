@@ -1031,7 +1031,9 @@
       "aliases": [
         "尖椒肉丝",
         "一份青椒肉丝",
-        "青椒肉丝盖饭"
+        "青椒肉丝盖饭",
+        "辣椒炒肉",
+        "青椒炒肉"
       ],
       "category": "dish",
       "nutrition_per_100g": {
@@ -1051,7 +1053,21 @@
         "food-pilot-curated-portions-2026q1",
         "cnfct-6th"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-03-24",
+      "ingredient_breakdown": [
+        {
+          "name": "猪瘦肉末",
+          "ratio": 0.42
+        },
+        {
+          "name": "青椒",
+          "ratio": 0.38
+        },
+        {
+          "name": "植物油（炒制用）",
+          "ratio": 0.20
+        }
+      ]
     },
     {
       "id": "scrambled-egg-tomato",
@@ -1079,7 +1095,21 @@
         "food-pilot-curated-portions-2026q1",
         "cnfct-6th"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-03-24",
+      "ingredient_breakdown": [
+        {
+          "name": "鸡蛋（全蛋）",
+          "ratio": 0.46
+        },
+        {
+          "name": "番茄（生）",
+          "ratio": 0.39
+        },
+        {
+          "name": "烹饪用油（如大豆油）",
+          "ratio": 0.15
+        }
+      ]
     },
     {
       "id": "disanxian",

@@ -132,6 +132,18 @@ export const Header: React.FC<HeaderProps> = ({
                     <span className="material-symbols-outlined text-[18px]">account_circle</span>
                     Open profile
                   </button>
+                  {currentUser?.isAdmin && (
+                    <button
+                      onClick={() => {
+                        onViewChange(AppView.ADMIN_DISH_IMAGES);
+                        setIsAvatarMenuOpen(false);
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-sm font-bold text-[#4A453E]/70 transition-colors hover:bg-[#F7F3E9] hover:text-[#4A453E]"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">gallery_thumbnail</span>
+                      Review dish images
+                    </button>
+                  )}
                   <div className="mx-2 my-1 h-px bg-[#4A453E]/5" />
                   <button
                     onClick={() => {

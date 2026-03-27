@@ -1,22 +1,53 @@
 import json
+import re
 from typing import Any
-from urllib import error, request
+from urllib import error
 
 from backend.config.estimate import get_estimate_ai_config
-from backend.schemas.knowledge import KnowledgeReference
 from backend.schemas.estimate import EstimateItem, EstimateResult
+from backend.schemas.knowledge import KnowledgeReference
 from backend.schemas.profile import ProfileOut
 from backend.services.ai_client import call_ai
 from backend.services.estimate_contract import (
     ESTIMATE_RESPONSE_INSTRUCTION,
     ESTIMATE_RESPONSE_SCHEMA,
 )
+from backend.services.estimate_parser import parse_estimate_payload
 from backend.services.food_knowledge import (
     build_single_dish_ingredient_breakdown,
     retrieve_food_knowledge,
 )
-from backend.services.estimate_parser import parse_estimate_payload
 from backend.services.profile_service import get_profile
+
+
+MULTI_FOOD_CONNECTOR_TERMS = (
+    "\u52a0",
+    "\u914d",
+    "\u642d\u914d",
+    "\u8fd8\u6709",
+    "\u4ee5\u53ca",
+    "\u3001",
+    ",",
+    "\uff0c",
+    "+",
+)
+QUANTITY_TOKEN_RE = re.compile(
+    r"[\u4e00\u4e8c\u4e24\u4e09\u56db\u4e94\u516d\u4e03\u516b\u4e5d\u5341\u534a\d]+"
+    r"(?:\u4efd|\u7897|\u676f|\u4e2a|\u53ea|\u6839|\u5757|\u7247|\u4e32|\u76d2|\u76d8|\u52fa)"
+)
+NON_FOOD_HE_TERMS = (
+    "\u70ed\u91cf\u548c",
+    "\u80fd\u91cf\u548c",
+    "\u8425\u517b\u548c",
+    "\u86cb\u767d\u8d28\u548c",
+    "\u78b3\u6c34\u548c",
+    "\u8102\u80aa\u548c",
+    "\u548c\u4e09\u5927\u8425\u517b\u7d20",
+    "\u548c\u8425\u517b",
+    "\u548c\u86cb\u767d\u8d28",
+    "\u548c\u78b3\u6c34",
+    "\u548c\u8102\u80aa",
+)
 
 
 class EstimateServiceError(Exception):
@@ -43,7 +74,7 @@ class MissingAPIKeyError(EstimateServiceError):
             code="AI_CONFIG_MISSING",
             status_code=503,
             message="GEMINI_API_KEY is missing",
-            user_message="AI 估算服务暂未配置，请稍后再试。",
+            user_message="\u4f30\u7b97\u670d\u52a1\u6682\u672a\u914d\u7f6e\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5\u3002",
             retryable=False,
         )
 
@@ -54,7 +85,7 @@ class UpstreamAIError(EstimateServiceError):
             code="AI_UPSTREAM_ERROR",
             status_code=503,
             message=message,
-            user_message="AI 服务暂时不可用，请稍后重试。",
+            user_message="\u4f30\u7b97 AI \u670d\u52a1\u6682\u65f6\u4e0d\u53ef\u7528\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002",
             retryable=retryable,
         )
 
@@ -65,7 +96,7 @@ class InvalidAIResponseError(EstimateServiceError):
             code="AI_RESPONSE_INVALID",
             status_code=502,
             message=message,
-            user_message="AI 返回结果异常，请稍后重试。",
+            user_message="AI \u8fd4\u56de\u7ed3\u679c\u5f02\u5e38\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002",
             retryable=True,
         )
 
@@ -76,7 +107,7 @@ class IncompleteAIResponseError(EstimateServiceError):
             code="AI_RESPONSE_INCOMPLETE",
             status_code=502,
             message=message,
-            user_message="AI 返回结果不完整，请稍后重试。",
+            user_message="AI \u8fd4\u56de\u7ed3\u679c\u4e0d\u5b8c\u6574\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002",
             retryable=True,
         )
 
@@ -88,6 +119,7 @@ def estimate_meal(
 ) -> EstimateResult:
     retrieved_knowledge = retrieve_food_knowledge(query, scenario="estimate")
     profile_context = _load_profile_context(profile_id, user_id)
+    inferred_multi_food_count = _infer_multi_food_count(query)
     raw_response = _call_ai_api(
         query,
         profile_context,
@@ -103,32 +135,21 @@ def estimate_meal(
             raise IncompleteAIResponseError(str(exc)) from exc
         raise InvalidAIResponseError(str(exc)) from exc
 
-    if _needs_multi_food_retry(parsed, retrieved_knowledge.hit_count):
+    if _needs_multi_food_retry(parsed, inferred_multi_food_count):
         retry_raw_response = _call_ai_api(
             query,
             profile_context,
             food_knowledge_context=retrieved_knowledge.context_text if retrieved_knowledge.has_hits else None,
-            force_min_items=min(max(retrieved_knowledge.hit_count, 2), 3),
+            force_min_items=inferred_multi_food_count,
         )
         try:
             retry_parsed = parse_estimate_payload(retry_raw_response)
             if len(retry_parsed.items) > len(parsed.items):
                 parsed = retry_parsed
         except ValueError:
-            # Keep the first valid parse to avoid breaking the main estimate flow.
             pass
 
-    dish_breakdown = _maybe_build_single_dish_breakdown(parsed, query)
-    if dish_breakdown:
-        parsed = parsed.model_copy(
-            update={
-                "items": [
-                    EstimateItem.model_validate(item)
-                    for item in dish_breakdown
-                ],
-                "itemization_mode": "single_dish_ingredients",
-            }
-        )
+    parsed = _apply_single_dish_itemization(parsed, query, inferred_multi_food_count)
 
     if retrieved_knowledge.references:
         parsed = parsed.model_copy(
@@ -139,6 +160,7 @@ def estimate_meal(
                 ]
             }
         )
+
     return parsed
 
 
@@ -226,6 +248,7 @@ def _build_estimate_system_instruction(
                 food_knowledge_context,
             ]
         )
+
     if force_min_items and force_min_items > 1:
         parts.append(
             (
@@ -234,29 +257,76 @@ def _build_estimate_system_instruction(
                 "Do not merge multiple foods into a single item row."
             )
         )
+
     parts.append(ESTIMATE_RESPONSE_INSTRUCTION)
     return "\n\n".join(parts)
 
 
-def _needs_multi_food_retry(result: EstimateResult, knowledge_hit_count: int) -> bool:
-    if knowledge_hit_count < 2:
+def _needs_multi_food_retry(result: EstimateResult, inferred_multi_food_count: int | None) -> bool:
+    if inferred_multi_food_count is None or inferred_multi_food_count < 2:
         return False
-    return len(result.items) < 2
+    return len(result.items) < inferred_multi_food_count
 
 
-def _maybe_build_single_dish_breakdown(
+def _apply_single_dish_itemization(
     result: EstimateResult,
     query: str,
-) -> list[dict[str, str]] | None:
-    if len(result.items) != 1:
+    inferred_multi_food_count: int | None,
+) -> EstimateResult:
+    if inferred_multi_food_count and inferred_multi_food_count > 1:
+        return result
+
+    if len(result.items) == 1:
+        primary_item = result.items[0]
+        dish_breakdown = build_single_dish_ingredient_breakdown(
+            query,
+            primary_item_name=primary_item.name,
+            total_calories_text=result.total_calories,
+            primary_portion_text=primary_item.portion,
+            primary_protein_text=primary_item.protein,
+            primary_carbs_text=primary_item.carbs,
+            primary_fat_text=primary_item.fat,
+        )
+        if dish_breakdown:
+            return result.model_copy(
+                update={
+                    "items": [
+                        EstimateItem.model_validate(item)
+                        for item in dish_breakdown
+                    ],
+                    "itemization_mode": "single_dish_ingredients",
+                }
+            )
+        return result
+
+    if len(result.items) > 1:
+        return result.model_copy(update={"itemization_mode": "single_dish_ingredients"})
+
+    return result
+
+
+def _infer_multi_food_count(query: str) -> int | None:
+    normalized = query.strip()
+    if not normalized:
         return None
-    primary_item = result.items[0]
-    return build_single_dish_ingredient_breakdown(
-        query,
-        primary_item_name=primary_item.name,
-        total_calories_text=result.total_calories,
-        primary_portion_text=primary_item.portion,
-    )
+
+    connector_hits = _count_multi_food_connectors(normalized)
+    quantity_hits = len(QUANTITY_TOKEN_RE.findall(normalized))
+
+    if connector_hits <= 0 and quantity_hits < 2:
+        return None
+
+    inferred = max(connector_hits + 1, quantity_hits)
+    return max(2, min(inferred, 3))
+
+
+def _count_multi_food_connectors(query: str) -> int:
+    connector_hits = sum(1 for term in MULTI_FOOD_CONNECTOR_TERMS if term in query)
+    sanitized_query = query
+    for term in NON_FOOD_HE_TERMS:
+        sanitized_query = sanitized_query.replace(term, "")
+    connector_hits += sanitized_query.count("\u548c")
+    return connector_hits
 
 
 def _build_profile_context(profile: ProfileOut) -> str:

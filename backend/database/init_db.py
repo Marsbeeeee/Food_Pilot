@@ -1,6 +1,7 @@
 import json
 from datetime import UTC, datetime
 
+from backend.config.auth import get_admin_emails
 from backend.database.connection import get_db_connection
 from backend.text import normalize_food_log_query
 
@@ -15,6 +16,7 @@ def init_db():
     _ensure_messages_table(cursor)
     _ensure_standard_dishes_table(cursor)
     _ensure_dish_images_table(cursor)
+    _ensure_dish_image_admin_events_table(cursor)
     _ensure_image_generation_jobs_table(cursor)
     _ensure_food_logs_table(cursor)
     _ensure_insights_analysis_table(cursor)
@@ -65,11 +67,21 @@ def _ensure_users_table(cursor) -> None:
             email TEXT NOT NULL,
             password_hash TEXT NOT NULL,
             display_name TEXT NOT NULL,
+            is_admin INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CHECK (is_admin IN (0, 1))
         );
         """
     )
+    user_columns = _get_table_columns(cursor, "users")
+    if "is_admin" not in user_columns:
+        cursor.execute(
+            """
+            ALTER TABLE users
+            ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0
+            """
+        )
     cursor.execute(
         """
         CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email
@@ -88,6 +100,33 @@ def _ensure_users_table(cursor) -> None:
             WHERE id = NEW.id;
         END;
         """
+    )
+    _sync_admin_users_from_env(cursor)
+
+
+def _sync_admin_users_from_env(cursor) -> None:
+    admin_emails = get_admin_emails()
+    if not admin_emails:
+        cursor.execute(
+            """
+            UPDATE users
+            SET is_admin = 0
+            WHERE is_admin != 0
+            """
+        )
+        return
+
+    normalized_emails = tuple(sorted(admin_emails))
+    placeholders = ", ".join("?" for _ in normalized_emails)
+    cursor.execute(
+        f"""
+        UPDATE users
+        SET is_admin = CASE
+            WHEN lower(email) IN ({placeholders}) THEN 1
+            ELSE 0
+        END
+        """,
+        normalized_emails,
     )
 
 
@@ -569,8 +608,7 @@ def _ensure_food_logs_table(cursor) -> None:
         END;
         """
     )
-
-
+    _sync_admin_users_from_env(cursor)
 def _ensure_standard_dishes_table(cursor) -> None:
     cursor.execute(
         """
@@ -709,6 +747,7 @@ def _ensure_dish_images_table(cursor) -> None:
             status TEXT NOT NULL DEFAULT 'pending',
             prompt_version TEXT,
             review_note TEXT,
+            reviewed_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             reviewed_at TEXT,
@@ -743,6 +782,13 @@ def _ensure_dish_images_table(cursor) -> None:
             """
             ALTER TABLE dish_images
             ADD COLUMN review_note TEXT
+            """
+        )
+    if "reviewed_by_user_id" not in dish_image_columns:
+        cursor.execute(
+            """
+            ALTER TABLE dish_images
+            ADD COLUMN reviewed_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
             """
         )
     if "created_at" not in dish_image_columns:
@@ -781,6 +827,13 @@ def _ensure_dish_images_table(cursor) -> None:
     )
     cursor.execute(
         """
+        CREATE INDEX IF NOT EXISTS idx_dish_images_reviewed_by_user_id
+        ON dish_images(reviewed_by_user_id)
+        WHERE reviewed_by_user_id IS NOT NULL;
+        """
+    )
+    cursor.execute(
+        """
         CREATE UNIQUE INDEX IF NOT EXISTS idx_dish_images_one_pending_per_dish
         ON dish_images(standard_dish_id)
         WHERE status = 'pending';
@@ -804,6 +857,44 @@ def _ensure_dish_images_table(cursor) -> None:
             SET updated_at = CURRENT_TIMESTAMP
             WHERE id = NEW.id;
         END;
+        """
+    )
+
+
+def _ensure_dish_image_admin_events_table(cursor) -> None:
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS dish_image_admin_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            standard_dish_id INTEGER NOT NULL REFERENCES standard_dishes(id) ON DELETE CASCADE,
+            dish_image_id INTEGER REFERENCES dish_images(id) ON DELETE SET NULL,
+            actor_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            action TEXT NOT NULL,
+            result_status TEXT NOT NULL,
+            note TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CHECK (action IN ('approve', 'reject', 'regenerate')),
+            CHECK (length(trim(result_status)) > 0),
+            CHECK (note IS NULL OR length(trim(note)) > 0)
+        );
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_dish_image_admin_events_standard_dish_created_at
+        ON dish_image_admin_events(standard_dish_id, created_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_dish_image_admin_events_dish_image_created_at
+        ON dish_image_admin_events(dish_image_id, created_at DESC, id DESC);
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_dish_image_admin_events_actor_user_id
+        ON dish_image_admin_events(actor_user_id, created_at DESC, id DESC);
         """
     )
 

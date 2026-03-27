@@ -1,5 +1,6 @@
 import sqlite3
 
+from backend.config.auth import get_admin_emails
 from backend.database.connection import get_db_connection
 from backend.repositories.user_repository import (
     create_user as create_user_record,
@@ -11,6 +12,10 @@ from backend.schemas.user import UserCreate, UserOut
 
 
 def create_user(user: UserCreate) -> UserOut:
+    admin_emails = get_admin_emails()
+    user = user.model_copy(
+        update={"is_admin": user.email.lower() in admin_emails},
+    )
     conn = get_db_connection()
     try:
         return create_user_record(conn, user)

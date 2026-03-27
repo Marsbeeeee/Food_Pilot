@@ -264,6 +264,9 @@ def build_single_dish_ingredient_breakdown(
     primary_item_name: str,
     total_calories_text: str,
     primary_portion_text: str | None = None,
+    primary_protein_text: str | None = None,
+    primary_carbs_text: str | None = None,
+    primary_fat_text: str | None = None,
 ) -> list[dict[str, str]] | None:
     config = get_food_knowledge_config()
     if not config.enabled:
@@ -277,6 +280,9 @@ def build_single_dish_ingredient_breakdown(
     total_calories_value = _extract_float(total_calories_text)
     if total_calories_value is None or total_calories_value <= 0:
         return None
+    total_protein_value = _extract_float(primary_protein_text)
+    total_carbs_value = _extract_float(primary_carbs_text)
+    total_fat_value = _extract_float(primary_fat_text)
 
     try:
         dataset = _load_dataset(config.data_path)
@@ -297,6 +303,9 @@ def build_single_dish_ingredient_breakdown(
     components = _render_breakdown_components(
         target_dish=target_dish,
         total_calories_value=total_calories_value,
+        total_protein_value=total_protein_value,
+        total_carbs_value=total_carbs_value,
+        total_fat_value=total_fat_value,
         total_grams=total_grams,
         food_lookup=food_lookup,
     )
@@ -942,6 +951,9 @@ def _render_breakdown_components(
     *,
     target_dish: FoodKnowledgeEntry,
     total_calories_value: float,
+    total_protein_value: float | None,
+    total_carbs_value: float | None,
+    total_fat_value: float | None,
     total_grams: float | None,
     food_lookup: dict[str, FoodKnowledgeEntry],
 ) -> list[dict[str, str]]:
@@ -971,6 +983,28 @@ def _render_breakdown_components(
             row["protein"] = f"{protein:.1f} g"
             row["carbs"] = f"{carbs:.1f} g"
             row["fat"] = f"{fat:.1f} g"
+        else:
+            protein = (
+                total_protein_value * normalized_ratio
+                if total_protein_value is not None and total_protein_value > 0
+                else None
+            )
+            carbs = (
+                total_carbs_value * normalized_ratio
+                if total_carbs_value is not None and total_carbs_value > 0
+                else None
+            )
+            fat = (
+                total_fat_value * normalized_ratio
+                if total_fat_value is not None and total_fat_value > 0
+                else None
+            )
+            if protein is not None:
+                row["protein"] = f"{protein:.1f} g"
+            if carbs is not None:
+                row["carbs"] = f"{carbs:.1f} g"
+            if fat is not None:
+                row["fat"] = f"{fat:.1f} g"
 
         note = _optional_text(component.get("note"))
         if note:

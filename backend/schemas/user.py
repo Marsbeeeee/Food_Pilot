@@ -39,6 +39,11 @@ class UserCreate(UserBase):
         validation_alias=AliasChoices("password_hash", "passwordHash"),
         serialization_alias="passwordHash",
     )
+    is_admin: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("is_admin", "isAdmin"),
+        serialization_alias="isAdmin",
+    )
 
     @field_validator("password_hash")
     @classmethod
@@ -51,6 +56,11 @@ class UserCreate(UserBase):
 
 class UserOut(UserBase):
     id: int
+    is_admin: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("is_admin", "isAdmin"),
+        serialization_alias="isAdmin",
+    )
     created_at: datetime = Field(
         validation_alias=AliasChoices("created_at", "createdAt"),
         serialization_alias="createdAt",

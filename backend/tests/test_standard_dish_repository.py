@@ -78,8 +78,7 @@ class StandardDishRepositoryTests(unittest.TestCase):
         self.assertIn("idx_standard_dishes_image_status", standard_dish_indexes)
         self.assertIn("idx_dish_images_one_pending_per_dish", dish_image_indexes)
         self.assertIn("idx_dish_images_one_approved_per_dish", dish_image_indexes)
-        self.assertEqual(len(foreign_keys), 1)
-        self.assertEqual(foreign_keys[0]["table"], "standard_dishes")
+        self.assertEqual({row["table"] for row in foreign_keys}, {"standard_dishes", "users"})
 
     def test_get_or_create_standard_dish_normalizes_duplicate_names(self) -> None:
         conn = get_db_connection()
@@ -149,12 +148,12 @@ class StandardDishRepositoryTests(unittest.TestCase):
                 image_url="https://img.example/fried-rice-alt.jpg",
                 prompt_version="v2",
             )
-            with self.assertRaises(ValueError):
-                approve_dish_image_candidate(
-                    conn,
-                    int(standard_dish["id"]),
-                    int(second_candidate["id"]),
-                )
+            replaced = approve_dish_image_candidate(
+                conn,
+                int(standard_dish["id"]),
+                int(second_candidate["id"]),
+            )
+            images = list_dish_images_by_standard_dish(conn, int(standard_dish["id"]))
         finally:
             conn.close()
 
@@ -163,6 +162,10 @@ class StandardDishRepositoryTests(unittest.TestCase):
         self.assertEqual(approved["image_prompt_version"], "v1")
         self.assertTrue(approved["has_official_image"])
         self.assertFalse(approved["can_trigger_image_generation"])
+        self.assertEqual(replaced["image_url"], "https://img.example/fried-rice-alt.jpg")
+        self.assertEqual(replaced["image_prompt_version"], "v2")
+        self.assertEqual(images[0]["status"], "approved")
+        self.assertEqual(images[1]["status"], "rejected")
 
     def test_reject_candidate_restores_generation_ready_state_without_official_image(self) -> None:
         conn = get_db_connection()

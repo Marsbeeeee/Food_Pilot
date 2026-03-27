@@ -1,4 +1,5 @@
 import json
+import sqlite3
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from urllib import error, request
@@ -28,6 +29,8 @@ from backend.repositories.image_generation_job_repository import (
 from backend.repositories.standard_dish_repository import (
     create_dish_image_candidate,
     get_standard_dish_by_id,
+    get_pending_dish_image,
+    reject_dish_image_candidate,
 )
 
 
@@ -84,6 +87,66 @@ def enqueue_standard_dish_image_generation(
         )
     finally:
         conn.close()
+
+    if dispatch_async:
+        dispatch_image_generation_job(int(job["id"]))
+    return job
+
+
+def enqueue_admin_standard_dish_image_regeneration(
+    standard_dish_id: int,
+    *,
+    conn: sqlite3.Connection | None = None,
+    replace_pending: bool = False,
+    reviewed_by_user_id: int | None = None,
+    review_note: str | None = None,
+    dispatch_async: bool = True,
+    config: StandardDishImageGenerationConfig | None = None,
+) -> dict[str, object]:
+    active_config = config or get_standard_dish_image_generation_config()
+    owns_connection = conn is None
+    active_conn = conn or get_db_connection()
+    try:
+        standard_dish = get_standard_dish_by_id(active_conn, standard_dish_id)
+        if standard_dish is None:
+            raise LookupError("standard dish not found")
+
+        pending_image = get_pending_dish_image(active_conn, standard_dish_id)
+        if pending_image is not None:
+            if not replace_pending:
+                raise ValueError("standard dish already has a pending image candidate")
+            reject_dish_image_candidate(
+                active_conn,
+                standard_dish_id,
+                int(pending_image["id"]),
+                reviewed_by_user_id=reviewed_by_user_id,
+                review_note=review_note or "Rejected before regenerate",
+                auto_commit=False,
+            )
+
+        active_job = get_active_image_generation_job(active_conn, standard_dish_id)
+        if active_job is not None:
+            if dispatch_async:
+                dispatch_image_generation_job(int(active_job["id"]))
+            if pending_image is not None and owns_connection:
+                active_conn.commit()
+            return active_job
+
+        job = create_image_generation_job(
+            active_conn,
+            standard_dish_id,
+            prompt_version=active_config.prompt_version,
+            prompt_text=build_standard_dish_image_prompt(
+                str(standard_dish["canonical_name"]),
+                config=active_config,
+            ),
+            auto_commit=False,
+        )
+        if owns_connection:
+            active_conn.commit()
+    finally:
+        if owns_connection:
+            active_conn.close()
 
     if dispatch_async:
         dispatch_image_generation_job(int(job["id"]))

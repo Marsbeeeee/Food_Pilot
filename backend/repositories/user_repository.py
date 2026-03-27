@@ -13,13 +13,15 @@ def create_user(
         INSERT INTO users (
             email,
             password_hash,
-            display_name
-        ) VALUES (?, ?, ?)
+            display_name,
+            is_admin
+        ) VALUES (?, ?, ?, ?)
         """,
         (
             user.email,
             user.password_hash,
             user.display_name,
+            1 if user.is_admin else 0,
         ),
     )
     conn.commit()
@@ -37,6 +39,7 @@ def get_user_by_id(
             id,
             email,
             display_name,
+            is_admin,
             created_at,
             updated_at
         FROM users
@@ -62,6 +65,7 @@ def get_user_auth_by_email(
             email,
             password_hash,
             display_name,
+            is_admin,
             created_at,
             updated_at
         FROM users

@@ -3,12 +3,20 @@ from typing import Any
 from pydantic import ValidationError
 
 from backend.schemas.estimate import EstimateItem, EstimateResult
+from backend.services.food_knowledge import build_single_dish_ingredient_breakdown
 
 
-def split_estimate_by_items(estimate: EstimateResult) -> list[EstimateResult]:
+def split_estimate_by_items(
+    estimate: EstimateResult,
+    *,
+    query: str | None = None,
+) -> list[EstimateResult]:
     """
-    When the estimate contains multiple food items, split into separate EstimateResult
-    objects so each food can be displayed individually.
+    Split a multi-food estimate into per-food cards for chat presentation.
+
+    For single-dish ingredient breakdown mode, keep one card.
+    For multi-food mode, each top-level food becomes one card, and each card
+    may further expand into ingredient/component rows when knowledge is available.
     """
     if getattr(estimate, "itemization_mode", None) == "single_dish_ingredients":
         return [estimate]
@@ -19,15 +27,37 @@ def split_estimate_by_items(estimate: EstimateResult) -> list[EstimateResult]:
     results: list[EstimateResult] = []
     for item in estimate.items:
         item_desc = (item.description or "").strip() or f"{item.name}（{item.portion}）的营养估算"
+        card_items = [item]
+        itemization_mode: str | None = None
+
+        if query:
+            breakdown = build_single_dish_ingredient_breakdown(
+                query,
+                primary_item_name=item.name,
+                total_calories_text=item.energy,
+                primary_portion_text=item.portion,
+                primary_protein_text=item.protein,
+                primary_carbs_text=item.carbs,
+                primary_fat_text=item.fat,
+            )
+            if breakdown:
+                card_items = [
+                    EstimateItem.model_validate(component)
+                    for component in breakdown
+                ]
+                itemization_mode = "single_dish_ingredients"
+
         single = EstimateResult(
             title=item.name,
             description=item_desc,
             confidence=estimate.confidence,
-            items=[item],
+            items=card_items,
             total_calories=item.energy,
             suggestion=estimate.suggestion,
+            itemization_mode=itemization_mode,
         )
         results.append(single)
+
     return results
 
 

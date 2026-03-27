@@ -13,6 +13,7 @@ import {
 import { fetchInsightsHistory } from '../api/insights';
 import { clearStoredProfile, loadStoredProfile, ProfileApiError, toProfileForm } from '../api/profile';
 import { Header } from '../components/Header';
+import { AdminDishImageReviewPage } from '../pages/AdminDishImageReview';
 import { AuthPage } from '../pages/Auth';
 import { Explorer } from '../pages/Explorer';
 import { Profile } from '../pages/Profile';
@@ -387,6 +388,22 @@ const App: React.FC = () => {
         );
       case AppView.PROFILE:
         return <Profile profile={profile} setProfile={setProfile} />;
+      case AppView.ADMIN_DISH_IMAGES:
+        return session.user.isAdmin
+          ? <AdminDishImageReviewPage currentUser={session.user} />
+          : (
+            <Workspace
+              sessions={sessions}
+              setSessions={setSessions}
+              foodLog={foodLog}
+              activeSessionId={activeSessionId}
+              setActiveSessionId={setActiveSessionId}
+              profileId={profile.id}
+              refreshFoodLog={refreshFoodLog}
+              onDeleteFoodLog={handleDeleteFoodLog}
+              unlinkDeletedChatFromFoodLog={handleChatSessionDeleted}
+            />
+          );
       default:
         return (
           <Workspace

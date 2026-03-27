@@ -586,7 +586,7 @@ def _build_meal_estimate_response_with_conn(
     profile_id: int | None,
 ) -> dict[str, object]:
     estimate = estimate_meal(content, profile_id, user_id)
-    estimates = split_estimate_by_items(estimate)
+    estimates = split_estimate_by_items(estimate, query=content)
     return _create_estimate_result_message_with_conn(
         conn,
         user_id,

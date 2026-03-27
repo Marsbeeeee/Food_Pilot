@@ -4,6 +4,7 @@ export enum AppView {
   EXPLORER = 'EXPLORER',
   INSIGHTS = 'INSIGHTS',
   PROFILE = 'PROFILE',
+  ADMIN_DISH_IMAGES = 'ADMIN_DISH_IMAGES',
 }
 
 export type AuthScreenMode = 'login' | 'register';
@@ -14,6 +15,7 @@ export interface AuthUser {
   id: number;
   email: string;
   displayName: string;
+  isAdmin: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -318,4 +320,52 @@ export interface InsightsAnalyzeResponse {
   success: boolean;
   data: InsightsAnalyzeData | null;
   error: InsightsError | null;
+}
+
+export type AdminDishImageStatus = 'pending' | 'approved' | 'rejected';
+
+export interface AdminDishImageCandidateListParams {
+  status?: AdminDishImageStatus;
+  query?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  limit?: number;
+}
+
+export interface AdminDishImageCandidateListItem {
+  id: number;
+  standardDishId: number;
+  standardDishName: string;
+  imageUrl: string;
+  status: AdminDishImageStatus;
+  promptVersion?: string;
+  reviewNote?: string;
+  createdAt: string;
+  reviewedAt?: string;
+  officialImageUrl?: string;
+  officialImageStatus?: AdminDishImageStatus;
+  isCurrentOfficial: boolean;
+}
+
+export interface AdminDishImageOperation {
+  id: number;
+  dishImageId?: number;
+  action: 'approve' | 'reject' | 'regenerate';
+  resultStatus: string;
+  note?: string;
+  createdAt: string;
+  actor: {
+    id: number;
+    displayName: string;
+    email: string;
+  };
+}
+
+export interface AdminDishImageCandidateDetail extends AdminDishImageCandidateListItem {
+  officialImagePromptVersion?: string;
+  officialImageUpdatedAt?: string;
+  canApprove: boolean;
+  canReject: boolean;
+  canRegenerate: boolean;
+  recentOperations: AdminDishImageOperation[];
 }

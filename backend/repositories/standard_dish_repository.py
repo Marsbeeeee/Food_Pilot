@@ -27,9 +27,23 @@ DISH_IMAGE_SELECT_COLUMNS = """
     status,
     prompt_version,
     review_note,
+    reviewed_by_user_id,
     created_at,
     updated_at,
     reviewed_at
+"""
+
+DISH_IMAGE_SELECT_COLUMNS_WITH_ALIAS = """
+    dish_images.id AS id,
+    dish_images.standard_dish_id AS standard_dish_id,
+    dish_images.image_url AS image_url,
+    dish_images.status AS status,
+    dish_images.prompt_version AS prompt_version,
+    dish_images.review_note AS review_note,
+    dish_images.reviewed_by_user_id AS reviewed_by_user_id,
+    dish_images.created_at AS created_at,
+    dish_images.updated_at AS updated_at,
+    dish_images.reviewed_at AS reviewed_at
 """
 
 
@@ -238,11 +252,173 @@ def list_dish_images_by_standard_dish(
     return [_row_to_dish_image(row) for row in cursor.fetchall()]
 
 
+def list_dish_image_candidates(
+    conn: sqlite3.Connection,
+    *,
+    status: str | None = None,
+    query: str | None = None,
+    created_from: str | None = None,
+    created_to: str | None = None,
+    limit: int | None = None,
+) -> list[dict[str, object]]:
+    normalized_query = _normalize_optional_text(query)
+    normalized_status = _normalize_optional_text(status)
+    if normalized_status is not None and normalized_status not in {
+        PENDING_IMAGE_STATUS,
+        APPROVED_IMAGE_STATUS,
+        REJECTED_IMAGE_STATUS,
+    }:
+        raise ValueError("invalid dish image status")
+
+    cursor = conn.cursor()
+    cursor.execute(
+        f"""
+        SELECT
+            {DISH_IMAGE_SELECT_COLUMNS_WITH_ALIAS},
+            standard_dishes.canonical_name AS standard_dish_name,
+            standard_dishes.image_url AS official_image_url,
+            standard_dishes.image_status AS official_image_status
+        FROM dish_images
+        JOIN standard_dishes
+          ON standard_dishes.id = dish_images.standard_dish_id
+        WHERE (? IS NULL OR dish_images.status = ?)
+          AND (
+              ? IS NULL
+              OR standard_dishes.canonical_name LIKE '%' || ? || '%'
+              OR standard_dishes.normalized_name LIKE '%' || ? || '%'
+          )
+          AND (? IS NULL OR dish_images.created_at >= ?)
+          AND (? IS NULL OR dish_images.created_at < datetime(?, '+1 day'))
+        ORDER BY dish_images.created_at DESC, dish_images.id DESC
+        LIMIT COALESCE(?, -1)
+        """,
+        (
+            normalized_status,
+            normalized_status,
+            normalized_query,
+            normalized_query,
+            normalized_query,
+            created_from,
+            created_from,
+            created_to,
+            created_to,
+            limit,
+        ),
+    )
+    return [dict(row) for row in cursor.fetchall()]
+
+
+def get_dish_image_candidate_detail(
+    conn: sqlite3.Connection,
+    dish_image_id: int,
+) -> dict[str, object] | None:
+    cursor = conn.cursor()
+    cursor.execute(
+        f"""
+        SELECT
+            {DISH_IMAGE_SELECT_COLUMNS_WITH_ALIAS},
+            standard_dishes.canonical_name AS standard_dish_name,
+            standard_dishes.image_url AS official_image_url,
+            standard_dishes.image_status AS official_image_status,
+            standard_dishes.image_prompt_version AS official_image_prompt_version,
+            standard_dishes.image_updated_at AS official_image_updated_at
+        FROM dish_images
+        JOIN standard_dishes
+          ON standard_dishes.id = dish_images.standard_dish_id
+        WHERE dish_images.id = ?
+        """,
+        (dish_image_id,),
+    )
+    row = cursor.fetchone()
+    return dict(row) if row is not None else None
+
+
+def list_dish_image_admin_events(
+    conn: sqlite3.Connection,
+    *,
+    standard_dish_id: int,
+    limit: int | None = None,
+) -> list[dict[str, object]]:
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT
+            events.id,
+            events.standard_dish_id,
+            events.dish_image_id,
+            events.actor_user_id,
+            users.display_name AS actor_display_name,
+            users.email AS actor_email,
+            events.action,
+            events.result_status,
+            events.note,
+            events.created_at
+        FROM dish_image_admin_events AS events
+        JOIN users
+          ON users.id = events.actor_user_id
+        WHERE events.standard_dish_id = ?
+        ORDER BY events.created_at DESC, events.id DESC
+        LIMIT COALESCE(?, -1)
+        """,
+        (standard_dish_id, limit),
+    )
+    return [dict(row) for row in cursor.fetchall()]
+
+
+def create_dish_image_admin_event(
+    conn: sqlite3.Connection,
+    *,
+    standard_dish_id: int,
+    actor_user_id: int,
+    action: str,
+    result_status: str,
+    dish_image_id: int | None = None,
+    note: str | None = None,
+    auto_commit: bool = True,
+) -> dict[str, object]:
+    normalized_action = _normalize_required_text(action, "action")
+    if normalized_action not in {"approve", "reject", "regenerate"}:
+        raise ValueError("invalid admin dish image action")
+
+    normalized_result_status = _normalize_required_text(result_status, "result_status")
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO dish_image_admin_events (
+            standard_dish_id,
+            dish_image_id,
+            actor_user_id,
+            action,
+            result_status,
+            note
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            standard_dish_id,
+            dish_image_id,
+            actor_user_id,
+            normalized_action,
+            normalized_result_status,
+            _normalize_optional_text(note),
+        ),
+    )
+    if auto_commit:
+        conn.commit()
+    event_id = int(cursor.lastrowid)
+    return list_dish_image_admin_events(
+        conn,
+        standard_dish_id=standard_dish_id,
+        limit=1,
+    )[0]
+
+
 def approve_dish_image_candidate(
     conn: sqlite3.Connection,
     standard_dish_id: int,
     dish_image_id: int,
     *,
+    reviewed_by_user_id: int | None = None,
+    review_note: str | None = None,
     auto_commit: bool = True,
 ) -> dict[str, object]:
     standard_dish = get_standard_dish_by_id(conn, standard_dish_id)
@@ -257,21 +433,42 @@ def approve_dish_image_candidate(
         raise ValueError("rejected image candidate cannot be approved")
 
     approved_image = _get_approved_dish_image(conn, standard_dish_id)
-    if approved_image is not None and int(approved_image["id"]) != dish_image_id:
-        raise ValueError("standard dish already has an approved official image")
-
     reviewed_at = _current_timestamp()
     cursor = conn.cursor()
+    normalized_review_note = _normalize_optional_text(review_note)
+    if approved_image is not None and int(approved_image["id"]) != dish_image_id:
+        cursor.execute(
+            """
+            UPDATE dish_images
+            SET
+                status = ?,
+                review_note = ?,
+                reviewed_by_user_id = ?,
+                reviewed_at = ?
+            WHERE id = ?
+            """,
+            (
+                REJECTED_IMAGE_STATUS,
+                "Superseded by a newer approved candidate",
+                reviewed_by_user_id,
+                reviewed_at,
+                int(approved_image["id"]),
+            ),
+        )
     cursor.execute(
         """
         UPDATE dish_images
         SET
             status = ?,
+            review_note = ?,
+            reviewed_by_user_id = ?,
             reviewed_at = ?
         WHERE id = ?
         """,
         (
             APPROVED_IMAGE_STATUS,
+            normalized_review_note,
+            reviewed_by_user_id,
             reviewed_at,
             dish_image_id,
         ),
@@ -308,6 +505,7 @@ def reject_dish_image_candidate(
     standard_dish_id: int,
     dish_image_id: int,
     *,
+    reviewed_by_user_id: int | None = None,
     review_note: str | None = None,
     auto_commit: bool = True,
 ) -> dict[str, object]:
@@ -330,12 +528,14 @@ def reject_dish_image_candidate(
         SET
             status = ?,
             review_note = ?,
+            reviewed_by_user_id = ?,
             reviewed_at = ?
         WHERE id = ?
         """,
         (
             REJECTED_IMAGE_STATUS,
             _normalize_optional_text(review_note),
+            reviewed_by_user_id,
             reviewed_at,
             dish_image_id,
         ),
@@ -380,6 +580,20 @@ def _get_approved_dish_image(
     standard_dish_id: int,
 ) -> dict[str, object] | None:
     return _get_single_dish_image_by_status(conn, standard_dish_id, APPROVED_IMAGE_STATUS)
+
+
+def get_pending_dish_image(
+    conn: sqlite3.Connection,
+    standard_dish_id: int,
+) -> dict[str, object] | None:
+    return _get_pending_dish_image(conn, standard_dish_id)
+
+
+def get_approved_dish_image(
+    conn: sqlite3.Connection,
+    standard_dish_id: int,
+) -> dict[str, object] | None:
+    return _get_approved_dish_image(conn, standard_dish_id)
 
 
 def _get_single_dish_image_by_status(
