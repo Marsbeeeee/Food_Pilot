@@ -469,7 +469,7 @@ class FoodLogServiceTests(unittest.TestCase):
             "\u739b\u683c\u4e3d\u7279\u8584\u5e95\u62ab\u8428",
         )
 
-    def test_save_food_log_does_not_use_fallback_for_non_high_confidence(self) -> None:
+    def test_save_food_log_medium_confidence_uses_fallback_and_enqueues_generation_job(self) -> None:
         entry = save_food_log(
             self.user_id,
             "estimate_api",
@@ -481,7 +481,30 @@ class FoodLogServiceTests(unittest.TestCase):
             result_confidence="medium",
         )
 
-        self.assertIsNone(entry["standard_dish_id"])
+        self.assertIsNotNone(entry["standard_dish_id"])
+
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT status
+                FROM image_generation_jobs
+                WHERE standard_dish_id = ?
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (int(entry["standard_dish_id"]),),
+            )
+            job = cursor.fetchone()
+        finally:
+            conn.close()
+
+        self.assertIsNotNone(job)
+        self.assertIn(
+            job["status"],
+            {"queued", "running", "completed", "failed", "timed_out"},
+        )
 
     def test_user_idempotency_key_unique_index_blocks_duplicate_food_logs(self) -> None:
         conn = get_db_connection()

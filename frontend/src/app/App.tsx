@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { AuthApiError, clearSession, deleteCurrentAccount, restoreSession } from '../api/auth';
 import { buildFoodLogNavigationState } from './foodLogNavigation';
@@ -44,8 +44,11 @@ const DEFAULT_PROFILE: UserProfileForm = {
   allergies: [],
 };
 
+const APP_VIEW_STORAGE_KEY = 'food_pilot_current_view';
+const FOOD_LOG_AUTO_REFRESH_INTERVAL_MS = 20000;
+
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<AppView>(AppView.WORKSPACE);
+  const [currentView, setCurrentView] = useState<AppView>(() => loadPersistedCurrentView());
   const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
   const [authMode, setAuthMode] = useState<AuthScreenMode>('login');
   const [session, setSession] = useState<AuthSession | null>(null);
@@ -74,7 +77,7 @@ const App: React.FC = () => {
         }
 
         if (restoredSession) {
-          applyAuthenticatedState(restoredSession);
+          applyAuthenticatedState(restoredSession, { preserveCurrentView: true });
         } else {
           resetUnauthenticatedState('login');
         }
@@ -92,6 +95,10 @@ const App: React.FC = () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    persistCurrentView(currentView);
+  }, [currentView]);
 
   useEffect(() => {
     if (authStatus !== 'authenticated' || !session) {
@@ -195,6 +202,15 @@ const App: React.FC = () => {
     };
   }, [authStatus, session]);
 
+  useEffect(() => {
+    if (authStatus !== 'authenticated' || !session) {
+      return;
+    }
+    if (!session.user.isAdmin && currentView === AppView.ADMIN_DISH_IMAGES) {
+      setCurrentView(AppView.WORKSPACE);
+    }
+  }, [authStatus, session, currentView]);
+
   const resetUnauthenticatedState = (nextMode: AuthScreenMode) => {
     setIsBootstrappingData(false);
     setAuthStatus('unauthenticated');
@@ -208,26 +224,68 @@ const App: React.FC = () => {
     setCurrentAnalysisDate(getTodayKey());
   };
 
-  const applyAuthenticatedState = (nextSession: AuthSession) => {
+  const applyAuthenticatedState = (
+    nextSession: AuthSession,
+    options: { preserveCurrentView?: boolean } = {},
+  ) => {
+    const { preserveCurrentView = false } = options;
     setIsBootstrappingData(true);
     setSession(nextSession);
     setAuthStatus('authenticated');
     setSessions([]);
     setFoodLog([]);
     setProfile(createDefaultProfile());
-    setCurrentView(AppView.WORKSPACE);
+    if (!preserveCurrentView) {
+      setCurrentView(AppView.WORKSPACE);
+    }
     setActiveSessionId('');
     setCurrentAnalysisDate(getTodayKey());
   };
 
-  const refreshFoodLog = async () => {
+  const refreshFoodLog = useCallback(async () => {
     try {
       const entries = await listFoodLogs();
       setFoodLog(entries);
     } catch (error) {
       console.error('Failed to load food log:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (authStatus !== 'authenticated' || !session) {
+      return;
+    }
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState !== 'hidden') {
+        void refreshFoodLog();
+      }
+    };
+
+    const intervalId = window.setInterval(
+      refreshWhenVisible,
+      FOOD_LOG_AUTO_REFRESH_INTERVAL_MS,
+    );
+    const handleFocus = () => {
+      refreshWhenVisible();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshWhenVisible();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [authStatus, session, refreshFoodLog]);
 
   const handleDeleteFoodLog = async (entryId: string) => {
     await deleteFoodLogEntry(entryId);
@@ -451,6 +509,27 @@ function getTodayKey(date = new Date()): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function loadPersistedCurrentView(): AppView {
+  if (typeof window === 'undefined') {
+    return AppView.WORKSPACE;
+  }
+  const raw = window.localStorage.getItem(APP_VIEW_STORAGE_KEY);
+  if (!raw) {
+    return AppView.WORKSPACE;
+  }
+  if (Object.values(AppView).includes(raw as AppView)) {
+    return raw as AppView;
+  }
+  return AppView.WORKSPACE;
+}
+
+function persistCurrentView(view: AppView): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem(APP_VIEW_STORAGE_KEY, view);
 }
 
 export default App;

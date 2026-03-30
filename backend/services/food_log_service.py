@@ -61,13 +61,19 @@ IMAGE_LICENSE_ALIASES = {
     "copyright": "licensed",
     "publicdomain": "public_domain",
 }
-HIGH_CONFIDENCE_TOKENS = {"high", "高", "高置信", "高可信"}
-
-
-HIGH_CONFIDENCE_TOKENS = {"high", "\u9ad8", "\u9ad8\u7f6e\u4fe1", "\u9ad8\u53ef\u4fe1"}
-HIGH_CONFIDENCE_FALLBACK_MIN_LEN = 2
-HIGH_CONFIDENCE_FALLBACK_MAX_LEN = 24
-HIGH_CONFIDENCE_FALLBACK_MULTI_CONNECTORS = (
+MEDIUM_OR_HIGH_CONFIDENCE_TOKENS = {
+    "high",
+    "medium",
+    "\u9ad8",
+    "\u4e2d",
+    "\u9ad8\u7f6e\u4fe1",
+    "\u9ad8\u53ef\u4fe1",
+    "\u4e2d\u7f6e\u4fe1",
+    "\u4e2d\u53ef\u4fe1",
+}
+CONFIDENT_FALLBACK_MIN_LEN = 2
+CONFIDENT_FALLBACK_MAX_LEN = 24
+CONFIDENT_FALLBACK_MULTI_CONNECTORS = (
     "\u548c",
     "\u53ca",
     "\u4ee5\u53ca",
@@ -76,7 +82,7 @@ HIGH_CONFIDENCE_FALLBACK_MULTI_CONNECTORS = (
     "/",
     "+",
 )
-HIGH_CONFIDENCE_FALLBACK_BLOCK_TERMS = (
+CONFIDENT_FALLBACK_BLOCK_TERMS = (
     "\u70ed\u91cf",
     "\u5361\u8def\u91cc",
     "\u8425\u517b",
@@ -93,7 +99,7 @@ HIGH_CONFIDENCE_FALLBACK_BLOCK_TERMS = (
     "kcal",
     "calorie",
 )
-HIGH_CONFIDENCE_FALLBACK_AMBIGUOUS_TERMS = {
+CONFIDENT_FALLBACK_AMBIGUOUS_TERMS = {
     "\u7092\u9762",
     "\u76d6\u996d",
     "\u5957\u9910",
@@ -108,14 +114,13 @@ HIGH_CONFIDENCE_FALLBACK_AMBIGUOUS_TERMS = {
     "burger",
     "salad",
 }
-HIGH_CONFIDENCE_FALLBACK_SUFFIX_PATTERN = re.compile(
+CONFIDENT_FALLBACK_SUFFIX_PATTERN = re.compile(
     r"(\u7684)?(\u70ed\u91cf|\u5361\u8def\u91cc|\u8425\u517b).*$",
 )
-HIGH_CONFIDENCE_FALLBACK_PREFIX_PATTERN = re.compile(
+CONFIDENT_FALLBACK_PREFIX_PATTERN = re.compile(
     r"^[\u4e00-\u9fa5\d]+\s*(\u4efd|\u7897|\u676f|\u4e2a|\u76d8|\u6761|\u5757)\s*",
 )
-HIGH_CONFIDENCE_FALLBACK_CHINESE_RE = re.compile(r"[\u4e00-\u9fff]")
-
+CONFIDENT_FALLBACK_CHINESE_RE = re.compile(r"[\u4e00-\u9fff]")
 
 def create_food_log(
     user_id: int,
@@ -844,16 +849,16 @@ def _resolve_standard_dish_id(
     result_title: str,
     result_confidence: str | None,
 ) -> int | None:
-    is_high_confidence = _is_high_confidence(result_confidence)
-    if source_type != "manual" and not is_high_confidence:
+    is_medium_or_high_confidence = _is_medium_or_high_confidence(result_confidence)
+    if source_type != "manual" and not is_medium_or_high_confidence:
         return None
 
     canonical_name = (
         find_exact_standard_dish_name(result_title)
         or find_exact_standard_dish_name(meal_description)
     )
-    if canonical_name is None and is_high_confidence:
-        canonical_name = _resolve_high_confidence_fallback_standard_dish_name(
+    if canonical_name is None and is_medium_or_high_confidence:
+        canonical_name = _resolve_confident_fallback_standard_dish_name(
             result_title=result_title,
             meal_description=meal_description,
         )
@@ -868,28 +873,28 @@ def _resolve_standard_dish_id(
     return int(standard_dish["id"])
 
 
-def _is_high_confidence(value: object) -> bool:
+def _is_medium_or_high_confidence(value: object) -> bool:
     normalized = _normalize_optional_metadata_token(str(value)) if value is not None else None
     if normalized is None:
         return False
-    return normalized in HIGH_CONFIDENCE_TOKENS
+    return normalized in MEDIUM_OR_HIGH_CONFIDENCE_TOKENS
 
 
-def _resolve_high_confidence_fallback_standard_dish_name(
+def _resolve_confident_fallback_standard_dish_name(
     *,
     result_title: str,
     meal_description: str,
 ) -> str | None:
     for raw_candidate in (result_title, meal_description):
-        candidate = _sanitize_high_confidence_fallback_candidate(raw_candidate)
+        candidate = _sanitize_confident_fallback_candidate(raw_candidate)
         if candidate is None:
             continue
-        if _is_allowed_high_confidence_fallback_candidate(candidate):
+        if _is_allowed_confident_fallback_candidate(candidate):
             return candidate
     return None
 
 
-def _sanitize_high_confidence_fallback_candidate(value: str) -> str | None:
+def _sanitize_confident_fallback_candidate(value: str) -> str | None:
     normalized = _normalize_optional_text(value)
     if normalized is None:
         return None
@@ -913,32 +918,32 @@ def _sanitize_high_confidence_fallback_candidate(value: str) -> str | None:
     ):
         if delimiter in candidate:
             candidate = candidate.split(delimiter, 1)[0]
-    candidate = HIGH_CONFIDENCE_FALLBACK_SUFFIX_PATTERN.sub("", candidate).strip()
-    candidate = HIGH_CONFIDENCE_FALLBACK_PREFIX_PATTERN.sub("", candidate).strip()
+    candidate = CONFIDENT_FALLBACK_SUFFIX_PATTERN.sub("", candidate).strip()
+    candidate = CONFIDENT_FALLBACK_PREFIX_PATTERN.sub("", candidate).strip()
     candidate = candidate.strip("-_/ ")
     return candidate or None
 
 
-def _is_allowed_high_confidence_fallback_candidate(value: str) -> bool:
+def _is_allowed_confident_fallback_candidate(value: str) -> bool:
     candidate = value.strip()
     if not candidate:
         return False
-    if len(candidate) < HIGH_CONFIDENCE_FALLBACK_MIN_LEN:
+    if len(candidate) < CONFIDENT_FALLBACK_MIN_LEN:
         return False
-    if len(candidate) > HIGH_CONFIDENCE_FALLBACK_MAX_LEN:
+    if len(candidate) > CONFIDENT_FALLBACK_MAX_LEN:
         return False
 
     candidate_lower = candidate.lower()
-    if candidate_lower in HIGH_CONFIDENCE_FALLBACK_AMBIGUOUS_TERMS:
+    if candidate_lower in CONFIDENT_FALLBACK_AMBIGUOUS_TERMS:
         return False
-    if any(connector in candidate for connector in HIGH_CONFIDENCE_FALLBACK_MULTI_CONNECTORS):
+    if any(connector in candidate for connector in CONFIDENT_FALLBACK_MULTI_CONNECTORS):
         return False
-    if any(term in candidate_lower for term in HIGH_CONFIDENCE_FALLBACK_BLOCK_TERMS):
+    if any(term in candidate_lower for term in CONFIDENT_FALLBACK_BLOCK_TERMS):
         return False
     if candidate.isdigit():
         return False
 
-    has_chinese = bool(HIGH_CONFIDENCE_FALLBACK_CHINESE_RE.search(candidate))
+    has_chinese = bool(CONFIDENT_FALLBACK_CHINESE_RE.search(candidate))
     has_letters = any(char.isalpha() for char in candidate_lower)
     return has_chinese or has_letters
 
@@ -953,3 +958,4 @@ def _enqueue_standard_dish_image_generation_if_needed(standard_dish_id: int) -> 
         # Image generation is a non-blocking enhancement layer and must not
         # reduce Food Log save success.
         return
+

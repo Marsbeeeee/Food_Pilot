@@ -58,6 +58,19 @@ class AdminDishImageActionRequest(BaseModel):
         return normalized or None
 
 
+class AdminDishImageGenerationJobListQuery(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    limit: int = 50
+
+    @field_validator("limit")
+    @classmethod
+    def validate_limit(cls, value: int) -> int:
+        if value < 1 or value > 200:
+            raise ValueError("limit must be between 1 and 200")
+        return value
+
+
 class AdminDishImageActorOut(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
@@ -89,6 +102,46 @@ class AdminDishImageOperationOut(BaseModel):
         serialization_alias="createdAt",
     )
     actor: AdminDishImageActorOut
+
+
+class AdminDishImageActiveGenerationJobOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    id: int
+    status: str
+    created_at: str = Field(
+        validation_alias=AliasChoices("created_at", "createdAt"),
+        serialization_alias="createdAt",
+    )
+    started_at: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("started_at", "startedAt"),
+        serialization_alias="startedAt",
+    )
+
+
+class AdminDishImageGenerationJobOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    id: int
+    standard_dish_id: int = Field(
+        validation_alias=AliasChoices("standard_dish_id", "standardDishId"),
+        serialization_alias="standardDishId",
+    )
+    standard_dish_name: str = Field(
+        validation_alias=AliasChoices("standard_dish_name", "standardDishName"),
+        serialization_alias="standardDishName",
+    )
+    status: str
+    created_at: str = Field(
+        validation_alias=AliasChoices("created_at", "createdAt"),
+        serialization_alias="createdAt",
+    )
+    started_at: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("started_at", "startedAt"),
+        serialization_alias="startedAt",
+    )
 
 
 class AdminDishImageListItemOut(BaseModel):
@@ -140,6 +193,11 @@ class AdminDishImageListItemOut(BaseModel):
     is_current_official: bool = Field(
         validation_alias=AliasChoices("is_current_official", "isCurrentOfficial"),
         serialization_alias="isCurrentOfficial",
+    )
+    active_generation_job: AdminDishImageActiveGenerationJobOut | None = Field(
+        default=None,
+        validation_alias=AliasChoices("active_generation_job", "activeGenerationJob"),
+        serialization_alias="activeGenerationJob",
     )
 
 

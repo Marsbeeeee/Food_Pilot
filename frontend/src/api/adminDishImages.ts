@@ -2,6 +2,7 @@ import { clearSession, getStoredToken } from './auth';
 import { API_BASE_URL } from '../config/api';
 import {
   AdminDishImageCandidateDetail,
+  AdminDishImageGenerationJobListItem,
   AdminDishImageCandidateListItem,
   AdminDishImageCandidateListParams,
 } from '../types/types';
@@ -29,6 +30,13 @@ export async function getAdminDishImageCandidate(
   dishImageId: number | string,
 ): Promise<AdminDishImageCandidateDetail> {
   return requestJson<AdminDishImageCandidateDetail>(`/${dishImageId}`);
+}
+
+export async function listAdminDishImageGenerationJobs(
+  limit = 100,
+): Promise<AdminDishImageGenerationJobListItem[]> {
+  const query = new URLSearchParams({ limit: String(limit) });
+  return requestJson<AdminDishImageGenerationJobListItem[]>(`/generation-jobs?${query.toString()}`);
 }
 
 export async function approveAdminDishImageCandidate(

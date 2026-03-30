@@ -1,16 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import {
   approveAdminDishImageCandidate,
   getAdminDishImageCandidate,
   listAdminDishImageCandidates,
+  listAdminDishImageGenerationJobs,
   regenerateAdminDishImageCandidate,
   rejectAndRegenerateAdminDishImageCandidate,
   rejectAdminDishImageCandidate,
 } from '../api/adminDishImages';
 import {
+  AdminDishImageActiveGenerationJob,
   AdminDishImageCandidateDetail,
   AdminDishImageCandidateListItem,
+  AdminDishImageGenerationJobListItem,
   AdminDishImageStatus,
   AuthUser,
 } from '../types/types';
@@ -25,6 +28,8 @@ const STATUS_OPTIONS: Array<{ label: string; value: AdminDishImageStatus | '' }>
   { label: 'Approved', value: 'approved' },
   { label: 'Rejected', value: 'rejected' },
 ];
+const ADMIN_IDLE_AUTO_REFRESH_INTERVAL_MS = 10000;
+const ADMIN_ACTIVE_AUTO_REFRESH_INTERVAL_MS = 3000;
 
 export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> = ({
   currentUser,
@@ -39,13 +44,23 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
   const [note, setNote] = useState('');
   const [listLoading, setListLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [jobsLoading, setJobsLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<
     'approve' | 'reject' | 'regenerate' | 'rejectRegenerate' | null
   >(null);
   const [listError, setListError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [jobsError, setJobsError] = useState<string | null>(null);
+  const [activeJobs, setActiveJobs] = useState<AdminDishImageGenerationJobListItem[]>([]);
+  const [clockTick, setClockTick] = useState<number>(() => Date.now());
 
-  const loadCandidates = async (preferredId?: number | null) => {
+  const activeGenerationCount = activeJobs.length;
+  const hasActiveGeneration = activeGenerationCount > 0;
+  const autoRefreshIntervalMs = hasActiveGeneration
+    ? ADMIN_ACTIVE_AUTO_REFRESH_INTERVAL_MS
+    : ADMIN_IDLE_AUTO_REFRESH_INTERVAL_MS;
+
+  const loadCandidates = useCallback(async (preferredId?: number | null) => {
     setListLoading(true);
     setListError(null);
     try {
@@ -71,9 +86,9 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
     } finally {
       setListLoading(false);
     }
-  };
+  }, [createdFrom, createdTo, query, statusFilter]);
 
-  const loadDetail = async (dishImageId: number) => {
+  const loadDetail = useCallback(async (dishImageId: number) => {
     setDetailLoading(true);
     setDetailError(null);
     try {
@@ -85,11 +100,29 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
     } finally {
       setDetailLoading(false);
     }
-  };
+  }, []);
+
+  const loadActiveJobs = useCallback(async () => {
+    setJobsLoading(true);
+    setJobsError(null);
+    try {
+      const jobs = await listAdminDishImageGenerationJobs(100);
+      setActiveJobs(jobs);
+    } catch (error) {
+      setJobsError(getErrorMessage(error));
+      setActiveJobs([]);
+    } finally {
+      setJobsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     void loadCandidates();
-  }, [statusFilter, query, createdFrom, createdTo]);
+  }, [loadCandidates]);
+
+  useEffect(() => {
+    void loadActiveJobs();
+  }, [loadActiveJobs]);
 
   useEffect(() => {
     if (selectedId == null) {
@@ -97,7 +130,57 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
       return;
     }
     void loadDetail(selectedId);
-  }, [selectedId]);
+  }, [selectedId, loadDetail]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !hasActiveGeneration) {
+      return;
+    }
+    const timerId = window.setInterval(() => {
+      setClockTick(Date.now());
+    }, 1000);
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [hasActiveGeneration]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
+    const refreshWhenVisible = () => {
+      if (actionLoading !== null || document.visibilityState === 'hidden') {
+        return;
+      }
+      void loadCandidates(selectedId);
+      void loadActiveJobs();
+      if (selectedId != null) {
+        void loadDetail(selectedId);
+      }
+    };
+
+    const intervalId = window.setInterval(
+      refreshWhenVisible,
+      autoRefreshIntervalMs,
+    );
+    const handleFocus = () => {
+      refreshWhenVisible();
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refreshWhenVisible();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [actionLoading, autoRefreshIntervalMs, loadActiveJobs, loadCandidates, loadDetail, selectedId]);
 
   const handleAction = async (action: 'approve' | 'reject' | 'regenerate' | 'rejectRegenerate') => {
     if (!detail || actionLoading) {
@@ -117,6 +200,7 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
       setDetail(nextDetail);
       setNote('');
       await loadCandidates(nextDetail.id);
+      await loadActiveJobs();
     } catch (error) {
       setDetailError(getErrorMessage(error));
     } finally {
@@ -211,17 +295,74 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
           </div>
         </div>
 
+        <div className="mt-6 rounded-[24px] border border-[#4A453E]/8 bg-[#FFFEFB] p-4 shadow-[0_12px_28px_rgba(74,69,62,0.05)]">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#4A453E]/35">
+              Generation Queue
+            </p>
+            <span className="rounded-full bg-[#FFF3EA] px-3 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-[#D7653F]">
+              {activeGenerationCount}
+            </span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {jobsLoading && <PanelMessage text="Loading generation queue..." />}
+            {!jobsLoading && jobsError && <PanelMessage text={jobsError} tone="error" />}
+            {!jobsLoading && !jobsError && activeJobs.length === 0 && (
+              <PanelMessage text="No active generation jobs." />
+            )}
+            {!jobsLoading && !jobsError && activeJobs.map((job) => (
+              <div
+                key={job.id}
+                className="rounded-[18px] border border-[#4A453E]/8 bg-white px-3 py-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-bold text-[#4A453E]">
+                    {job.standardDishName}
+                  </p>
+                  <GenerationStatusBadge
+                    job={{
+                      id: job.id,
+                      status: job.status,
+                      createdAt: job.createdAt,
+                      startedAt: job.startedAt,
+                    }}
+                    nowMs={clockTick}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-[#4A453E]/50">
+                  Job #{job.id} · Created {formatTimestamp(job.createdAt)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="mt-6 flex items-center justify-between px-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#4A453E]/35">
-            Candidates
-          </p>
-          <button
-            type="button"
-            onClick={() => void loadCandidates(selectedId)}
-            className="rounded-full bg-[#F7F3E9] px-3 py-1.5 text-[11px] font-bold text-[#4A453E]/65 transition-colors hover:bg-[#EFE7DA] hover:text-[#4A453E]"
-          >
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#4A453E]/35">
+              Candidates
+            </p>
+            {activeGenerationCount > 0 && (
+              <span className="rounded-full bg-[#FF8A65]/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-[#D7653F]">
+                Generating {activeGenerationCount}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="hidden rounded-full bg-[#F7F3E9] px-3 py-1 text-[10px] font-bold text-[#4A453E]/55 sm:inline-flex">
+              Auto {Math.floor(autoRefreshIntervalMs / 1000)}s
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                void loadCandidates(selectedId);
+                void loadActiveJobs();
+              }}
+              className="rounded-full bg-[#F7F3E9] px-3 py-1.5 text-[11px] font-bold text-[#4A453E]/65 transition-colors hover:bg-[#EFE7DA] hover:text-[#4A453E]"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
 
         <div className="mt-4 space-y-3">
@@ -249,6 +390,12 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <StatusBadge status={item.status} />
+                  {item.activeGenerationJob && (
+                    <GenerationStatusBadge
+                      job={item.activeGenerationJob}
+                      nowMs={clockTick}
+                    />
+                  )}
                   {item.isCurrentOfficial && (
                     <span className="rounded-full bg-[#81C784]/12 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-[#4D8C53]">
                       Official
@@ -287,6 +434,12 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
                 <div className="border-t border-[#4A453E]/8 px-6 py-5">
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge status={detail.status} />
+                    {detail.activeGenerationJob && (
+                      <GenerationStatusBadge
+                        job={detail.activeGenerationJob}
+                        nowMs={clockTick}
+                      />
+                    )}
                     {detail.isCurrentOfficial && (
                       <span className="rounded-full bg-[#81C784]/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-[#4D8C53]">
                         Current Official
@@ -339,6 +492,11 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
                       {currentUser.displayName}
                     </span>
                   </div>
+                  {detail.activeGenerationJob && (
+                    <div className="mt-4 rounded-[18px] border border-[#FF8A65]/20 bg-[#FFF3EA] px-4 py-3 text-xs font-semibold text-[#D7653F]">
+                      New image is still generating. This panel auto-refreshes every 3 seconds.
+                    </div>
+                  )}
                   <textarea
                     value={note}
                     onChange={(event) => setNote(event.target.value)}
@@ -461,6 +619,29 @@ const StatusBadge: React.FC<{ status: AdminDishImageStatus }> = ({ status }) => 
   );
 };
 
+const GenerationStatusBadge: React.FC<{
+  job: AdminDishImageActiveGenerationJob;
+  nowMs: number;
+}> = ({ job, nowMs }) => {
+  const elapsedSeconds = getGenerationElapsedSeconds(job, nowMs);
+  const isRunning = job.status === 'running';
+
+  return (
+    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${
+      isRunning
+        ? 'bg-[#81C784]/14 text-[#4D8C53]'
+        : 'bg-[#FF8A65]/12 text-[#D7653F]'
+    }`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${isRunning ? 'animate-pulse bg-[#4D8C53]' : 'bg-[#D7653F]'}`} />
+      {isRunning ? 'Generating' : 'Queued'}
+      {elapsedSeconds != null && (
+        <span className="tracking-normal">{formatElapsedDuration(elapsedSeconds)}</span>
+      )}
+    </span>
+  );
+};
+
 const MetaCard: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div className="rounded-[18px] border border-[#4A453E]/8 bg-[#FFFEFB] px-4 py-3">
     <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#4A453E]/35">{label}</p>
@@ -501,11 +682,44 @@ const ActionButton: React.FC<ActionButtonProps> = ({ label, onClick, disabled, t
 };
 
 function formatTimestamp(value: string): string {
-  const date = new Date(value.replace(' ', 'T'));
-  if (Number.isNaN(date.getTime())) {
+  const date = parseTimestamp(value);
+  if (!date) {
     return value;
   }
   return date.toLocaleString();
+}
+
+function parseTimestamp(value: string): Date | null {
+  const date = new Date(value.replace(' ', 'T'));
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date;
+}
+
+function getGenerationElapsedSeconds(
+  job: AdminDishImageActiveGenerationJob,
+  nowMs: number,
+): number | null {
+  const startedAt = parseTimestamp(job.startedAt || job.createdAt);
+  if (!startedAt) {
+    return null;
+  }
+  return Math.max(0, Math.floor((nowMs - startedAt.getTime()) / 1000));
+}
+
+function formatElapsedDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (mins < 1) {
+    return `${remainingSeconds}s`;
+  }
+  if (mins < 60) {
+    return `${mins}m ${remainingSeconds}s`;
+  }
+  const hours = Math.floor(mins / 60);
+  const remainingMins = mins % 60;
+  return `${hours}h ${remainingMins}m`;
 }
 
 function getErrorMessage(error: unknown): string {

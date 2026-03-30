@@ -2115,6 +2115,9 @@ interface FoodLogImageProps {
   compact?: boolean;
 }
 
+const FOOD_LOG_IMAGE_RETRY_DELAY_MS = 8000;
+const FOOD_LOG_IMAGE_MAX_RETRY_ATTEMPTS = 30;
+
 const FoodLogImage: React.FC<FoodLogImageProps> = ({
   src,
   alt,
@@ -2122,18 +2125,36 @@ const FoodLogImage: React.FC<FoodLogImageProps> = ({
   compact = false,
 }) => {
   const [hasError, setHasError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     setHasError(false);
+    setRetryCount(0);
   }, [src]);
+
+  useEffect(() => {
+    if (!src || !hasError || retryCount >= FOOD_LOG_IMAGE_MAX_RETRY_ATTEMPTS) {
+      return undefined;
+    }
+    const timerId = window.setTimeout(() => {
+      setRetryCount((current) => current + 1);
+      setHasError(false);
+    }, FOOD_LOG_IMAGE_RETRY_DELAY_MS);
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [hasError, retryCount, src]);
 
   if (!src || hasError) {
     return <ImagePlaceholder compact={compact} />;
   }
 
+  const imageSrc = withRetryToken(src, retryCount);
+
   return (
     <img
-      src={src}
+      key={`${src}-${retryCount}`}
+      src={imageSrc}
       alt={alt}
       className={className}
       onError={() => setHasError(true)}
@@ -2162,6 +2183,16 @@ const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({ compact = false }) 
     </div>
   </div>
 );
+
+function withRetryToken(src: string, retryCount: number): string {
+  if (retryCount <= 0 || src.startsWith('data:')) {
+    return src;
+  }
+  const [basePath, hash = ''] = src.split('#', 2);
+  const separator = basePath.includes('?') ? '&' : '?';
+  const next = `${basePath}${separator}retry=${retryCount}`;
+  return hash ? `${next}#${hash}` : next;
+}
 
 function buildEditDraft(entry: FoodLogEntry): FoodLogEditDraft {
   return {

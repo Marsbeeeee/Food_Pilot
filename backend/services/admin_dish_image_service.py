@@ -1,4 +1,10 @@
 from backend.database.connection import get_db_connection
+from backend.repositories.image_generation_job_repository import (
+    IMAGE_GENERATION_JOB_STATUS_QUEUED,
+    IMAGE_GENERATION_JOB_STATUS_RUNNING,
+    get_active_image_generation_job,
+    list_image_generation_jobs_by_status,
+)
 from backend.repositories.standard_dish_repository import (
     APPROVED_IMAGE_STATUS,
     PENDING_IMAGE_STATUS,
@@ -39,6 +45,37 @@ def list_admin_dish_image_candidates(
             limit=limit,
         )
         return [_serialize_candidate_summary(conn, candidate) for candidate in candidates]
+    finally:
+        conn.close()
+
+
+def list_admin_active_generation_jobs(
+    *,
+    limit: int = 50,
+) -> list[dict[str, object]]:
+    conn = get_db_connection()
+    try:
+        active_jobs = [
+            *list_image_generation_jobs_by_status(
+                conn,
+                IMAGE_GENERATION_JOB_STATUS_RUNNING,
+                limit=limit,
+            ),
+            *list_image_generation_jobs_by_status(
+                conn,
+                IMAGE_GENERATION_JOB_STATUS_QUEUED,
+                limit=limit,
+            ),
+        ]
+        sorted_jobs = sorted(
+            active_jobs,
+            key=lambda item: (str(item["created_at"]), int(item["id"])),
+            reverse=True,
+        )[:limit]
+        return [
+            _serialize_active_generation_job_entry(conn, job)
+            for job in sorted_jobs
+        ]
     finally:
         conn.close()
 
@@ -275,6 +312,10 @@ def _serialize_candidate_summary(
     candidate: dict[str, object],
 ) -> dict[str, object]:
     approved_image = get_approved_dish_image(conn, int(candidate["standard_dish_id"]))
+    active_generation_job = _serialize_active_generation_job(
+        conn,
+        standard_dish_id=int(candidate["standard_dish_id"]),
+    )
     return {
         "id": int(candidate["id"]),
         "standard_dish_id": int(candidate["standard_dish_id"]),
@@ -291,6 +332,7 @@ def _serialize_candidate_summary(
             approved_image is not None
             and int(approved_image["id"]) == int(candidate["id"])
         ),
+        "active_generation_job": active_generation_job,
     }
 
 
@@ -346,4 +388,46 @@ def _serialize_candidate_detail(
         "can_reject": str(candidate["status"]) != REJECTED_IMAGE_STATUS and not is_current_official,
         "can_regenerate": can_regenerate,
         "recent_operations": recent_operations,
+    }
+
+
+def _serialize_active_generation_job(
+    conn,
+    *,
+    standard_dish_id: int,
+) -> dict[str, object] | None:
+    job = get_active_image_generation_job(conn, standard_dish_id)
+    if job is None:
+        return None
+    return {
+        "id": int(job["id"]),
+        "status": str(job["status"]),
+        "created_at": str(job["created_at"]),
+        "started_at": (
+            str(job["started_at"])
+            if job.get("started_at") is not None
+            else None
+        ),
+    }
+
+
+def _serialize_active_generation_job_entry(
+    conn,
+    job: dict[str, object],
+) -> dict[str, object]:
+    standard_dish_id = int(job["standard_dish_id"])
+    standard_dish = get_standard_dish_by_id(conn, standard_dish_id)
+    if standard_dish is None:
+        raise LookupError("standard dish not found for image generation job")
+    return {
+        "id": int(job["id"]),
+        "standard_dish_id": standard_dish_id,
+        "standard_dish_name": str(standard_dish["canonical_name"]),
+        "status": str(job["status"]),
+        "created_at": str(job["created_at"]),
+        "started_at": (
+            str(job["started_at"])
+            if job.get("started_at") is not None
+            else None
+        ),
     }

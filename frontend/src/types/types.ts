@@ -323,6 +323,23 @@ export interface InsightsAnalyzeResponse {
 }
 
 export type AdminDishImageStatus = 'pending' | 'approved' | 'rejected';
+export type AdminDishImageGenerationJobStatus = 'queued' | 'running';
+
+export interface AdminDishImageActiveGenerationJob {
+  id: number;
+  status: AdminDishImageGenerationJobStatus;
+  createdAt: string;
+  startedAt?: string;
+}
+
+export interface AdminDishImageGenerationJobListItem {
+  id: number;
+  standardDishId: number;
+  standardDishName: string;
+  status: AdminDishImageGenerationJobStatus;
+  createdAt: string;
+  startedAt?: string;
+}
 
 export interface AdminDishImageCandidateListParams {
   status?: AdminDishImageStatus;
@@ -345,6 +362,7 @@ export interface AdminDishImageCandidateListItem {
   officialImageUrl?: string;
   officialImageStatus?: AdminDishImageStatus;
   isCurrentOfficial: boolean;
+  activeGenerationJob?: AdminDishImageActiveGenerationJob;
 }
 
 export interface AdminDishImageOperation {

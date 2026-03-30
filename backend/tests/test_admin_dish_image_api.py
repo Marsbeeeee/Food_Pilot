@@ -101,6 +101,46 @@ class AdminDishImageApiTests(unittest.TestCase):
         self.assertEqual(approved_response.json()[0]["standardDishName"], "番茄炒蛋")
         self.assertTrue(approved_response.json()[0]["isCurrentOfficial"])
 
+    def test_admin_can_list_active_generation_jobs_without_pending_candidates(self) -> None:
+        conn = get_db_connection()
+        try:
+            standard_dish = get_or_create_standard_dish(conn, "鍥炴爣鑲夌洊楗?")
+            candidate = create_dish_image_candidate(
+                conn,
+                int(standard_dish["id"]),
+                image_url="https://img.example/huiguorou-approved.jpg",
+                prompt_version="v1",
+            )
+            approve_dish_image_candidate(
+                conn,
+                int(standard_dish["id"]),
+                int(candidate["id"]),
+                reviewed_by_user_id=self.admin_user.id,
+            )
+        finally:
+            conn.close()
+
+        client = self._build_client(self.admin_user)
+        with patch(
+            "backend.services.admin_dish_image_service.dispatch_image_generation_job",
+            return_value=True,
+        ):
+            regenerate_response = client.post(
+                f"/admin/dish-images/{candidate['id']}/regenerate",
+                json={"note": "Need a new render."},
+            )
+
+        self.assertEqual(regenerate_response.status_code, 200)
+        jobs_response = client.get("/admin/dish-images/generation-jobs")
+
+        self.assertEqual(jobs_response.status_code, 200)
+        payload = jobs_response.json()
+        self.assertGreaterEqual(len(payload), 1)
+        self.assertEqual(payload[0]["standardDishId"], int(standard_dish["id"]))
+        self.assertEqual(payload[0]["standardDishName"], "鍥炴爣鑲夌洊楗?")
+        self.assertIn(payload[0]["status"], {"queued", "running"})
+        self.assertIn("createdAt", payload[0])
+
     def test_admin_can_approve_candidate_and_audit_event_is_returned(self) -> None:
         conn = get_db_connection()
         try:
@@ -173,6 +213,8 @@ class AdminDishImageApiTests(unittest.TestCase):
         self.assertEqual(payload["status"], "approved")
         self.assertTrue(payload["isCurrentOfficial"])
         self.assertFalse(payload["canRegenerate"])
+        self.assertIn("activeGenerationJob", payload)
+        self.assertEqual(payload["activeGenerationJob"]["status"], "queued")
         self.assertEqual(payload["recentOperations"][0]["action"], "regenerate")
         self.assertEqual(payload["officialImageUrl"], "https://img.example/curry-approved.jpg")
 

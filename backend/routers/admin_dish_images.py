@@ -6,6 +6,8 @@ from backend.dependencies.auth import require_admin_user
 from backend.schemas.admin_dish_image import (
     AdminDishImageActionRequest,
     AdminDishImageDetailOut,
+    AdminDishImageGenerationJobListQuery,
+    AdminDishImageGenerationJobOut,
     AdminDishImageListItemOut,
     AdminDishImageListQuery,
 )
@@ -14,6 +16,7 @@ from backend.services.admin_dish_image_service import (
     approve_admin_dish_image_candidate,
     get_admin_dish_image_candidate,
     list_admin_dish_image_candidates,
+    list_admin_active_generation_jobs,
     regenerate_admin_dish_image_candidate,
     reject_and_regenerate_admin_dish_image_candidate,
     reject_admin_dish_image_candidate,
@@ -39,6 +42,22 @@ def list_dish_image_review_candidates(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return [AdminDishImageListItemOut.model_validate(item) for item in items]
+
+
+@router.get(
+    "/generation-jobs",
+    response_model=list[AdminDishImageGenerationJobOut],
+    response_model_exclude_none=True,
+)
+def list_dish_image_generation_jobs(
+    filters: Annotated[AdminDishImageGenerationJobListQuery, Depends()],
+    _: UserOut = Depends(require_admin_user),
+) -> list[AdminDishImageGenerationJobOut]:
+    try:
+        items = list_admin_active_generation_jobs(limit=filters.limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return [AdminDishImageGenerationJobOut.model_validate(item) for item in items]
 
 
 @router.get("/{dish_image_id}", response_model=AdminDishImageDetailOut, response_model_exclude_none=True)
