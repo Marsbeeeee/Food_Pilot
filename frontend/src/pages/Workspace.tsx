@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { buildWorkspaceMessagePresentation } from '../app/workspaceMessagePresentation';
 import { resolveFoodLogSavePresentation } from '../app/workspaceFoodLogState';
@@ -39,6 +39,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   onDeleteFoodLog,
   unlinkDeletedChatFromFoodLog,
 }) => {
+  const BOTTOM_SNAP_THRESHOLD_PX = 96;
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -55,6 +56,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const previousSessionIdRef = useRef<string | null>(null);
+  const previousMessageCountRef = useRef<number>(0);
+  const shouldFollowNewMessagesRef = useRef(true);
 
   useEffect(() => {
     if (sessions.length > 0 && !activeSessionId) {
@@ -75,11 +79,39 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       .map((entry) => [`${entry.sourceMessageId}::${entry.name}`, entry] as [string, FoodLogEntry]),
   );
 
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+  useLayoutEffect(() => {
+    const chatContainer = chatContainerRef.current;
+    const currentSessionId = activeSession?.id ?? null;
+    const currentMessageCount = activeSession?.messages.length ?? 0;
+
+    if (!chatContainer || !currentSessionId) {
+      previousSessionIdRef.current = currentSessionId;
+      previousMessageCountRef.current = currentMessageCount;
+      shouldFollowNewMessagesRef.current = true;
+      return;
     }
-  }, [activeSession?.messages, isTyping]);
+
+    const previousSessionId = previousSessionIdRef.current;
+    const previousMessageCount = previousMessageCountRef.current;
+    const hasSessionChanged = previousSessionId !== currentSessionId;
+    const hasNewMessages = currentMessageCount > previousMessageCount;
+
+    if (hasSessionChanged) {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      shouldFollowNewMessagesRef.current = true;
+    } else if (hasNewMessages && shouldFollowNewMessagesRef.current) {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    previousSessionIdRef.current = currentSessionId;
+    previousMessageCountRef.current = currentMessageCount;
+  }, [activeSession?.id, activeSession?.messages.length]);
+
+  const handleChatScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const target = event.currentTarget;
+    const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    shouldFollowNewMessagesRef.current = distanceToBottom <= BOTTOM_SNAP_THRESHOLD_PX;
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -504,7 +536,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
         <div
           ref={chatContainerRef}
-          className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-10 overflow-y-auto px-6 py-10 scroll-smooth md:px-16"
+          onScroll={handleChatScroll}
+          className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-10 overflow-y-auto px-6 py-10 md:px-16"
         >
           {(!activeSession || activeSession.messages.length === 0) ? (
             <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
