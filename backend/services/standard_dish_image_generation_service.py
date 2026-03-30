@@ -134,6 +134,11 @@ def enqueue_admin_standard_dish_image_regeneration(
                 review_note=review_note or "Rejected before regenerate",
                 auto_commit=False,
             )
+            cleanup_local_standard_dish_image_asset_if_unreferenced(
+                str(pending_image["image_url"]),
+                conn=active_conn,
+                config=active_config,
+            )
 
         active_job = get_active_image_generation_job(active_conn, standard_dish_id)
         if active_job is not None:
@@ -428,6 +433,63 @@ def persist_standard_dish_image_asset(
     return f"{public_base_url}/generated-assets/standard-dish-images/{file_name}"
 
 
+def cleanup_local_standard_dish_image_asset_if_unreferenced(
+    image_url: str,
+    *,
+    conn: sqlite3.Connection | None = None,
+    config: StandardDishImageGenerationConfig | None = None,
+) -> bool:
+    normalized_url = image_url.strip()
+    if not normalized_url:
+        return False
+
+    file_name = _extract_local_generated_asset_filename(normalized_url)
+    if file_name is None:
+        return False
+
+    active_config = config or get_standard_dish_image_generation_config()
+    owns_conn = conn is None
+    active_conn = conn or get_db_connection()
+    try:
+        referenced_by_active_candidates = int(
+            active_conn.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM dish_images
+                WHERE image_url = ?
+                  AND status IN ('pending', 'approved')
+                """,
+                (normalized_url,),
+            ).fetchone()["total"]
+        )
+        referenced_by_official = int(
+            active_conn.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM standard_dishes
+                WHERE image_url = ?
+                """,
+                (normalized_url,),
+            ).fetchone()["total"]
+        )
+    finally:
+        if owns_conn:
+            active_conn.close()
+
+    if referenced_by_active_candidates > 0 or referenced_by_official > 0:
+        return False
+
+    storage_dir = Path(active_config.storage_dir).resolve()
+    target_path = (storage_dir / file_name).resolve()
+    if target_path.parent != storage_dir:
+        return False
+    if not target_path.exists():
+        return False
+
+    target_path.unlink()
+    return True
+
+
 def _generate_dashscope_image_url(
     prompt: str,
     *,
@@ -599,6 +661,18 @@ def _should_use_dashscope_multimodal_sync_api(model: str) -> bool:
     return normalized_model.startswith("qwen-image-2.0") or normalized_model.startswith(
         "qwen-image-max"
     )
+
+
+def _extract_local_generated_asset_filename(image_url: str) -> str | None:
+    parsed = urlparse(image_url.strip())
+    normalized_path = parsed.path.strip()
+    expected_prefix = "/generated-assets/standard-dish-images/"
+    if not normalized_path.startswith(expected_prefix):
+        return None
+    file_name = Path(normalized_path).name
+    if not file_name:
+        return None
+    return file_name
 
 
 def _resolve_image_file_extension(*, content_type: str, source_url: str) -> str:

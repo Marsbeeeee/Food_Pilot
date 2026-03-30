@@ -1,10 +1,12 @@
 import os
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from backend.config.image_generation import get_standard_dish_image_generation_config
 from backend.database.connection import get_db_connection
 from backend.database.init_db import init_db
 from backend.dependencies.auth import get_current_user
@@ -194,6 +196,95 @@ class AdminDishImageApiTests(unittest.TestCase):
         self.assertEqual(refreshed_dish["image_url"], "https://img.example/curry-approved.jpg")
         self.assertIsNotNone(active_job)
         self.assertEqual(active_job["status"], "queued")
+
+    def test_admin_can_reject_and_regenerate_pending_candidate(self) -> None:
+        conn = get_db_connection()
+        try:
+            standard_dish = get_or_create_standard_dish(conn, "Margherita Pizza")
+            candidate = create_dish_image_candidate(
+                conn,
+                int(standard_dish["id"]),
+                image_url="https://img.example/margherita-pending.jpg",
+                prompt_version="v2",
+            )
+        finally:
+            conn.close()
+
+        client = self._build_client(self.admin_user)
+
+        with patch(
+            "backend.services.admin_dish_image_service.dispatch_image_generation_job",
+            return_value=True,
+        ):
+            response = client.post(
+                f"/admin/dish-images/{candidate['id']}/reject-and-regenerate",
+                json={"note": "Need another composition."},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "rejected")
+        self.assertEqual(payload["id"], int(candidate["id"]))
+        self.assertEqual(payload["recentOperations"][0]["action"], "regenerate")
+
+        conn = get_db_connection()
+        try:
+            rejected_row = conn.execute(
+                """
+                SELECT status
+                FROM dish_images
+                WHERE id = ?
+                """,
+                (int(candidate["id"]),),
+            ).fetchone()
+            active_job = conn.execute(
+                """
+                SELECT status
+                FROM image_generation_jobs
+                WHERE standard_dish_id = ?
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (int(candidate["standard_dish_id"]),),
+            ).fetchone()
+        finally:
+            conn.close()
+
+        self.assertIsNotNone(rejected_row)
+        self.assertEqual(rejected_row["status"], "rejected")
+        self.assertIsNotNone(active_job)
+        self.assertEqual(active_job["status"], "queued")
+
+    def test_reject_candidate_deletes_local_asset_when_no_active_reference(self) -> None:
+        config = get_standard_dish_image_generation_config()
+        storage_dir = Path(config.storage_dir)
+        storage_dir.mkdir(parents=True, exist_ok=True)
+        file_name = "admin-reject-cleanup-test.png"
+        file_path = storage_dir / file_name
+        file_path.write_bytes(b"test-bytes")
+        image_url = f"{config.public_base_url.rstrip('/')}/generated-assets/standard-dish-images/{file_name}"
+
+        conn = get_db_connection()
+        try:
+            standard_dish = get_or_create_standard_dish(conn, "Sichuan Fish")
+            candidate = create_dish_image_candidate(
+                conn,
+                int(standard_dish["id"]),
+                image_url=image_url,
+                prompt_version="v2",
+            )
+        finally:
+            conn.close()
+
+        client = self._build_client(self.admin_user)
+
+        response = client.post(
+            f"/admin/dish-images/{candidate['id']}/reject",
+            json={"note": "Not usable."},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(file_path.exists())
 
     def _build_client(self, current_user: UserOut) -> TestClient:
         app = FastAPI()

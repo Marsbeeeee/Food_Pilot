@@ -61,6 +61,16 @@ export async function regenerateAdminDishImageCandidate(
   });
 }
 
+export async function rejectAndRegenerateAdminDishImageCandidate(
+  dishImageId: number | string,
+  note?: string,
+): Promise<AdminDishImageCandidateDetail> {
+  return requestJson<AdminDishImageCandidateDetail>(`/${dishImageId}/reject-and-regenerate`, {
+    method: 'POST',
+    body: JSON.stringify({ note }),
+  });
+}
+
 async function requestJson<T = unknown>(endpoint: string, init?: RequestInit): Promise<T> {
   const token = requireAuthToken();
   const response = await fetch(`${ADMIN_DISH_IMAGES_BASE_URL}${endpoint}`, {

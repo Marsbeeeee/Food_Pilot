@@ -5,6 +5,7 @@ import {
   getAdminDishImageCandidate,
   listAdminDishImageCandidates,
   regenerateAdminDishImageCandidate,
+  rejectAndRegenerateAdminDishImageCandidate,
   rejectAdminDishImageCandidate,
 } from '../api/adminDishImages';
 import {
@@ -38,7 +39,9 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
   const [note, setNote] = useState('');
   const [listLoading, setListLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState<'approve' | 'reject' | 'regenerate' | null>(null);
+  const [actionLoading, setActionLoading] = useState<
+    'approve' | 'reject' | 'regenerate' | 'rejectRegenerate' | null
+  >(null);
   const [listError, setListError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
 
@@ -96,7 +99,7 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
     void loadDetail(selectedId);
   }, [selectedId]);
 
-  const handleAction = async (action: 'approve' | 'reject' | 'regenerate') => {
+  const handleAction = async (action: 'approve' | 'reject' | 'regenerate' | 'rejectRegenerate') => {
     if (!detail || actionLoading) {
       return;
     }
@@ -108,7 +111,9 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
         ? await approveAdminDishImageCandidate(detail.id, note.trim() || undefined)
         : action === 'reject'
           ? await rejectAdminDishImageCandidate(detail.id, note.trim() || undefined)
-          : await regenerateAdminDishImageCandidate(detail.id, note.trim() || undefined);
+          : action === 'regenerate'
+            ? await regenerateAdminDishImageCandidate(detail.id, note.trim() || undefined)
+            : await rejectAndRegenerateAdminDishImageCandidate(detail.id, note.trim() || undefined);
       setDetail(nextDetail);
       setNote('');
       await loadCandidates(nextDetail.id);
@@ -354,12 +359,21 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
                       disabled={!detail.canReject || actionLoading !== null}
                       tone="reject"
                     />
-                    <ActionButton
-                      label={actionLoading === 'regenerate' ? 'Queueing regenerate...' : 'Regenerate'}
-                      onClick={() => void handleAction('regenerate')}
-                      disabled={!detail.canRegenerate || actionLoading !== null}
-                      tone="regenerate"
-                    />
+                    {detail.canReject && detail.canRegenerate ? (
+                      <ActionButton
+                        label={actionLoading === 'rejectRegenerate' ? 'Rejecting and queueing...' : 'Reject & Regenerate'}
+                        onClick={() => void handleAction('rejectRegenerate')}
+                        disabled={actionLoading !== null}
+                        tone="rejectRegenerate"
+                      />
+                    ) : (
+                      <ActionButton
+                        label={actionLoading === 'regenerate' ? 'Queueing regenerate...' : 'Regenerate'}
+                        onClick={() => void handleAction('regenerate')}
+                        disabled={!detail.canRegenerate || actionLoading !== null}
+                        tone="regenerate"
+                      />
+                    )}
                   </div>
                 </section>
               </div>
@@ -458,7 +472,7 @@ interface ActionButtonProps {
   label: string;
   onClick: () => void;
   disabled: boolean;
-  tone: 'approve' | 'reject' | 'regenerate';
+  tone: 'approve' | 'reject' | 'regenerate' | 'rejectRegenerate';
 }
 
 const ActionButton: React.FC<ActionButtonProps> = ({ label, onClick, disabled, tone }) => {
@@ -466,7 +480,9 @@ const ActionButton: React.FC<ActionButtonProps> = ({ label, onClick, disabled, t
     ? 'bg-[#81C784] text-white hover:bg-[#73b877]'
     : tone === 'reject'
       ? 'bg-[#E57373] text-white hover:bg-[#d86464]'
-      : 'bg-[#4A453E] text-white hover:bg-[#3d3934]';
+      : tone === 'rejectRegenerate'
+        ? 'bg-[#FF8A65] text-white hover:bg-[#f07a54]'
+        : 'bg-[#4A453E] text-white hover:bg-[#3d3934]';
 
   return (
     <button

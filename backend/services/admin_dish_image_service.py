@@ -14,6 +14,7 @@ from backend.repositories.standard_dish_repository import (
     reject_dish_image_candidate,
 )
 from backend.services.standard_dish_image_generation_service import (
+    cleanup_local_standard_dish_image_asset_if_unreferenced,
     dispatch_image_generation_job,
     enqueue_admin_standard_dish_image_regeneration,
 )
@@ -115,6 +116,10 @@ def reject_admin_dish_image_candidate(
             review_note=note,
             auto_commit=False,
         )
+        cleanup_local_standard_dish_image_asset_if_unreferenced(
+            str(detail["image_url"]),
+            conn=conn,
+        )
         create_dish_image_admin_event(
             conn,
             standard_dish_id=int(detail["standard_dish_id"]),
@@ -169,7 +174,11 @@ def regenerate_admin_dish_image_candidate(
         )
         conn.commit()
         dispatch_image_generation_job(int(job["id"]))
-        refreshed = get_dish_image_candidate_detail(conn, dish_image_id)
+        refreshed = _resolve_regenerate_response_candidate(
+            conn,
+            standard_dish_id=int(detail["standard_dish_id"]),
+            fallback_dish_image_id=dish_image_id,
+        )
         if refreshed is None:
             raise LookupError("dish image candidate not found after regenerate")
         return _serialize_candidate_detail(conn, refreshed)
@@ -178,6 +187,87 @@ def regenerate_admin_dish_image_candidate(
         raise
     finally:
         conn.close()
+
+
+def reject_and_regenerate_admin_dish_image_candidate(
+    *,
+    admin_user_id: int,
+    dish_image_id: int,
+    note: str | None = None,
+) -> dict[str, object]:
+    conn = get_db_connection()
+    try:
+        detail = get_dish_image_candidate_detail(conn, dish_image_id)
+        if detail is None:
+            raise LookupError("dish image candidate not found")
+
+        reject_dish_image_candidate(
+            conn,
+            int(detail["standard_dish_id"]),
+            dish_image_id,
+            reviewed_by_user_id=admin_user_id,
+            review_note=note,
+            auto_commit=False,
+        )
+        cleanup_local_standard_dish_image_asset_if_unreferenced(
+            str(detail["image_url"]),
+            conn=conn,
+        )
+        job = enqueue_admin_standard_dish_image_regeneration(
+            int(detail["standard_dish_id"]),
+            conn=conn,
+            replace_pending=False,
+            reviewed_by_user_id=admin_user_id,
+            review_note=note,
+            dispatch_async=False,
+        )
+        create_dish_image_admin_event(
+            conn,
+            standard_dish_id=int(detail["standard_dish_id"]),
+            dish_image_id=dish_image_id,
+            actor_user_id=admin_user_id,
+            action="reject",
+            result_status=REJECTED_IMAGE_STATUS,
+            note=note,
+            auto_commit=False,
+        )
+        create_dish_image_admin_event(
+            conn,
+            standard_dish_id=int(detail["standard_dish_id"]),
+            dish_image_id=dish_image_id,
+            actor_user_id=admin_user_id,
+            action="regenerate",
+            result_status=str(job["status"]),
+            note=note,
+            auto_commit=False,
+        )
+        conn.commit()
+        dispatch_image_generation_job(int(job["id"]))
+        refreshed = _resolve_regenerate_response_candidate(
+            conn,
+            standard_dish_id=int(detail["standard_dish_id"]),
+            fallback_dish_image_id=dish_image_id,
+        )
+        if refreshed is None:
+            raise LookupError("dish image candidate not found after regenerate")
+        return _serialize_candidate_detail(conn, refreshed)
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def _resolve_regenerate_response_candidate(
+    conn,
+    *,
+    standard_dish_id: int,
+    fallback_dish_image_id: int,
+) -> dict[str, object] | None:
+    pending = get_pending_dish_image(conn, standard_dish_id)
+    if pending is not None:
+        return get_dish_image_candidate_detail(conn, int(pending["id"]))
+    return get_dish_image_candidate_detail(conn, fallback_dish_image_id)
 
 
 def _serialize_candidate_summary(

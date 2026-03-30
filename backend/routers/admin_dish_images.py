@@ -15,6 +15,7 @@ from backend.services.admin_dish_image_service import (
     get_admin_dish_image_candidate,
     list_admin_dish_image_candidates,
     regenerate_admin_dish_image_candidate,
+    reject_and_regenerate_admin_dish_image_candidate,
     reject_admin_dish_image_candidate,
 )
 
@@ -97,6 +98,29 @@ def regenerate_dish_image_review_candidate(
 ) -> AdminDishImageDetailOut:
     try:
         item = regenerate_admin_dish_image_candidate(
+            admin_user_id=admin_user.id,
+            dish_image_id=dish_image_id,
+            note=request.note,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return AdminDishImageDetailOut.model_validate(item)
+
+
+@router.post(
+    "/{dish_image_id}/reject-and-regenerate",
+    response_model=AdminDishImageDetailOut,
+    response_model_exclude_none=True,
+)
+def reject_and_regenerate_dish_image_review_candidate(
+    dish_image_id: int,
+    request: AdminDishImageActionRequest,
+    admin_user: UserOut = Depends(require_admin_user),
+) -> AdminDishImageDetailOut:
+    try:
+        item = reject_and_regenerate_admin_dish_image_candidate(
             admin_user_id=admin_user.id,
             dish_image_id=dish_image_id,
             note=request.note,
