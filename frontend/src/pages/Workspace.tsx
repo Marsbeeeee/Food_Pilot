@@ -435,7 +435,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   return (
     <div className="relative flex h-full min-h-0 flex-1 overflow-hidden">
       <aside className="flex min-h-0 w-72 shrink-0 flex-col border-r border-[#4A453E]/5 bg-[#FFFDF5]">
-        <div className="flex h-full min-h-0 flex-col gap-6 p-6">
+        <div className="flex h-full min-h-0 flex-col gap-7 p-7">
           <button
             onClick={() => void handleNewAnalysis()}
             disabled={isCreatingSession}
@@ -445,7 +445,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             <span>开始新对话</span>
           </button>
 
-          <div className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-2 pb-10">
+          <div className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-7 overflow-y-auto pr-2 pb-12">
             <div>
               <h3 className="mb-4 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">会话</h3>
               <div className="flex flex-col gap-1">
@@ -496,10 +496,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
       <section className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#FFFDF5]">
         {activeSession && (
-          <div className="z-10 flex items-center justify-between border-b border-[#4A453E]/5 bg-white/40 px-10 py-4 backdrop-blur-sm">
+          <div className="z-10 flex items-center justify-between border-b border-[#4A453E]/5 bg-white/40 px-10 py-5 backdrop-blur-sm">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-[20px] text-[#4A453E]/20">auto_awesome</span>
-              <span className="font-serif-brand text-[13px] font-bold italic tracking-wide text-[#4A453E]">
+              <span className="font-serif-brand text-[13px] font-bold tracking-wide text-[#4A453E]">
                 {activeSession.title}
               </span>
             </div>
@@ -537,24 +537,24 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         <div
           ref={chatContainerRef}
           onScroll={handleChatScroll}
-          className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-10 overflow-y-auto px-6 py-10 md:px-16"
+          className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-12 overflow-y-auto px-6 py-12 md:px-16 lg:px-20"
         >
           {(!activeSession || activeSession.messages.length === 0) ? (
-            <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
-              <div className="mb-8 flex size-20 items-center justify-center rounded-[40px] border border-[#4A453E]/5 bg-white shadow-sm">
+            <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
+              <div className="mb-9 flex size-20 items-center justify-center rounded-[40px] border border-[#4A453E]/5 bg-white shadow-sm">
                 <span className="material-symbols-outlined text-4xl text-[#FF8A65]">restaurant</span>
               </div>
-              <h3 className="mb-3 font-serif-brand text-3xl font-bold italic text-[#4A453E]">从一餐描述、一个问题或一个目标开始。</h3>
+              <h3 className="mb-3 font-serif-brand text-3xl font-bold text-[#4A453E]">从一餐描述、一个问题或一个目标开始。</h3>
               <p className="max-w-md text-base leading-relaxed text-[#4A453E]/50">
                 你可以直接描述吃了什么、询问大概热量和营养，或让 Food Pilot 帮你推荐更合适的吃法。
                 值得保留的估算结果可以再保存到饮食记录。
               </p>
-              <div className="mt-10 grid w-full max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">
-                <button onClick={() => void handleSendMessage('一份牛油果吐司大概有什么营养？')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-4 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
+              <div className="mt-12 grid w-full max-w-xl grid-cols-1 gap-4 sm:grid-cols-2">
+                <button onClick={() => void handleSendMessage('一份牛油果吐司大概有什么营养？')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-5 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
                   <p className="mb-1 text-[13px] font-bold text-[#4A453E]">估算这餐</p>
                   <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">“一份牛油果吐司大概有什么营养？”</p>
                 </button>
-                <button onClick={() => void handleSendMessage('晚饭在 poke 和拉面之间怎么选更合适？')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-4 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
+                <button onClick={() => void handleSendMessage('晚饭在 poke 和拉面之间怎么选更合适？')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-5 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
                   <p className="mb-1 text-[13px] font-bold text-[#4A453E]">推荐怎么吃</p>
                   <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">“晚饭在 poke 和拉面之间怎么选更合适？”</p>
                 </button>
@@ -610,7 +610,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
                     <div className={`flex max-w-[95%] flex-col gap-3 ${message.role === 'user' ? 'items-end max-w-[80%]' : 'items-start'}`}>
                       {isMealEstimate ? (
-                        <div className="flex w-full flex-col gap-4">
+                        <div className="flex w-full flex-col gap-5">
                           {(messagePresentation.estimates as Array<{ title: string; confidence?: string; description?: string; items: Array<{ name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }>; total: string }> | null)?.length ? (
                             messagePresentation.estimates.map((est: { title: string; confidence?: string; description?: string; items: Array<{ name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }>; total: string }, estIdx: number) => {
                               const estSaveKey = message.id ? `${message.id}::${est.title}` : '';
@@ -627,9 +627,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                               });
                               return (
                               <div key={estIdx} className="overflow-hidden rounded-[32px] border border-[#4A453E]/5 bg-white shadow-sm">
-                                <div className="border-b border-[#4A453E]/5 p-8">
+                                <div className="border-b border-[#4A453E]/5 p-9">
                                   <div className="mb-4 flex items-center justify-between">
-                                    <h3 className="font-serif-brand text-2xl font-bold italic text-[#4A453E]">{est.title}</h3>
+                                    <h3 className="font-serif-brand text-2xl font-bold text-[#4A453E]">{est.title}</h3>
                                     {est.confidence && (
                                       <span className="rounded-full border border-[#81C784]/10 bg-[#81C784]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#81C784]">
                                         {est.confidence}
@@ -673,7 +673,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                         return (
                                           <tr>
                                             <td className="px-6 py-6 text-lg text-[#4A453E]" colSpan={2}>{messagePresentation.totalLabel}</td>
-                                            <td className="px-4 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{formatEnergyInteger(est.total)}</td>
+                                            <td className="px-4 py-6 text-right font-serif-brand text-3xl text-[#FF8A65]">{formatEnergyInteger(est.total)}</td>
                                             <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tPro > 0 ? `${fmtNum(tPro)} g` : '—'}</td>
                                             <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tCarb > 0 ? `${fmtNum(tCarb)} g` : '—'}</td>
                                             <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tFat > 0 ? `${fmtNum(tFat)} g` : '—'}</td>
@@ -683,7 +683,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                     </tfoot>
                                   </table>
                                 </div>
-                                <div className="flex flex-col items-end gap-2 border-t border-[#4A453E]/5 px-8 py-5">
+                                <div className="flex flex-col items-end gap-3 border-t border-[#4A453E]/5 px-9 py-6">
                                   <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                     <div className={`inline-flex items-center gap-2 self-end rounded-full border px-4 py-2 text-sm font-bold md:self-auto ${
                                       estSavePresentation.state === 'saved'
@@ -735,9 +735,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             })
                           ) : (
                             <div className="overflow-hidden rounded-[32px] border border-[#4A453E]/5 bg-white shadow-sm">
-                              <div className="border-b border-[#4A453E]/5 p-8">
+                              <div className="border-b border-[#4A453E]/5 p-9">
                                 <div className="mb-4 flex items-center justify-between">
-                                  <h3 className="font-serif-brand text-2xl font-bold italic text-[#4A453E]">{messagePresentation.title}</h3>
+                                  <h3 className="font-serif-brand text-2xl font-bold text-[#4A453E]">{messagePresentation.title}</h3>
                                   <span className="rounded-full border border-[#81C784]/10 bg-[#81C784]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#81C784]">
                                     {messagePresentation.confidence}
                                   </span>
@@ -777,7 +777,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                       return (
                                         <tr>
                                           <td className="px-6 py-6 text-lg text-[#4A453E]" colSpan={2}>{messagePresentation.totalLabel}</td>
-                                          <td className="px-4 py-6 text-right font-serif-brand text-3xl italic text-[#FF8A65]">{formatEnergyInteger(messagePresentation.total)}</td>
+                                          <td className="px-4 py-6 text-right font-serif-brand text-3xl text-[#FF8A65]">{formatEnergyInteger(messagePresentation.total)}</td>
                                           <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tPro > 0 ? `${fmtNum(tPro)} g` : '—'}</td>
                                           <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tCarb > 0 ? `${fmtNum(tCarb)} g` : '—'}</td>
                                           <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tFat > 0 ? `${fmtNum(tFat)} g` : '—'}</td>
@@ -790,7 +790,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             </div>
                           )}
                           {!(messagePresentation.estimates as unknown[] | null)?.length ? (
-                          <div className="flex flex-col items-end gap-2 rounded-[32px] border border-[#4A453E]/5 bg-white px-8 py-5 shadow-sm">
+                          <div className="flex flex-col items-end gap-3 rounded-[32px] border border-[#4A453E]/5 bg-white px-9 py-6 shadow-sm">
                             {(messagePresentation.suggestion ?? message.content) && (
                               <p className="w-full text-[14px] leading-relaxed text-[#4A453E]/70">{messagePresentation.suggestion ?? message.content}</p>
                             )}
@@ -850,20 +850,20 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             </p>
                           </div>
                           ) : (messagePresentation.suggestion ?? message.content) ? (
-                          <div className="rounded-[32px] border border-[#4A453E]/5 bg-white px-8 py-5 shadow-sm">
+                          <div className="rounded-[32px] border border-[#4A453E]/5 bg-white px-9 py-6 shadow-sm">
                             <p className="w-full text-[14px] leading-relaxed text-[#4A453E]/70">{messagePresentation.suggestion ?? message.content}</p>
                           </div>
                           ) : null}
                         </div>
                       ) : isMealRecommendation ? (
                         <div className="w-full overflow-hidden rounded-[28px] border border-[#4A453E]/5 bg-white shadow-sm">
-                          <div className="border-b border-[#4A453E]/5 px-8 py-6">
+                          <div className="border-b border-[#4A453E]/5 px-9 py-7">
                             <div className="mb-3 flex items-center justify-between gap-4">
                               <div>
                                 <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#4A453E]/35">
                                   {messagePresentation.eyebrow}
                                 </p>
-                                <h3 className="font-serif-brand text-2xl font-bold italic text-[#4A453E]">
+                                <h3 className="font-serif-brand text-2xl font-bold text-[#4A453E]">
                                   {messagePresentation.title}
                                 </h3>
                               </div>
@@ -883,7 +883,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             )}
                           </div>
                           {messagePresentation.content && (
-                            <div className="px-8 py-6">
+                            <div className="px-9 py-7">
                               <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
                                 {messagePresentation.contentLabel}
                               </p>
@@ -894,7 +894,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                           )}
                         </div>
                       ) : (
-                        <div className={`rounded-[24px] px-6 py-4 text-[15px] leading-relaxed shadow-sm border ${
+                        <div className={`rounded-[24px] px-7 py-5 text-[15px] leading-relaxed shadow-sm border ${
                           message.role === 'user'
                             ? 'bg-[#F7F3E9] text-[#4A453E] border-[#4A453E]/5 rounded-tr-[4px]'
                             : 'bg-white text-[#4A453E] border-[#4A453E]/8 rounded-tl-[4px]'
@@ -914,7 +914,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               <div className="mt-1 flex size-10 shrink-0 items-center justify-center rounded-2xl border border-[#4A453E]/10 bg-white shadow-sm">
                 <span className="material-symbols-outlined animate-pulse text-[22px] text-[#FF8A65]">auto_awesome</span>
               </div>
-              <div className="rounded-[24px] rounded-tl-[4px] border border-[#4A453E]/5 bg-white px-8 py-5 shadow-sm">
+              <div className="rounded-[24px] rounded-tl-[4px] border border-[#4A453E]/5 bg-white px-9 py-6 shadow-sm">
                 <div className="flex gap-1.5">
                   <span className="size-2 animate-bounce rounded-full bg-[#FF8A65] [animation-delay:-0.3s]"></span>
                   <span className="size-2 animate-bounce rounded-full bg-[#FF8A65] [animation-delay:-0.15s]"></span>
@@ -925,11 +925,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           )}
         </div>
 
-        <div className="z-20 bg-gradient-to-t from-[#FFFDF5] via-[#FFFDF5] to-transparent px-10 pb-10 pt-4">
-          <div className="mx-auto max-w-4xl">
+        <div className="z-20 bg-gradient-to-t from-[#FFFDF5] via-[#FFFDF5] to-transparent px-10 pb-12 pt-6">
+          <div className="mx-auto max-w-5xl">
             <div className="relative flex items-end overflow-hidden rounded-[28px] border border-[#4A453E]/10 bg-white shadow-xl shadow-[#4A453E]/05 transition-all focus-within:border-[#FF8A65]/40">
               <textarea
-                className="custom-scrollbar max-h-40 flex-1 resize-none border-none bg-transparent py-6 pl-8 text-[16px] leading-relaxed text-[#4A453E] placeholder-[#4A453E]/30 focus:ring-0"
+                className="custom-scrollbar max-h-40 flex-1 resize-none border-none bg-transparent py-7 pl-8 pr-2 text-[16px] leading-relaxed text-[#4A453E] placeholder-[#4A453E]/30 focus:ring-0"
                 placeholder="描述你吃了什么，或问这餐大概多少热量 / 营养..."
                 rows={1}
                 value={inputValue}

@@ -466,14 +466,14 @@ export const Explorer: React.FC<ExplorerProps> = ({
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#FFFDF5] lg:flex-row">
       <main className="relative custom-scrollbar flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10 xl:px-12">
         <div className="relative mx-auto w-full max-w-4xl pb-10">
-          <div className="mb-8 flex flex-col gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#FF8A65]/70">
+          <div className="mb-10 flex flex-col gap-3">
+            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#FF8A65]/70">
               饮食记录
             </span>
-            <h1 className="font-serif-brand text-4xl font-bold text-[#4A453E] md:text-5xl">
+            <h1 className="font-serif-brand text-[2.5rem] font-bold leading-[1.18] text-[#4A453E] md:text-[2.9rem]">
               已保存记录
             </h1>
-            <p className="max-w-2xl text-sm leading-7 text-[#4A453E]/60 md:text-base">
+            <p className="max-w-2xl text-[15px] leading-8 text-[#4A453E]/60 md:text-[16px]">
               饮食记录会保存你主动保留的餐食分析结果。它是可回看、可持续优化的保存清单，
               不是完整的饮食日记。记录按最近一次保存或编辑时间组织展示。
             </p>
@@ -1073,10 +1073,10 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="flex-1">
-                  <h1 className="font-serif-brand text-3xl font-bold text-[#4A453E] md:text-4xl">
-                    Insights
+                  <h1 className="font-serif-brand text-[2.5rem] font-bold leading-[1.18] text-[#4A453E] md:text-[2.9rem]">
+                    营养分析
                   </h1>
-                  <p className="mt-3 max-w-2xl text-sm leading-7 text-[#4A453E]/60 md:text-base">
+                  <p className="mt-4 max-w-2xl text-[15px] leading-8 text-[#4A453E]/60 md:text-[16px]">
                     {modeAIPanelDescription}
                   </p>
                 </div>
@@ -1781,8 +1781,8 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col bg-white">
-      <div className="shrink-0 border-b border-[#4A453E]/05 px-5 py-5 md:px-6 md:py-6">
-        <div className="mb-4 flex items-start justify-between gap-4">
+      <div className="shrink-0 border-b border-[#4A453E]/05 px-6 py-6 md:px-7 md:py-7">
+        <div className="mb-5 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#FF8A65]">
               {isEditing ? '编辑克重' : '已保存记录'}
@@ -1813,13 +1813,13 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
           </div>
         </div>
 
-        <h2 className="text-balance font-serif-brand text-[28px] font-bold italic leading-[1.14] text-[#4A453E] md:text-[34px]">
+        <h2 className="text-balance font-serif-brand text-[28px] font-bold leading-[1.14] text-[#4A453E] md:text-[34px]">
           {entry.name}
         </h2>
       </div>
 
-      <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-5 md:px-6 md:py-6">
-        <div className="space-y-5 md:space-y-6">
+      <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-6 md:px-7 md:py-7">
+        <div className="space-y-6 md:space-y-7">
           <div className="relative aspect-[4/3] overflow-hidden rounded-[24px] border border-[#4A453E]/05 shadow-sm md:aspect-video md:rounded-[28px]">
             <FoodLogImage
               src={entry.image}
@@ -1838,7 +1838,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
             )}
           </div>
 
-          <div className="rounded-[24px] border border-[#4A453E]/8 bg-white p-5 shadow-sm md:rounded-[28px] md:p-6">
+          <div className="rounded-[24px] border border-[#4A453E]/8 bg-white p-6 shadow-sm md:rounded-[28px] md:p-7">
             <h5 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/40">
               <span className="material-symbols-outlined text-lg text-[#FF8A65]">
                 notes
@@ -1851,15 +1851,15 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
             </p>
           </div>
 
-          <div className="rounded-[24px] border border-[#4A453E]/8 bg-[#FFFDF5] p-5 shadow-sm md:rounded-[28px] md:p-6">
-            <div className="mb-5 flex flex-col gap-2 md:mb-6 md:flex-row md:items-center md:justify-between">
+          <div className="rounded-[24px] border border-[#4A453E]/8 bg-[#FFFDF5] p-6 shadow-sm md:rounded-[28px] md:p-7">
+            <div className="mb-6 flex flex-col gap-3 md:mb-7 md:flex-row md:items-center md:justify-between">
               <h5 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/40">
                 <span className="material-symbols-outlined text-lg text-[#FF8A65]">
                   analytics
                 </span>
                 营养详情
               </h5>
-              <span className="font-serif-brand text-[26px] font-bold italic leading-none text-[#4A453E] md:text-[28px]">
+              <span className="font-serif-brand text-[26px] font-bold leading-none text-[#4A453E] md:text-[28px]">
                 {formatCalories(totalCalories)}{' '}
                 <span className="font-sans text-xs font-bold not-italic uppercase tracking-wide text-[#4A453E]/20">
                   kcal
@@ -1868,7 +1868,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
             </div>
 
             {isEditing && editDraft ? (
-              <div className="mb-5 md:mb-6">
+              <div className="mb-6 md:mb-7">
                 <p className="mb-3 text-[10px] font-bold text-[#FF8A65]/70">
                   调整克重后，热量与营养素自动按比例重新计算
                 </p>
@@ -1912,7 +1912,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="mb-5 md:mb-6">
+              <div className="mb-6 md:mb-7">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-[#4A453E]/08 text-[9px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/35">
@@ -1973,8 +1973,8 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-[#4A453E]/05 bg-white px-5 py-4 md:px-6 md:py-6">
-        <div className="flex flex-col gap-3">
+      <div className="shrink-0 border-t border-[#4A453E]/05 bg-white px-6 py-5 md:px-7 md:py-7">
+        <div className="flex flex-col gap-4">
           {isEditing ? (
             <div className="flex gap-3">
               <button

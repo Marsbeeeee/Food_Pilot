@@ -52,7 +52,7 @@ const ALLERGY_OPTIONS = [
 const EXERCISE_OPTIONS = ['瑜伽', '跑步', '游泳', '健身', '骑行'];
 
 const INPUT_CLASSNAME =
-  'w-full bg-[#F7F3E9]/30 border border-[#4A453E]/05 rounded-[18px] px-4 py-3 font-bold text-[#4A453E] focus:ring-2 focus:ring-[#FF8A65]/20 focus:bg-white outline-none transition-all placeholder:text-[#4A453E]/20 disabled:cursor-not-allowed disabled:opacity-70';
+  'w-full bg-[#F7F3E9]/30 border border-[#4A453E]/05 rounded-[18px] px-4 py-3 text-[15px] font-medium text-[#4A453E] focus:ring-2 focus:ring-[#FF8A65]/20 focus:bg-white outline-none transition-all placeholder:text-[#4A453E]/20 disabled:cursor-not-allowed disabled:opacity-70';
 
 type FormStatus = 'loading' | 'idle' | 'saving' | 'success' | 'error';
 type TextProfileField =
@@ -249,7 +249,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col px-8 py-10 max-w-[1200px] mx-auto w-full overflow-y-auto custom-scrollbar relative">
+    <div className="relative mx-auto flex w-full max-w-[1200px] flex-1 flex-col overflow-y-auto custom-scrollbar px-8 py-12 lg:py-14">
       {(status === 'success' || status === 'error') && bannerMessage && (
         <div
           className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300 ${
@@ -259,14 +259,14 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
           <span className="material-symbols-outlined text-sm font-bold">
             {status === 'success' ? 'check_circle' : 'error'}
           </span>
-          <span className="text-sm font-bold tracking-wide">{bannerMessage}</span>
+          <span className="text-sm font-bold tracking-[0.08em]">{bannerMessage}</span>
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
+      <div className="mb-14 flex flex-col items-start justify-between gap-7 md:flex-row md:items-center">
         <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-serif-brand font-bold text-[#4A453E]">个人档案</h1>
-          <p className="text-[#4A453E]/60 text-base max-w-2xl">
+          <h1 className="font-serif-brand text-[2.5rem] font-bold leading-[1.18] text-[#4A453E] md:text-[2.9rem]">个人档案</h1>
+          <p className="max-w-2xl text-[15px] leading-8 text-[#4A453E]/60 md:text-[16px]">
             个人档案用于告诉助手“它在为谁提供建议”，并让已保存的饮食记录始终基于相同的目标、偏好和限制条件。
           </p>
           {status === 'loading' && (
@@ -286,7 +286,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
+          <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/35">
             {status === 'saving'
               ? '保存中'
               : status === 'loading'
@@ -330,17 +330,17 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
 
       <fieldset disabled={isBusy} className="contents">
         <div className={`transition-opacity ${isBusy ? 'opacity-80' : 'opacity-100'}`}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-            <div className="space-y-8">
-              <section className="bg-white border border-[#4A453E]/05 rounded-[32px] p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
+          <div className="mb-14 grid grid-cols-1 gap-10 lg:grid-cols-2">
+            <div className="space-y-10">
+              <section className="rounded-[32px] border border-[#4A453E]/05 bg-white p-9 shadow-sm lg:p-10">
+                <div className="mb-9 flex items-center gap-3">
                   <div className="size-10 rounded-2xl bg-[#FF8A65]/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[#FF8A65]">person</span>
                   </div>
-                  <h3 className="font-serif-brand font-bold text-xl text-[#4A453E]">身体数据</h3>
+                  <h3 className="font-serif-brand text-[22px] font-bold leading-[1.25] text-[#4A453E]">身体数据</h3>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+                <div className="mb-9 grid grid-cols-1 gap-6 sm:grid-cols-3">
                   <Field label="年龄">
                     <input type="number" value={profile.age} onChange={(event) => updateField('age', event.target.value)} placeholder="岁" className={INPUT_CLASSNAME} />
                   </Field>
@@ -353,7 +353,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-2">
+                  <label className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4A453E]/40">
                     性别
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -367,17 +367,17 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                 </div>
               </section>
 
-              <section className="bg-white border border-[#4A453E]/05 rounded-[32px] p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
+              <section className="rounded-[32px] border border-[#4A453E]/05 bg-white p-9 shadow-sm lg:p-10">
+                <div className="mb-9 flex items-center gap-3">
                   <div className="size-10 rounded-2xl bg-[#81C784]/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[#81C784]">directions_run</span>
                   </div>
-                  <h3 className="font-serif-brand font-bold text-xl text-[#4A453E]">生活方式与训练</h3>
+                  <h3 className="font-serif-brand text-[22px] font-bold leading-[1.25] text-[#4A453E]">生活方式与训练</h3>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-7">
                   <div>
-                    <label className="block text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-4">
+                    <label className="mb-4 block px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4A453E]/40">
                       活动水平
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -392,7 +392,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-4">
+                    <label className="mb-4 block px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4A453E]/40">
                       运动类型
                     </label>
                     <div className="flex flex-wrap gap-2">
@@ -458,18 +458,18 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
               </section>
             </div>
 
-            <div className="space-y-8">
-              <section className="bg-white border border-[#4A453E]/05 rounded-[32px] p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
+            <div className="space-y-10">
+              <section className="rounded-[32px] border border-[#4A453E]/05 bg-white p-9 shadow-sm lg:p-10">
+                <div className="mb-9 flex items-center gap-3">
                   <div className="size-10 rounded-2xl bg-[#FF8A65]/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[#FF8A65]">flag</span>
                   </div>
-                  <h3 className="font-serif-brand font-bold text-xl text-[#4A453E]">目标与节奏</h3>
+                  <h3 className="font-serif-brand text-[22px] font-bold leading-[1.25] text-[#4A453E]">目标与节奏</h3>
                 </div>
 
-                <div className="space-y-8">
+                <div className="space-y-9">
                   <div>
-                    <label className="block text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-4">
+                    <label className="mb-4 block px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4A453E]/40">
                       主要目标
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -483,7 +483,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-4">
+                    <label className="mb-4 block px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4A453E]/40">
                       计划节奏
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-6">
@@ -539,17 +539,17 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                 </div>
               </section>
 
-              <section className="bg-white border border-[#4A453E]/05 rounded-[32px] p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
+              <section className="rounded-[32px] border border-[#4A453E]/05 bg-white p-9 shadow-sm lg:p-10">
+                <div className="mb-9 flex items-center gap-3">
                   <div className="size-10 rounded-2xl bg-[#81C784]/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[#81C784]">restaurant</span>
                   </div>
-                  <h3 className="font-serif-brand font-bold text-xl text-[#4A453E]">饮食偏好</h3>
+                  <h3 className="font-serif-brand text-[22px] font-bold leading-[1.25] text-[#4A453E]">饮食偏好</h3>
                 </div>
 
-                <div className="space-y-8">
+                <div className="space-y-9">
                   <div>
-                    <label className="block text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-4">
+                    <label className="mb-4 block px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4A453E]/40">
                       饮食风格
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -564,7 +564,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-4">
+                    <label className="mb-4 block px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4A453E]/40">
                       过敏与忌口
                     </label>
                     <div className="flex flex-wrap gap-2">
@@ -587,8 +587,8 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
         </div>
       </fieldset>
 
-      <div className="bg-[#F7F3E9]/40 border border-[#4A453E]/05 rounded-[32px] p-8 text-center max-w-3xl mx-auto mb-20">
-        <h5 className="text-[11px] font-bold text-[#4A453E]/60 uppercase tracking-widest mb-3 flex items-center justify-center gap-2">
+      <div className="mx-auto mb-24 max-w-3xl rounded-[32px] border border-[#4A453E]/05 bg-[#F7F3E9]/40 p-9 text-center lg:p-10">
+        <h5 className="mb-3 flex items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/60">
           <span className="material-symbols-outlined text-base">info</span>
           说明
         </h5>
@@ -608,7 +608,7 @@ interface FieldProps {
 const Field: React.FC<FieldProps> = ({ label, children }) => {
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1">{label}</label>
+      <label className="px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4A453E]/40">{label}</label>
       {children}
     </div>
   );
