@@ -204,38 +204,38 @@ function getErrorMessage(payload: unknown, status: number): string {
   }
 
   if (status === 404) {
-    return 'Profile not found.';
+    return '未找到个人档案。';
   }
 
   if (status === 422) {
-    return 'Invalid profile fields. Please check your input.';
+    return '档案字段不合法，请检查输入。';
   }
 
   if (status === 401) {
-    return 'Please sign in again.';
+    return '登录状态已失效，请重新登录。';
   }
 
   if (status === 409) {
-    return 'A profile already exists for this account.';
+    return '该账号已存在个人档案。';
   }
 
-  return 'Profile service is temporarily unavailable. Please try again later.';
+  return '档案服务暂时不可用，请稍后重试。';
 }
 
 function toProfileInput(form: UserProfileForm): UserProfileInput {
   const normalized = normalizeProfileForm(form);
 
   return {
-    age: parseRequiredNumber(normalized.age, 'Age', true),
-    height: parseRequiredNumber(normalized.height, 'Height'),
-    weight: parseRequiredNumber(normalized.weight, 'Weight'),
-    sex: requireText(normalized.sex, 'Sex'),
-    activityLevel: requireText(normalized.activityLevel, 'Activity level'),
+    age: parseRequiredNumber(normalized.age, '年龄', true),
+    height: parseRequiredNumber(normalized.height, '身高'),
+    weight: parseRequiredNumber(normalized.weight, '体重'),
+    sex: requireText(normalized.sex, '性别'),
+    activityLevel: requireText(normalized.activityLevel, '活动水平'),
     exerciseType: normalized.exerciseType.trim(),
-    goal: requireText(normalized.goal, 'Goal'),
-    pace: requireText(normalized.pace, 'Pace'),
-    kcalTarget: parseRequiredNumber(normalized.kcalTarget, 'Calorie target', true),
-    dietStyle: requireText(normalized.dietStyle, 'Diet style'),
+    goal: requireText(normalized.goal, '目标'),
+    pace: requireText(normalized.pace, '节奏'),
+    kcalTarget: parseRequiredNumber(normalized.kcalTarget, '热量目标', true),
+    dietStyle: requireText(normalized.dietStyle, '饮食风格'),
     allergies: normalized.allergies,
   };
 }
@@ -243,12 +243,12 @@ function toProfileInput(form: UserProfileForm): UserProfileInput {
 function parseRequiredNumber(value: string, label: string, integer = false): number {
   const normalized = value.trim();
   if (!normalized) {
-    throw new ProfileApiError(`${label} is required.`);
+    throw new ProfileApiError(`${label}为必填项。`);
   }
 
   const parsed = integer ? Number.parseInt(normalized, 10) : Number.parseFloat(normalized);
   if (!Number.isFinite(parsed)) {
-    throw new ProfileApiError(`${label} must be a valid number.`);
+    throw new ProfileApiError(`${label}必须是有效数字。`);
   }
 
   return parsed;
@@ -257,7 +257,7 @@ function parseRequiredNumber(value: string, label: string, integer = false): num
 function requireText(value: string, label: string): string {
   const normalized = value.trim();
   if (!normalized) {
-    throw new ProfileApiError(`${label} is required.`);
+    throw new ProfileApiError(`${label}为必填项。`);
   }
   return normalized;
 }
@@ -291,7 +291,7 @@ function normalizeNumericText(value: string): string {
 function requireAuthToken(): string {
   const token = getStoredToken();
   if (!token) {
-    throw new ProfileApiError('Please sign in again.', 401);
+    throw new ProfileApiError('登录状态已失效，请重新登录。', 401);
   }
   return token;
 }

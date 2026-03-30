@@ -17,7 +17,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   title,
   description,
   confirmLabel,
-  cancelLabel = 'Cancel',
+  cancelLabel = '取消',
   icon = 'warning',
   isConfirming = false,
   onClose,

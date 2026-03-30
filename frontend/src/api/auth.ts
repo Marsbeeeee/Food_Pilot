@@ -63,7 +63,7 @@ export async function restoreSession(): Promise<AuthSession | null> {
 export async function deleteCurrentAccount(): Promise<void> {
   const token = getStoredToken();
   if (!token) {
-    throw new AuthApiError('Please sign in again.', 401);
+    throw new AuthApiError('登录状态已失效，请重新登录。', 401);
   }
 
   const response = await fetch(`${AUTH_BASE_URL}/me`, {
@@ -86,7 +86,7 @@ export async function deleteCurrentAccount(): Promise<void> {
 export async function updateDisplayName(displayName: string): Promise<AuthUser> {
   const token = getStoredToken();
   if (!token) {
-    throw new AuthApiError('Please sign in again.', 401);
+    throw new AuthApiError('登录状态已失效，请重新登录。', 401);
   }
 
   const response = await fetch(`${AUTH_BASE_URL}/me`, {
@@ -199,16 +199,16 @@ function getErrorMessage(payload: unknown, status: number): string {
   }
 
   if (status === 401) {
-    return 'Invalid email or password.';
+    return '邮箱或密码错误。';
   }
 
   if (status === 409) {
-    return 'This email is already registered.';
+    return '该邮箱已注册。';
   }
 
   if (status === 422) {
-    return 'Please check your email, password, and display name.';
+    return '请检查邮箱、密码和显示名称。';
   }
 
-  return 'Authentication is temporarily unavailable. Please try again later.';
+  return '认证服务暂时不可用，请稍后重试。';
 }

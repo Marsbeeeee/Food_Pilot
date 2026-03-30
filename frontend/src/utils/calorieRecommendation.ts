@@ -5,9 +5,9 @@
  */
 
 export const PACE_OPTIONS = [
-  { value: 'Conservative', label: 'Conservative' },
-  { value: 'Moderate', label: 'Moderate' },
-  { value: 'Aggressive', label: 'Aggressive' },
+  { value: 'Conservative', label: '稳健' },
+  { value: 'Moderate', label: '适中' },
+  { value: 'Aggressive', label: '激进' },
 ] as const;
 
 export type PaceValue = (typeof PACE_OPTIONS)[number]['value'];

@@ -34,18 +34,18 @@ interface FilterDraft {
 }
 
 const SORT_OPTIONS: Array<{ value: FoodLogSort; label: string }> = [
-  { value: 'created_desc', label: 'Latest save first' },
-  { value: 'created_asc', label: 'Oldest first' },
-  { value: 'calories_desc', label: 'Calories high -> low' },
-  { value: 'calories_asc', label: 'Calories low -> high' },
+  { value: 'created_desc', label: '最近保存优先' },
+  { value: 'created_asc', label: '最早保存优先' },
+  { value: 'calories_desc', label: '热量从高到低' },
+  { value: 'calories_asc', label: '热量从低到高' },
 ];
 
 const CALORIE_OPTIONS: Array<{ value: FoodLogCaloriesPreset; label: string }> = [
-  { value: 'any', label: 'Any calories' },
-  { value: 'under_200', label: 'Under 200 kcal' },
+  { value: 'any', label: '不限热量' },
+  { value: 'under_200', label: '200 kcal 以下' },
   { value: '200_500', label: '200-500 kcal' },
   { value: '500_800', label: '500-800 kcal' },
-  { value: '800_plus', label: '800+ kcal' },
+  { value: '800_plus', label: '800 kcal 以上' },
 ];
 
 const PANEL_ENTER_ANIMATION = 'food-log-toolbar-panel-enter 180ms cubic-bezier(0.22, 1, 0.36, 1) both';
@@ -115,13 +115,13 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
 
   const filterLabel = useMemo(() => {
     const calorieLabel = getCalorieSummaryLabel(caloriePreset, customMinCalories, customMaxCalories);
-    if (calorieLabel !== 'Any calories') {
+    if (calorieLabel !== '不限热量') {
       return calorieLabel;
     }
     if (dateFrom || dateTo) {
       return getDateSummaryLabel(dateFrom, dateTo);
     }
-    return 'Any calories';
+    return '不限热量';
   }, [caloriePreset, customMinCalories, customMaxCalories, dateFrom, dateTo]);
 
   const appliedHasCustomCalories = useMemo(
@@ -230,14 +230,14 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
             type="text"
             value={searchQuery}
             onChange={(event) => onSearchQueryChange(event.target.value)}
-            placeholder="Search saved meals, notes, or ingredients"
+            placeholder="搜索已保存的餐食、备注或食材"
             className="w-full appearance-none border-none bg-transparent text-[15px] leading-none text-[#3F3A34] outline-none ring-0 shadow-none placeholder:text-[#4A453E]/38 focus:border-none focus:outline-none focus:ring-0 focus-visible:outline-none"
           />
         </label>
 
         <div className="relative shrink-0">
           <ToolbarTrigger
-            label="Filter"
+            label="筛选"
             value={filterLabel}
             open={openPanel === 'filter'}
             selected={isFilterSelected}
@@ -252,16 +252,16 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
                 <div className="grid min-h-[290px] grid-cols-[170px_1fr]">
                   <div className="border-r border-[#4A453E]/9 bg-[#FCFAF6] p-3">
                     <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.09em] text-[#4A453E]/45">
-                      Filter by
+                      筛选维度
                     </p>
                     <div className="mt-2 space-y-2">
                       <FilterTypeButton
-                        label="Date"
+                        label="日期"
                         selected={activeFilterType === 'date'}
                         onClick={() => setActiveFilterType('date')}
                       />
                       <FilterTypeButton
-                        label="Calories"
+                        label="热量"
                         selected={activeFilterType === 'calories'}
                         onClick={() => setActiveFilterType('calories')}
                       />
@@ -273,21 +273,21 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
                       <div className="space-y-4">
                         <div>
                           <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#4A453E]/45">
-                            Date
+                            日期
                           </p>
                           <div className="flex flex-wrap gap-2">
                             <PresetButton
-                              label="Any time"
+                              label="全部时间"
                               active={!filterDraft.dateFrom && !filterDraft.dateTo}
                               onClick={handleDraftAnyTime}
                             />
                             <PresetButton
-                              label="Last 7 days"
+                              label="近 7 天"
                               active={isLastNDaysRange(filterDraft.dateFrom, filterDraft.dateTo, 7)}
                               onClick={() => applyDraftLastNDays(7)}
                             />
                             <PresetButton
-                              label="Last 30 days"
+                              label="近 30 天"
                               active={isLastNDaysRange(filterDraft.dateFrom, filterDraft.dateTo, 30)}
                               onClick={() => applyDraftLastNDays(30)}
                             />
@@ -295,11 +295,11 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
                         </div>
                         <div>
                           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#4A453E]/45">
-                            Custom range
+                            自定义范围
                           </p>
                           <div className="grid grid-cols-2 gap-2">
                             <label className="flex flex-col gap-1 text-[11px] font-semibold text-[#4A453E]/55">
-                              From
+                              起始
                               <input
                                 type="date"
                                 value={filterDraft.dateFrom}
@@ -308,7 +308,7 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
                               />
                             </label>
                             <label className="flex flex-col gap-1 text-[11px] font-semibold text-[#4A453E]/55">
-                              To
+                              截止
                               <input
                                 type="date"
                                 value={filterDraft.dateTo}
@@ -324,7 +324,7 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
                       <div className="space-y-4">
                         <div>
                           <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#4A453E]/45">
-                            Calories
+                            热量
                           </p>
                           <div className="flex flex-wrap gap-2">
                             {CALORIE_OPTIONS.map((option) => (
@@ -340,11 +340,11 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
 
                         <div>
                           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#4A453E]/45">
-                            Custom range
+                            自定义范围
                           </p>
                           <div className="grid grid-cols-2 gap-2">
                             <label className="flex flex-col gap-1 text-[11px] font-semibold text-[#4A453E]/55">
-                              Min kcal
+                              最低 kcal
                               <input
                                 type="number"
                                 min="0"
@@ -356,7 +356,7 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
                               />
                             </label>
                             <label className="flex flex-col gap-1 text-[11px] font-semibold text-[#4A453E]/55">
-                              Max kcal
+                              最高 kcal
                               <input
                                 type="number"
                                 min="0"
@@ -380,14 +380,14 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
                     onClick={handleFilterReset}
                     className="rounded-full border border-[#4A453E]/14 bg-white px-4 py-2 text-xs font-semibold text-[#4A453E]/65 transition-all duration-200 ease-out hover:border-[#4A453E]/22 hover:bg-[#F5F0E8] active:translate-y-[1px]"
                   >
-                    Reset
+                    重置
                   </button>
                   <button
                     type="button"
                     onClick={handleFilterConfirm}
                     className="rounded-full border border-[#FF8A65] bg-[#FF8A65] px-5 py-2 text-xs font-semibold text-white transition-all duration-200 ease-out hover:bg-[#F57D59] active:translate-y-[1px]"
                   >
-                    Confirm
+                    确认
                   </button>
                 </div>
               </div>
@@ -437,7 +437,7 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
           onClick={onClearFilters}
           className="mt-3 inline-flex rounded-full border border-[#4A453E]/12 bg-[#FFFCF7] px-3 py-1.5 text-[11px] font-semibold text-[#4A453E]/62 transition-colors hover:bg-[#F8F1E7]"
         >
-          Clear Filters
+          清空筛选
         </button>
       )}
     </div>
@@ -491,7 +491,7 @@ const SortIconTrigger: React.FC<SortIconTriggerProps> = ({ open, selected, onCli
     type="button"
     onClick={onClick}
     aria-expanded={open}
-    aria-label="Sort options"
+    aria-label="排序选项"
     className={`inline-flex h-[50px] w-[50px] items-center justify-center rounded-full border shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-200 ease-out active:translate-y-[1px] ${
       open
         ? 'border-[#FF8A65] bg-white text-[#FF8A65]'
@@ -562,11 +562,11 @@ function buildFilterDraft(
 
 function getDateSummaryLabel(dateFrom: string, dateTo: string): string {
   if (!dateFrom && !dateTo) {
-    return 'Any time';
+    return '全部时间';
   }
 
   if (isLastNDaysRange(dateFrom, dateTo, 7)) {
-    return 'Last 7 days';
+    return '近 7 天';
   }
 
   if (dateFrom && dateTo) {
@@ -577,10 +577,10 @@ function getDateSummaryLabel(dateFrom: string, dateTo: string): string {
   }
 
   if (dateFrom) {
-    return `From ${formatDateForLabel(dateFrom)}`;
+    return `${formatDateForLabel(dateFrom)} 起`;
   }
 
-  return `Until ${formatDateForLabel(dateTo)}`;
+  return `至 ${formatDateForLabel(dateTo)}`;
 }
 
 function getCalorieSummaryLabel(
@@ -601,7 +601,7 @@ function getCalorieSummaryLabel(
     return `<= ${normalizedMax} kcal`;
   }
 
-  return CALORIE_OPTIONS.find((option) => option.value === preset)?.label ?? 'Any calories';
+  return CALORIE_OPTIONS.find((option) => option.value === preset)?.label ?? '不限热量';
 }
 
 function normalizeCalorieInput(value: string): string {
@@ -645,8 +645,8 @@ function formatDateForLabel(value: string): string {
     return value;
   }
 
-  return parsed.toLocaleDateString('en-US', {
-    month: 'short',
+  return parsed.toLocaleDateString('zh-CN', {
+    month: 'numeric',
     day: 'numeric',
   });
 }

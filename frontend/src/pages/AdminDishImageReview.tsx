@@ -23,10 +23,10 @@ interface AdminDishImageReviewPageProps {
 }
 
 const STATUS_OPTIONS: Array<{ label: string; value: AdminDishImageStatus | '' }> = [
-  { label: 'All', value: '' },
-  { label: 'Pending', value: 'pending' },
-  { label: 'Approved', value: 'approved' },
-  { label: 'Rejected', value: 'rejected' },
+  { label: '全部', value: '' },
+  { label: '待审核', value: 'pending' },
+  { label: '已通过', value: 'approved' },
+  { label: '已拒绝', value: 'rejected' },
 ];
 const ADMIN_IDLE_AUTO_REFRESH_INTERVAL_MS = 10000;
 const ADMIN_ACTIVE_AUTO_REFRESH_INTERVAL_MS = 3000;
@@ -213,10 +213,10 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
       <div className="flex flex-1 items-center justify-center bg-[#FFFDF5] px-6 py-10">
         <div className="max-w-lg rounded-[32px] border border-[#4A453E]/10 bg-white px-8 py-10 text-center shadow-[0_24px_60px_rgba(74,69,62,0.08)]">
           <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[#FF8A65]">
-            Admin Only
+            仅管理员
           </p>
           <h1 className="mt-4 font-serif-brand text-3xl font-bold text-[#4A453E]">
-            You do not have access to the dish image review console.
+            你暂无菜品图片审核控制台的访问权限。
           </h1>
         </div>
       </div>
@@ -228,25 +228,25 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
       <aside className="custom-scrollbar w-full shrink-0 overflow-y-auto border-b border-[#4A453E]/8 bg-white/75 px-6 py-6 backdrop-blur-sm xl:w-[420px] xl:border-b-0 xl:border-r xl:px-7">
         <div className="mb-6">
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#FF8A65]">
-            Internal Admin
+            内部管理
           </p>
           <h1 className="mt-3 font-serif-brand text-3xl font-bold text-[#4A453E]">
-            Dish Image Review
+            菜品图片审核
           </h1>
           <p className="mt-3 text-sm leading-7 text-[#4A453E]/60">
-            Review AI-generated dish images before they become reusable official assets.
+            审核 AI 生成的菜品图片，再决定是否作为可复用的官方素材。
           </p>
         </div>
 
         <div className="space-y-4 rounded-[28px] border border-[#4A453E]/8 bg-[#FFFEFB] p-5 shadow-[0_18px_36px_rgba(74,69,62,0.06)]">
           <label className="block">
             <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-[#4A453E]/35">
-              Dish Name
+              菜品名称
             </span>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search standard dishes"
+              placeholder="搜索标准菜品"
               className="w-full rounded-[18px] border border-[#4A453E]/10 bg-white px-4 py-3 text-sm font-semibold text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/45 focus:ring-4 focus:ring-[#FF8A65]/10"
             />
           </label>
@@ -254,7 +254,7 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
           <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
             <label className="block">
               <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-[#4A453E]/35">
-                Status
+                状态
               </span>
               <select
                 value={statusFilter}
@@ -271,7 +271,7 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
 
             <label className="block">
               <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-[#4A453E]/35">
-                Created From
+                创建开始
               </span>
               <input
                 type="date"
@@ -283,7 +283,7 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
 
             <label className="block">
               <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-[#4A453E]/35">
-                Created To
+                创建结束
               </span>
               <input
                 type="date"
@@ -298,17 +298,17 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
         <div className="mt-6 rounded-[24px] border border-[#4A453E]/8 bg-[#FFFEFB] p-4 shadow-[0_12px_28px_rgba(74,69,62,0.05)]">
           <div className="flex items-center justify-between">
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#4A453E]/35">
-              Generation Queue
+              生成队列
             </p>
             <span className="rounded-full bg-[#FFF3EA] px-3 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-[#D7653F]">
               {activeGenerationCount}
             </span>
           </div>
           <div className="mt-3 space-y-2">
-            {jobsLoading && <PanelMessage text="Loading generation queue..." />}
+            {jobsLoading && <PanelMessage text="正在加载生成队列..." />}
             {!jobsLoading && jobsError && <PanelMessage text={jobsError} tone="error" />}
             {!jobsLoading && !jobsError && activeJobs.length === 0 && (
-              <PanelMessage text="No active generation jobs." />
+              <PanelMessage text="当前没有进行中的生成任务。" />
             )}
             {!jobsLoading && !jobsError && activeJobs.map((job) => (
               <div
@@ -330,7 +330,7 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
                   />
                 </div>
                 <p className="mt-2 text-xs text-[#4A453E]/50">
-                  Job #{job.id} · Created {formatTimestamp(job.createdAt)}
+                  任务 #{job.id} · 创建于 {formatTimestamp(job.createdAt)}
                 </p>
               </div>
             ))}
@@ -340,17 +340,17 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
         <div className="mt-6 flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#4A453E]/35">
-              Candidates
+              候选图片
             </p>
             {activeGenerationCount > 0 && (
               <span className="rounded-full bg-[#FF8A65]/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-[#D7653F]">
-                Generating {activeGenerationCount}
+                生成中 {activeGenerationCount}
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden rounded-full bg-[#F7F3E9] px-3 py-1 text-[10px] font-bold text-[#4A453E]/55 sm:inline-flex">
-              Auto {Math.floor(autoRefreshIntervalMs / 1000)}s
+              自动刷新 {Math.floor(autoRefreshIntervalMs / 1000)}s
             </span>
             <button
               type="button"
@@ -360,16 +360,16 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
               }}
               className="rounded-full bg-[#F7F3E9] px-3 py-1.5 text-[11px] font-bold text-[#4A453E]/65 transition-colors hover:bg-[#EFE7DA] hover:text-[#4A453E]"
             >
-              Refresh
+              刷新
             </button>
           </div>
         </div>
 
         <div className="mt-4 space-y-3">
-          {listLoading && <PanelMessage text="Loading dish image candidates..." />}
+          {listLoading && <PanelMessage text="正在加载候选图片..." />}
           {!listLoading && listError && <PanelMessage text={listError} tone="error" />}
           {!listLoading && !listError && items.length === 0 && (
-            <PanelMessage text="No dish image candidates match the current filters." />
+            <PanelMessage text="当前筛选条件下没有匹配的候选图片。" />
           )}
           {!listLoading && !listError && items.map((item) => (
             <button
@@ -398,7 +398,7 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
                   )}
                   {item.isCurrentOfficial && (
                     <span className="rounded-full bg-[#81C784]/12 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-[#4D8C53]">
-                      Official
+                      官方
                     </span>
                   )}
                 </div>
@@ -406,7 +406,7 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
                   {item.standardDishName}
                 </h2>
                 <p className="mt-1 text-xs text-[#4A453E]/45">
-                  Candidate #{item.id} · {formatTimestamp(item.createdAt)}
+                  候选 #{item.id} · {formatTimestamp(item.createdAt)}
                 </p>
               </div>
             </button>
@@ -415,10 +415,10 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
       </aside>
 
       <main className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-6 md:px-8 xl:px-10">
-        {detailLoading && <DetailState title="Loading review detail..." />}
+        {detailLoading && <DetailState title="正在加载审核详情..." />}
         {!detailLoading && detailError && <DetailState title={detailError} tone="error" />}
         {!detailLoading && !detailError && !detail && (
-          <DetailState title="Select a dish image candidate to review." />
+          <DetailState title="请选择一个候选图片进行审核。" />
         )}
         {!detailLoading && !detailError && detail && (
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -442,7 +442,7 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
                     )}
                     {detail.isCurrentOfficial && (
                       <span className="rounded-full bg-[#81C784]/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-[#4D8C53]">
-                        Current Official
+                        当前官方图
                       </span>
                     )}
                   </div>
@@ -450,10 +450,10 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
                     {detail.standardDishName}
                   </h2>
                   <div className="mt-4 grid gap-3 text-sm text-[#4A453E]/65 sm:grid-cols-2">
-                    <MetaCard label="Candidate ID" value={`#${detail.id}`} />
-                    <MetaCard label="Generated At" value={formatTimestamp(detail.createdAt)} />
-                    <MetaCard label="Prompt Version" value={detail.promptVersion || 'Unknown'} />
-                    <MetaCard label="Reviewed At" value={detail.reviewedAt ? formatTimestamp(detail.reviewedAt) : 'Not reviewed'} />
+                    <MetaCard label="候选 ID" value={`#${detail.id}`} />
+                    <MetaCard label="生成时间" value={formatTimestamp(detail.createdAt)} />
+                    <MetaCard label="提示词版本" value={detail.promptVersion || '未知'} />
+                    <MetaCard label="审核时间" value={detail.reviewedAt ? formatTimestamp(detail.reviewedAt) : '未审核'} />
                   </div>
                 </div>
               </article>
@@ -461,32 +461,32 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
               <div className="space-y-6">
                 <section className="rounded-[30px] border border-[#4A453E]/8 bg-white p-6 shadow-[0_18px_40px_rgba(74,69,62,0.06)]">
                   <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#4A453E]/35">
-                    Official Asset
+                    官方素材
                   </p>
                   <div className="mt-4 overflow-hidden rounded-[24px] border border-[#4A453E]/8 bg-[#F7F3E9]">
                     {detail.officialImageUrl ? (
                       <img
                         src={detail.officialImageUrl}
-                        alt={`${detail.standardDishName} official`}
+                        alt={`${detail.standardDishName} 官方图`}
                         className="h-48 w-full object-cover"
                       />
                     ) : (
                       <div className="flex h-48 items-center justify-center text-sm font-semibold text-[#4A453E]/45">
-                        No official image yet
+                        暂无官方图片
                       </div>
                     )}
                   </div>
                   <div className="mt-4 space-y-2 text-sm text-[#4A453E]/65">
-                    <p>Status: {detail.officialImageStatus || 'none'}</p>
-                    <p>Prompt version: {detail.officialImagePromptVersion || 'n/a'}</p>
-                    <p>Last updated: {detail.officialImageUpdatedAt ? formatTimestamp(detail.officialImageUpdatedAt) : 'n/a'}</p>
+                    <p>状态：{detail.officialImageStatus || '无'}</p>
+                    <p>提示词版本：{detail.officialImagePromptVersion || '无'}</p>
+                    <p>最后更新：{detail.officialImageUpdatedAt ? formatTimestamp(detail.officialImageUpdatedAt) : '无'}</p>
                   </div>
                 </section>
 
                 <section className="rounded-[30px] border border-[#4A453E]/8 bg-white p-6 shadow-[0_18px_40px_rgba(74,69,62,0.06)]">
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#4A453E]/35">
-                      Review Actions
+                      审核操作
                     </p>
                     <span className="rounded-full bg-[#F7F3E9] px-3 py-1 text-[11px] font-bold text-[#4A453E]/55">
                       {currentUser.displayName}
@@ -494,39 +494,39 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
                   </div>
                   {detail.activeGenerationJob && (
                     <div className="mt-4 rounded-[18px] border border-[#FF8A65]/20 bg-[#FFF3EA] px-4 py-3 text-xs font-semibold text-[#D7653F]">
-                      New image is still generating. This panel auto-refreshes every 3 seconds.
+                      新图片仍在生成中。此面板每 3 秒自动刷新一次。
                     </div>
                   )}
                   <textarea
                     value={note}
                     onChange={(event) => setNote(event.target.value)}
                     rows={4}
-                    placeholder="Optional reviewer note"
+                    placeholder="可选审核备注"
                     className="mt-4 w-full rounded-[22px] border border-[#4A453E]/10 bg-[#FFFEFB] px-4 py-4 text-sm font-medium text-[#4A453E] outline-none transition-all focus:border-[#FF8A65]/45 focus:ring-4 focus:ring-[#FF8A65]/10"
                   />
                   <div className="mt-4 grid gap-3">
                     <ActionButton
-                      label={actionLoading === 'approve' ? 'Approving...' : 'Approve Candidate'}
+                      label={actionLoading === 'approve' ? '通过中...' : '通过候选'}
                       onClick={() => void handleAction('approve')}
                       disabled={!detail.canApprove || actionLoading !== null}
                       tone="approve"
                     />
                     <ActionButton
-                      label={actionLoading === 'reject' ? 'Rejecting...' : 'Reject Candidate'}
+                      label={actionLoading === 'reject' ? '拒绝中...' : '拒绝候选'}
                       onClick={() => void handleAction('reject')}
                       disabled={!detail.canReject || actionLoading !== null}
                       tone="reject"
                     />
                     {detail.canReject && detail.canRegenerate ? (
                       <ActionButton
-                        label={actionLoading === 'rejectRegenerate' ? 'Rejecting and queueing...' : 'Reject & Regenerate'}
+                        label={actionLoading === 'rejectRegenerate' ? '拒绝并排队中...' : '拒绝并重新生成'}
                         onClick={() => void handleAction('rejectRegenerate')}
                         disabled={actionLoading !== null}
                         tone="rejectRegenerate"
                       />
                     ) : (
                       <ActionButton
-                        label={actionLoading === 'regenerate' ? 'Queueing regenerate...' : 'Regenerate'}
+                        label={actionLoading === 'regenerate' ? '正在排队重新生成...' : '重新生成'}
                         onClick={() => void handleAction('regenerate')}
                         disabled={!detail.canRegenerate || actionLoading !== null}
                         tone="regenerate"
@@ -539,11 +539,11 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
 
             <section className="rounded-[30px] border border-[#4A453E]/8 bg-white p-6 shadow-[0_18px_40px_rgba(74,69,62,0.06)]">
               <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#4A453E]/35">
-                Recent Operations
+                最近操作
               </p>
               <div className="mt-5 space-y-4">
                 {detail.recentOperations.length === 0 && (
-                  <p className="text-sm text-[#4A453E]/55">No admin actions recorded yet.</p>
+                  <p className="text-sm text-[#4A453E]/55">暂无管理员操作记录。</p>
                 )}
                 {detail.recentOperations.map((operation) => (
                   <div
@@ -558,7 +558,7 @@ export const AdminDishImageReviewPage: React.FC<AdminDishImageReviewPageProps> =
                       <span className="text-xs text-[#4A453E]/45">{operation.actor.email}</span>
                     </div>
                     <p className="mt-2 text-sm text-[#4A453E]/65">
-                      Result: {operation.resultStatus} · {formatTimestamp(operation.createdAt)}
+                      结果：{operation.resultStatus} · {formatTimestamp(operation.createdAt)}
                     </p>
                     {operation.note && (
                       <p className="mt-2 text-sm leading-7 text-[#4A453E]/60">{operation.note}</p>
@@ -612,9 +612,14 @@ const StatusBadge: React.FC<{ status: AdminDishImageStatus }> = ({ status }) => 
     : status === 'approved'
       ? 'bg-[#81C784]/14 text-[#4D8C53]'
       : 'bg-[#E57373]/14 text-[#B84C4C]';
+  const label = status === 'pending'
+    ? '待审核'
+    : status === 'approved'
+      ? '已通过'
+      : '已拒绝';
   return (
     <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${className}`}>
-      {status}
+      {label}
     </span>
   );
 };
@@ -635,7 +640,7 @@ const GenerationStatusBadge: React.FC<{
     }`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${isRunning ? 'animate-pulse bg-[#4D8C53]' : 'bg-[#D7653F]'}`} />
-      {isRunning ? 'Generating' : 'Queued'}
+      {isRunning ? '生成中' : '排队中'}
       {isRunning && timerText && (
         <span className="font-mono tracking-normal">{timerText}</span>
       )}
@@ -723,5 +728,5 @@ function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
-  return 'Unable to load dish image review data.';
+  return '无法加载菜品图片审核数据。';
 }

@@ -118,10 +118,10 @@ function getErrorMessage(payload: unknown, status: number): string {
   }
 
   if (status === 404) {
-    return '未找到对应的 Food Log 记录。';
+    return '未找到对应的饮食记录。';
   }
 
-  return 'Food Log 暂时不可用，请稍后重试。';
+  return '饮食记录服务暂时不可用，请稍后重试。';
 }
 
 function requireAuthToken(): string {

@@ -150,7 +150,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       setSessions((prev) => mergeSessionIntoList(prev, newSession));
       setActiveSessionId(newSession.id);
     } catch (error) {
-      handleChatError(error, 'Unable to create a new chat right now.');
+      handleChatError(error, '暂时无法创建新对话，请稍后重试。');
     } finally {
       setIsCreatingSession(false);
     }
@@ -271,7 +271,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       setDeleteSessionId(null);
       setIsMenuOpen(false);
     } catch (error) {
-      handleChatError(error, 'Unable to delete this chat right now.');
+      handleChatError(error, '暂时无法删除该对话，请稍后重试。');
     } finally {
       setIsDeletingSession(false);
     }
@@ -292,7 +292,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       setIsRenameModalOpen(false);
       setIsMenuOpen(false);
     } catch (error) {
-      handleChatError(error, 'Unable to rename this chat right now.');
+      handleChatError(error, '暂时无法重命名该对话，请稍后重试。');
     }
   };
 
@@ -324,7 +324,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         session.id === sessionId ? detailedSession : session
       )));
     } catch (error) {
-      handleChatError(error, 'Unable to load this chat right now.');
+      handleChatError(error, '暂时无法加载该对话，请稍后重试。');
     } finally {
       setIsLoadingSessionId((current) => (current === sessionId ? null : current));
     }
@@ -394,7 +394,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         ...current,
         [saveKey]: resolveFoodLogErrorMessage(
           error,
-          '这条估算结果暂时无法保存到 Food Log，请稍后重试。',
+          '这条估算结果暂时无法保存到饮食记录，请稍后重试。',
         ),
       }));
     } finally {
@@ -426,7 +426,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         return next;
       });
     } catch (error) {
-      handleFoodLogError(error, '暂时无法撤销这条 Food Log 保存记录，请稍后重试。');
+      handleFoodLogError(error, '暂时无法撤销这条饮食记录保存记录，请稍后重试。');
     } finally {
       setDeletingFoodLogMessageIds((current) => current.filter((item) => item !== saveKey));
     }
@@ -442,12 +442,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             className="bg-[#FF8A65] text-white rounded-[20px] flex w-full items-center justify-center gap-2 h-12 px-4 text-sm font-bold shadow-lg shadow-[#FF8A65]/10 hover:shadow-xl hover:translate-y-[-1px] transition-all active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
           >
             <span className="material-symbols-outlined text-[20px]">add_circle</span>
-            <span>Start New Chat</span>
+            <span>开始新对话</span>
           </button>
 
           <div className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-2 pb-10">
             <div>
-              <h3 className="mb-4 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">Chats</h3>
+              <h3 className="mb-4 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">会话</h3>
               <div className="flex flex-col gap-1">
                 {sessions.map((session) => {
                   const lastResult = [...session.messages].reverse().find(isMealEstimateMessage);
@@ -486,7 +486,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                   );
                 })}
                 {sessions.length === 0 && (
-                  <p className="px-3 text-[11px] italic text-[#4A453E]/30">No chats yet.</p>
+                  <p className="px-3 text-[11px] italic text-[#4A453E]/30">暂无会话。</p>
                 )}
               </div>
             </div>
@@ -518,7 +518,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     className="flex w-full items-center gap-3 px-4 py-3 text-sm font-bold text-[#4A453E]/70 transition-colors hover:bg-[#F7F3E9] hover:text-[#4A453E]"
                   >
                     <span className="material-symbols-outlined text-[18px]">edit</span>
-                    Rename
+                    重命名
                   </button>
                   <div className="mx-2 my-1 h-[1px] bg-[#4A453E]/5"></div>
                   <button
@@ -526,7 +526,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     className="flex w-full items-center gap-3 px-4 py-3 text-sm font-bold text-red-400 transition-colors hover:bg-red-50"
                   >
                     <span className="material-symbols-outlined text-[18px]">delete</span>
-                    Delete
+                    删除
                   </button>
                 </div>
               )}
@@ -547,7 +547,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               <h3 className="mb-3 font-serif-brand text-3xl font-bold italic text-[#4A453E]">从一餐描述、一个问题或一个目标开始。</h3>
               <p className="max-w-md text-base leading-relaxed text-[#4A453E]/50">
                 你可以直接描述吃了什么、询问大概热量和营养，或让 Food Pilot 帮你推荐更合适的吃法。
-                值得保留的估算结果可以再保存到 Food Log。
+                值得保留的估算结果可以再保存到饮食记录。
               </p>
               <div className="mt-10 grid w-full max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">
                 <button onClick={() => void handleSendMessage('一份牛油果吐司大概有什么营养？')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-4 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
@@ -902,7 +902,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                           {messagePresentation.content}
                         </div>
                       )}
-                      <span className="px-1 text-[9px] font-bold uppercase tracking-widest text-[#4A453E]/20">{message.time || 'Just now'}</span>
+                      <span className="px-1 text-[9px] font-bold uppercase tracking-widest text-[#4A453E]/20">{message.time || '刚刚'}</span>
                     </div>
                   </div>
                 );
@@ -953,7 +953,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             </div>
 
             <p className="mt-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-              Your conversational nutrition assistant.
+              你的对话式营养助手。
             </p>
           </div>
         </div>
@@ -969,9 +969,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-5">
-              <h3 className="text-lg font-bold text-[#4A453E]">Rename Chat</h3>
+              <h3 className="text-lg font-bold text-[#4A453E]">重命名对话</h3>
               <p className="mt-1 text-sm text-[#4A453E]/50">
-                Update the conversation title shown in your chats.
+                修改会话列表中显示的标题。
               </p>
             </div>
             <input
@@ -987,13 +987,13 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 onClick={() => setIsRenameModalOpen(false)}
                 className="rounded-[14px] border border-[#4A453E]/10 bg-white px-4 py-2.5 text-sm font-semibold text-[#4A453E]/55 transition-colors hover:bg-[#F7F3E9]"
               >
-                Cancel
+                取消
               </button>
               <button
                 onClick={() => void handleRenameSession()}
                 className="rounded-[14px] bg-[#FF8A65] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#FF8A65]/20 transition-colors hover:bg-[#FF8A65]/90"
               >
-                Save
+                保存
               </button>
             </div>
           </div>
@@ -1002,18 +1002,18 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
       <ConfirmDialog
         open={Boolean(deleteSessionTarget)}
-        title="Delete Chat Permanently?"
+        title="永久删除此对话？"
         description={(
           <>
-            This chat cannot be recovered after deletion. Saved Food Log entries will remain,
-            but they will no longer be able to open{' '}
+            删除后该对话无法恢复。已保存的饮食记录会保留，
+            但将无法再打开{' '}
             <span className="font-bold text-[#4A453E]">
-              {deleteSessionTarget?.title ?? 'this chat'}
+              {deleteSessionTarget?.title ?? '该对话'}
             </span>
             .
           </>
         )}
-        confirmLabel={isDeletingSession ? 'Deleting...' : 'Delete Permanently'}
+        confirmLabel={isDeletingSession ? '删除中...' : '永久删除'}
         icon="delete"
         isConfirming={isDeletingSession}
         onClose={closeDeleteSessionDialog}
@@ -1024,7 +1024,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 };
 
 function handleChatError(error: unknown, fallbackMessage: string): void {
-  console.error('Chat Error:', error);
+  console.error('聊天错误:', error);
   const message = error instanceof ChatApiError
     ? error.message
     : error instanceof Error
@@ -1034,7 +1034,7 @@ function handleChatError(error: unknown, fallbackMessage: string): void {
 }
 
 function handleFoodLogError(error: unknown, fallbackMessage: string): void {
-  console.error('Food Log Error:', error);
+  console.error('饮食记录错误:', error);
   const message = resolveFoodLogErrorMessage(error, fallbackMessage);
   window.alert(message || fallbackMessage);
 }
@@ -1209,12 +1209,12 @@ function getSessionStatusLabel(
   isLoading: boolean,
 ): string {
   if (isLoading) {
-    return 'Loading...';
+    return '加载中...';
   }
 
   if (session.messages.length > 0) {
-    return 'Started';
+    return '已开始';
   }
 
-  return 'Empty';
+  return '空会话';
 }

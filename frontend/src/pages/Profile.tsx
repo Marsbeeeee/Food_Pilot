@@ -18,21 +18,37 @@ interface ProfileProps {
   setProfile: React.Dispatch<React.SetStateAction<UserProfileForm>>;
 }
 
-const SEX_OPTIONS = ['Male', 'Female', 'Prefer not to say'];
+const SEX_OPTIONS = [
+  { value: 'Male', label: '男' },
+  { value: 'Female', label: '女' },
+  { value: 'Prefer not to say', label: '不透露' },
+];
 const ACTIVITY_OPTIONS = [
-  { value: 'Sedentary', description: 'Little or no weekly exercise' },
-  { value: 'Lightly active', description: 'Exercise 1-3 days per week' },
-  { value: 'Moderately active', description: 'Exercise 3-5 days per week' },
-  { value: 'Highly active', description: 'Exercise 6-7 days per week' },
+  { value: 'Sedentary', label: '久坐为主', description: '每周几乎不运动' },
+  { value: 'Lightly active', label: '轻度活跃', description: '每周运动 1-3 天' },
+  { value: 'Moderately active', label: '中度活跃', description: '每周运动 3-5 天' },
+  { value: 'Highly active', label: '高度活跃', description: '每周运动 6-7 天' },
 ];
-const GOAL_OPTIONS = ['Fat loss', 'Muscle gain', 'General health', 'Performance'];
+const GOAL_OPTIONS = [
+  { value: 'Fat loss', label: '减脂' },
+  { value: 'Muscle gain', label: '增肌' },
+  { value: 'General health', label: '健康维护' },
+  { value: 'Performance', label: '表现提升' },
+];
 const DIET_STYLE_OPTIONS = [
-  { label: 'Balanced', icon: 'nutrition' },
-  { label: 'High protein', icon: 'fitness_center' },
-  { label: 'Low carb', icon: 'grain' },
-  { label: 'Vegetarian', icon: 'eco' },
+  { value: 'Balanced', label: '均衡饮食', icon: 'nutrition' },
+  { value: 'High protein', label: '高蛋白', icon: 'fitness_center' },
+  { value: 'Low carb', label: '低碳水', icon: 'grain' },
+  { value: 'Vegetarian', label: '素食', icon: 'eco' },
 ];
-const ALLERGY_OPTIONS = ['Nuts', 'Dairy', 'Seafood', 'Gluten', 'Soy', 'Shellfish'];
+const ALLERGY_OPTIONS = [
+  { value: 'Nuts', label: '坚果' },
+  { value: 'Dairy', label: '乳制品' },
+  { value: 'Seafood', label: '海鲜' },
+  { value: 'Gluten', label: '麸质' },
+  { value: 'Soy', label: '大豆' },
+  { value: 'Shellfish', label: '甲壳类' },
+];
 const EXERCISE_OPTIONS = ['瑜伽', '跑步', '游泳', '健身', '骑行'];
 
 const INPUT_CLASSNAME =
@@ -211,7 +227,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
       const nextProfile = toProfileForm(savedProfile);
       setProfile(cloneProfile(nextProfile));
       setLastSavedProfile(cloneProfile(nextProfile));
-      setBannerMessage('Profile saved.');
+      setBannerMessage('档案已保存。');
       setStatus('success');
     } catch (error) {
       setInlineError(getErrorMessage(error));
@@ -249,36 +265,35 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
         <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-serif-brand font-bold text-[#4A453E]">Profile</h1>
+          <h1 className="text-4xl font-serif-brand font-bold text-[#4A453E]">个人档案</h1>
           <p className="text-[#4A453E]/60 text-base max-w-2xl">
-            Profile tells the Assistant who it is answering for and keeps saved Food Log entries
-            grounded in the same goals, preferences, and constraints.
+            个人档案用于告诉助手“它在为谁提供建议”，并让已保存的饮食记录始终基于相同的目标、偏好和限制条件。
           </p>
           {status === 'loading' && (
-            <p className="text-sm font-bold text-[#FF8A65]">Loading your Profile...</p>
+            <p className="text-sm font-bold text-[#FF8A65]">正在加载个人档案...</p>
           )}
           {inlineError && (
             <p className="text-sm font-medium text-red-500">{inlineError}</p>
           )}
           {!inlineError && isDirty && !hasRequiredFields && (
             <p className="text-sm font-medium text-[#FF8A65]">
-              Complete the required profile fields before saving.
+              请先完善必填档案字段再保存。
             </p>
           )}
           {!inlineError && isDirty && status !== 'saving' && (
-            <p className="text-sm font-medium text-[#FF8A65]">You have unsaved changes.</p>
+            <p className="text-sm font-medium text-[#FF8A65]">你有未保存的更改。</p>
           )}
         </div>
 
         <div className="flex items-center gap-3">
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
             {status === 'saving'
-              ? 'Saving'
+              ? '保存中'
               : status === 'loading'
-                ? 'Loading'
+                ? '加载中'
                 : isDirty
-                  ? 'Dirty'
-                  : 'Saved'}
+                  ? '未保存'
+                  : '已保存'}
           </span>
           <button
             type="button"
@@ -286,7 +301,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
             disabled={cancelDisabled}
             className="px-6 py-3 bg-white text-[#4A453E]/40 font-bold text-sm rounded-full border border-[#4A453E]/10 hover:bg-[#F7F3E9] transition-all disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Cancel
+            取消
           </button>
           <button
             type="button"
@@ -301,12 +316,12 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
             {status === 'saving' ? (
               <>
                 <span className="material-symbols-outlined text-sm font-bold animate-spin">progress_activity</span>
-                <span>Saving...</span>
+                <span>保存中...</span>
               </>
             ) : (
               <>
                 <span className="material-symbols-outlined text-sm font-bold">check</span>
-                <span>{profile.id ? 'Save changes' : 'Create Profile'}</span>
+                <span>{profile.id ? '保存修改' : '创建档案'}</span>
               </>
             )}
           </button>
@@ -322,30 +337,30 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                   <div className="size-10 rounded-2xl bg-[#FF8A65]/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[#FF8A65]">person</span>
                   </div>
-                  <h3 className="font-serif-brand font-bold text-xl text-[#4A453E]">Body metrics</h3>
+                  <h3 className="font-serif-brand font-bold text-xl text-[#4A453E]">身体数据</h3>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-                  <Field label="Age">
-                    <input type="number" value={profile.age} onChange={(event) => updateField('age', event.target.value)} placeholder="Years" className={INPUT_CLASSNAME} />
+                  <Field label="年龄">
+                    <input type="number" value={profile.age} onChange={(event) => updateField('age', event.target.value)} placeholder="岁" className={INPUT_CLASSNAME} />
                   </Field>
-                  <Field label="Height (cm)">
-                    <input type="number" value={profile.height} onChange={(event) => updateField('height', event.target.value)} placeholder="Centimeters" className={INPUT_CLASSNAME} />
+                  <Field label="身高 (cm)">
+                    <input type="number" value={profile.height} onChange={(event) => updateField('height', event.target.value)} placeholder="厘米" className={INPUT_CLASSNAME} />
                   </Field>
-                  <Field label="Weight (kg)">
-                    <input type="number" value={profile.weight} onChange={(event) => updateField('weight', event.target.value)} placeholder="Kilograms" className={INPUT_CLASSNAME} />
+                  <Field label="体重 (kg)">
+                    <input type="number" value={profile.weight} onChange={(event) => updateField('weight', event.target.value)} placeholder="千克" className={INPUT_CLASSNAME} />
                   </Field>
                 </div>
 
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-2">
-                    Sex
+                    性别
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {SEX_OPTIONS.map((option) => (
-                      <label key={option} className="flex-1 min-w-[120px] group relative flex items-center justify-center p-3 bg-[#F7F3E9]/30 border border-transparent rounded-[18px] cursor-pointer transition-all hover:bg-white hover:border-[#FF8A65]/10 has-[:checked]:border-[#FF8A65] has-[:checked]:bg-white">
-                        <input type="radio" name="sex" className="sr-only" checked={profile.sex === option} onChange={() => updateField('sex', option)} />
-                        <span className="text-xs font-bold text-[#4A453E]/60 group-has-[:checked]:text-[#FF8A65]">{option}</span>
+                      <label key={option.value} className="flex-1 min-w-[120px] group relative flex items-center justify-center p-3 bg-[#F7F3E9]/30 border border-transparent rounded-[18px] cursor-pointer transition-all hover:bg-white hover:border-[#FF8A65]/10 has-[:checked]:border-[#FF8A65] has-[:checked]:bg-white">
+                        <input type="radio" name="sex" className="sr-only" checked={profile.sex === option.value} onChange={() => updateField('sex', option.value)} />
+                        <span className="text-xs font-bold text-[#4A453E]/60 group-has-[:checked]:text-[#FF8A65]">{option.label}</span>
                       </label>
                     ))}
                   </div>
@@ -357,19 +372,19 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                   <div className="size-10 rounded-2xl bg-[#81C784]/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[#81C784]">directions_run</span>
                   </div>
-                  <h3 className="font-serif-brand font-bold text-xl text-[#4A453E]">Lifestyle and training</h3>
+                  <h3 className="font-serif-brand font-bold text-xl text-[#4A453E]">生活方式与训练</h3>
                 </div>
 
                 <div className="space-y-6">
                   <div>
                     <label className="block text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-4">
-                      Activity level
+                      活动水平
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {ACTIVITY_OPTIONS.map((option) => (
                         <label key={option.value} className="group flex flex-col p-4 bg-[#F7F3E9]/30 border border-transparent rounded-[24px] cursor-pointer transition-all hover:bg-white hover:border-[#81C784]/20 has-[:checked]:border-[#81C784] has-[:checked]:bg-white overflow-hidden">
                           <input type="radio" name="activity" className="sr-only" checked={profile.activityLevel === option.value} onChange={() => updateField('activityLevel', option.value)} />
-                          <span className="text-sm font-bold text-[#4A453E] group-has-[:checked]:text-[#81C784] truncate">{option.value}</span>
+                          <span className="text-sm font-bold text-[#4A453E] group-has-[:checked]:text-[#81C784] truncate">{option.label}</span>
                           <span className="text-[10px] text-[#4A453E]/40 font-bold uppercase mt-1 truncate">{option.description}</span>
                         </label>
                       ))}
@@ -378,7 +393,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
 
                   <div>
                     <label className="block text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-4">
-                      Exercise type
+                      运动类型
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {EXERCISE_OPTIONS.map((option) => {
@@ -449,19 +464,19 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                   <div className="size-10 rounded-2xl bg-[#FF8A65]/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[#FF8A65]">flag</span>
                   </div>
-                  <h3 className="font-serif-brand font-bold text-xl text-[#4A453E]">Goals and pace</h3>
+                  <h3 className="font-serif-brand font-bold text-xl text-[#4A453E]">目标与节奏</h3>
                 </div>
 
                 <div className="space-y-8">
                   <div>
                     <label className="block text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-4">
-                      Primary goal
+                      主要目标
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       {GOAL_OPTIONS.map((option) => (
-                        <label key={option} className="group p-4 bg-[#F7F3E9]/30 border border-transparent rounded-[24px] cursor-pointer transition-all hover:bg-white hover:border-[#FF8A65]/20 has-[:checked]:border-[#FF8A65] has-[:checked]:bg-white overflow-hidden">
-                          <input type="radio" name="goal" className="sr-only" checked={profile.goal === option} onChange={() => updateField('goal', option)} />
-                          <span className="text-sm font-bold text-[#4A453E] group-has-[:checked]:text-[#FF8A65] truncate">{option}</span>
+                        <label key={option.value} className="group p-4 bg-[#F7F3E9]/30 border border-transparent rounded-[24px] cursor-pointer transition-all hover:bg-white hover:border-[#FF8A65]/20 has-[:checked]:border-[#FF8A65] has-[:checked]:bg-white overflow-hidden">
+                          <input type="radio" name="goal" className="sr-only" checked={profile.goal === option.value} onChange={() => updateField('goal', option.value)} />
+                          <span className="text-sm font-bold text-[#4A453E] group-has-[:checked]:text-[#FF8A65] truncate">{option.label}</span>
                         </label>
                       ))}
                     </div>
@@ -469,7 +484,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
 
                   <div>
                     <label className="block text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-4">
-                      Pace
+                      计划节奏
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-6">
                       {PACE_OPTIONS.map((option) => (
@@ -492,7 +507,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                     </div>
                   </div>
 
-                  <Field label="Daily calorie">
+                  <Field label="每日热量目标">
                     <div className="relative group">
                       <input
                         type="number"
@@ -516,7 +531,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                       });
                       return rec.canCalculate ? (
                         <p className="text-[10px] text-[#4A453E]/50 mt-2 px-1">
-                          BMR: {rec.bmr} · TDEE: {rec.tdee} kcal · Recommended: {rec.recommendedKcal} kcal
+                          基础代谢 BMR: {rec.bmr} · 总消耗 TDEE: {rec.tdee} kcal · 建议目标: {rec.recommendedKcal} kcal
                         </p>
                       ) : null;
                     })()}
@@ -529,18 +544,18 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                   <div className="size-10 rounded-2xl bg-[#81C784]/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[#81C784]">restaurant</span>
                   </div>
-                  <h3 className="font-serif-brand font-bold text-xl text-[#4A453E]">Eating preferences</h3>
+                  <h3 className="font-serif-brand font-bold text-xl text-[#4A453E]">饮食偏好</h3>
                 </div>
 
                 <div className="space-y-8">
                   <div>
                     <label className="block text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-4">
-                      Diet style
+                      饮食风格
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {DIET_STYLE_OPTIONS.map((option) => (
-                        <label key={option.label} className="group flex items-center gap-3 p-4 bg-[#F7F3E9]/30 border border-transparent rounded-[24px] cursor-pointer transition-all hover:bg-white hover:border-[#81C784]/20 has-[:checked]:border-[#81C784] has-[:checked]:bg-white overflow-hidden min-h-[64px]">
-                          <input type="radio" name="diet-style" className="sr-only" checked={profile.dietStyle === option.label} onChange={() => updateField('dietStyle', option.label)} />
+                        <label key={option.value} className="group flex items-center gap-3 p-4 bg-[#F7F3E9]/30 border border-transparent rounded-[24px] cursor-pointer transition-all hover:bg-white hover:border-[#81C784]/20 has-[:checked]:border-[#81C784] has-[:checked]:bg-white overflow-hidden min-h-[64px]">
+                          <input type="radio" name="diet-style" className="sr-only" checked={profile.dietStyle === option.value} onChange={() => updateField('dietStyle', option.value)} />
                           <span className="material-symbols-outlined text-[#4A453E]/20 group-has-[:checked]:text-[#81C784] transition-colors shrink-0 w-6 flex justify-center">{option.icon}</span>
                           <span className="text-sm font-bold text-[#4A453E]/70 group-has-[:checked]:text-[#4A453E] truncate">{option.label}</span>
                         </label>
@@ -550,15 +565,15 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
 
                   <div>
                     <label className="block text-[10px] font-bold text-[#4A453E]/40 uppercase tracking-widest px-1 mb-4">
-                      Allergies and avoidances
+                      过敏与忌口
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {ALLERGY_OPTIONS.map((option) => {
-                        const checked = profile.allergies.includes(option);
+                        const checked = profile.allergies.includes(option.value);
                         return (
-                          <label key={option} className="group relative flex items-center gap-2 px-4 py-2 bg-[#F7F3E9]/30 border border-transparent rounded-full cursor-pointer transition-all hover:bg-white hover:border-[#4A453E]/10 has-[:checked]:bg-[#4A453E] has-[:checked]:text-white overflow-hidden">
-                            <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleAllergy(option)} />
-                            <span className={`text-xs font-bold transition-colors truncate ${checked ? 'text-white' : 'text-[#4A453E]/60'}`}>{option}</span>
+                          <label key={option.value} className="group relative flex items-center gap-2 px-4 py-2 bg-[#F7F3E9]/30 border border-transparent rounded-full cursor-pointer transition-all hover:bg-white hover:border-[#4A453E]/10 has-[:checked]:bg-[#4A453E] has-[:checked]:text-white overflow-hidden">
+                            <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleAllergy(option.value)} />
+                            <span className={`text-xs font-bold transition-colors truncate ${checked ? 'text-white' : 'text-[#4A453E]/60'}`}>{option.label}</span>
                             {checked && <span className="material-symbols-outlined text-sm font-bold text-white shrink-0">close</span>}
                           </label>
                         );
@@ -575,11 +590,10 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
       <div className="bg-[#F7F3E9]/40 border border-[#4A453E]/05 rounded-[32px] p-8 text-center max-w-3xl mx-auto mb-20">
         <h5 className="text-[11px] font-bold text-[#4A453E]/60 uppercase tracking-widest mb-3 flex items-center justify-center gap-2">
           <span className="material-symbols-outlined text-base">info</span>
-          Note
+          说明
         </h5>
         <p className="text-xs text-[#4A453E]/50 leading-relaxed font-medium">
-          Profile is used to personalize Assistant replies and add context around the entries you
-          save to Food Log. It does not replace medical advice, diagnosis, or treatment.
+          个人档案用于个性化助手回复，并为你保存的饮食记录提供上下文。它不能替代医疗建议、诊断或治疗。
         </p>
       </div>
     </div>
@@ -637,5 +651,5 @@ function getErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  return 'Failed to save profile. Please try again.';
+  return '保存档案失败，请稍后重试。';
 }

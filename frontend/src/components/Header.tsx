@@ -71,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
 
     const normalizedName = nextDisplayName.trim();
     if (!normalizedName) {
-      setChangeNameError('Display name cannot be empty.');
+      setChangeNameError('显示名称不能为空。');
       return;
     }
 
@@ -88,7 +88,7 @@ export const Header: React.FC<HeaderProps> = ({
     } catch (error) {
       setChangeNameError(error instanceof Error && error.message
         ? error.message
-        : 'Failed to change display name. Please try again.');
+        : '修改显示名称失败，请稍后重试。');
     } finally {
       setIsChangingName(false);
     }
@@ -124,7 +124,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-[#4A453E]/60 hover:text-[#FF8A65]'
               }`}
             >
-              Chat
+              聊天
             </button>
             <button
               onClick={() => onViewChange(AppView.EXPLORER)}
@@ -134,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-[#4A453E]/60 hover:text-[#FF8A65]'
               }`}
             >
-              Food Log
+              饮食记录
             </button>
             <button
               onClick={() => onViewChange(AppView.INSIGHTS)}
@@ -144,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-[#4A453E]/60 hover:text-[#FF8A65]'
               }`}
             >
-              Insights
+              分析
             </button>
             <button
               onClick={() => onViewChange(AppView.PROFILE)}
@@ -154,7 +154,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-[#4A453E]/60 hover:text-[#FF8A65]'
               }`}
             >
-              Profile
+              档案
             </button>
           </nav>
 
@@ -164,7 +164,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="flex items-center gap-2 rounded-full border border-[#4A453E]/5 bg-[#F7F3E9] px-3 py-1">
                   <span className="flex h-2 w-2 rounded-full bg-[#81C784] animate-pulse" />
                   <span className="text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/70">
-                    Signed in
+                    已登录
                   </span>
                 </div>
 
@@ -183,13 +183,13 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="absolute right-0 top-full z-[70] mt-3 w-60 overflow-hidden rounded-[24px] border border-[#4A453E]/10 bg-white py-2 shadow-2xl">
                     <div className="mb-1 border-b border-[#4A453E]/5 px-4 py-3">
                       <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-[#4A453E]/30">
-                        Current account
+                        当前账号
                       </p>
                       <p className="truncate text-sm font-bold text-[#4A453E]">
-                        {currentUser?.displayName ?? 'Unknown user'}
+                        {currentUser?.displayName ?? '未知用户'}
                       </p>
                       <p className="truncate text-xs font-medium text-[#4A453E]/45">
-                        {currentUser?.email ?? 'No email'}
+                        {currentUser?.email ?? '无邮箱'}
                       </p>
                     </div>
                     <button
@@ -203,9 +203,9 @@ export const Header: React.FC<HeaderProps> = ({
                     >
                       <span className="material-symbols-outlined text-[18px]">edit</span>
                       <span className="flex min-w-0 flex-col">
-                        <span>{isChangingName ? 'changing...' : 'change name'}</span>
+                        <span>{isChangingName ? '修改中...' : '修改昵称'}</span>
                         <span className="max-w-[170px] truncate text-xs font-medium text-[#4A453E]/45">
-                          {currentUser?.displayName ?? 'Unknown user'}
+                          {currentUser?.displayName ?? '未知用户'}
                         </span>
                       </span>
                     </button>
@@ -218,7 +218,7 @@ export const Header: React.FC<HeaderProps> = ({
                         className="flex w-full items-center gap-3 px-4 py-3 text-sm font-bold text-[#4A453E]/70 transition-colors hover:bg-[#F7F3E9] hover:text-[#4A453E]"
                       >
                         <span className="material-symbols-outlined text-[18px]">gallery_thumbnail</span>
-                        Review dish images
+                        菜品图片审核
                       </button>
                     )}
                     <div className="mx-2 my-1 h-px bg-[#4A453E]/5" />
@@ -230,7 +230,7 @@ export const Header: React.FC<HeaderProps> = ({
                       className="flex w-full items-center gap-3 px-4 py-3 text-sm font-bold text-red-400 transition-colors hover:bg-red-50"
                     >
                       <span className="material-symbols-outlined text-[18px]">logout</span>
-                      Sign out
+                      退出登录
                     </button>
                     <div className="mx-2 my-1 h-px bg-[#4A453E]/5" />
                     <button
@@ -246,7 +246,7 @@ export const Header: React.FC<HeaderProps> = ({
                       }`}
                     >
                       <span className="material-symbols-outlined text-[18px]">delete_forever</span>
-                      {isDeletingAccount ? 'Deleting account...' : 'Delete account'}
+                      {isDeletingAccount ? '删除账号中...' : '删除账号'}
                     </button>
                   </div>
                 )}
@@ -261,7 +261,7 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'border border-[#4A453E]/10 bg-white text-[#4A453E]/60 hover:text-[#4A453E]'
                   }`}
                 >
-                  Sign in
+                  登录
                 </button>
                 <button
                   onClick={() => onAuthModeChange('register')}
@@ -271,7 +271,7 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'bg-[#FF8A65]/10 text-[#FF8A65] hover:bg-[#FF8A65]/15'
                   }`}
                 >
-                  Create account
+                  注册
                 </button>
               </div>
             )}
@@ -292,16 +292,16 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="p-6">
               <div className="mb-5">
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-                  Account
+                  账号
                 </p>
-                <h3 className="mt-2 text-xl font-bold text-[#4A453E]">Change Name</h3>
+                <h3 className="mt-2 text-xl font-bold text-[#4A453E]">修改昵称</h3>
                 <p className="mt-1 text-sm text-[#4A453E]/55">
-                  Update the name shown in your account menu.
+                  修改账户菜单中展示的昵称。
                 </p>
               </div>
 
               <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
-                Display name
+                显示名称
               </label>
               <input
                 type="text"
@@ -311,7 +311,7 @@ export const Header: React.FC<HeaderProps> = ({
                 autoFocus
                 disabled={isChangingName}
                 className="w-full rounded-[16px] border border-[#4A453E]/10 bg-white px-4 py-3 text-sm font-semibold text-[#4A453E] outline-none transition-all placeholder:text-[#4A453E]/25 focus:border-[#FF8A65]/40 focus:ring-2 focus:ring-[#FF8A65]/15 disabled:cursor-not-allowed disabled:bg-[#F7F3E9]/70 disabled:text-[#4A453E]/45"
-                placeholder="How people see your name"
+                placeholder="输入你想展示的昵称"
               />
               {changeNameError && (
                 <p className="mt-3 rounded-[14px] border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-500">
@@ -325,7 +325,7 @@ export const Header: React.FC<HeaderProps> = ({
                   disabled={isChangingName}
                   className="rounded-[14px] border border-[#4A453E]/10 bg-white px-4 py-2.5 text-sm font-semibold text-[#4A453E]/55 transition-colors hover:bg-[#F7F3E9] disabled:cursor-not-allowed disabled:text-[#4A453E]/30"
                 >
-                  Cancel
+                  取消
                 </button>
                 <button
                   onClick={() => void handleSubmitChangeName()}
@@ -336,7 +336,7 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'bg-[#FF8A65] hover:bg-[#FF8A65]/90'
                   }`}
                 >
-                  {isChangingName ? 'Saving...' : 'Save'}
+                  {isChangingName ? '保存中...' : '保存'}
                 </button>
               </div>
             </div>
@@ -348,6 +348,6 @@ export const Header: React.FC<HeaderProps> = ({
 };
 
 function getUserInitial(user: AuthUser | null): string {
-  const source = user?.displayName || user?.email || 'U';
+  const source = user?.displayName || user?.email || '我';
   return source.charAt(0).toUpperCase();
 }

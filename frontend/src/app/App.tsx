@@ -329,7 +329,7 @@ const App: React.FC = () => {
     }
 
     const shouldDelete = window.confirm(
-      'Delete this account permanently? Your profile and this device\'s saved chat history will be removed.',
+      '确定要永久删除此账号吗？你的个人档案和此设备上的已保存聊天记录将被移除。',
     );
     if (!shouldDelete) {
       return;
@@ -342,13 +342,13 @@ const App: React.FC = () => {
       clearSession();
       clearStoredProfile();
       resetUnauthenticatedState('register');
-      window.alert('Your account has been deleted.');
+      window.alert('账号已删除。');
     } catch (error) {
       const message = error instanceof AuthApiError
         ? error.message
         : error instanceof Error
           ? error.message
-          : 'Failed to delete this account. Please try again.';
+          : '删除账号失败，请稍后重试。';
       window.alert(message);
     } finally {
       setIsDeletingAccount(false);
@@ -391,11 +391,11 @@ const App: React.FC = () => {
                 progress_activity
               </span>
             </div>
-            <h2 className="font-serif-brand text-2xl font-bold text-[#4A453E]">Restoring session</h2>
+            <h2 className="font-serif-brand text-2xl font-bold text-[#4A453E]">恢复登录中</h2>
             <p className="mt-2 text-sm text-[#4A453E]/50">
               {authStatus === 'loading'
-                ? 'Checking whether there is a valid Food Pilot session on this device.'
-                : 'Loading your profile, chat history, and Food Log.'}
+                ? '正在检查此设备是否存在有效的 Food Pilot 登录状态。'
+                : '正在加载你的个人档案、聊天记录和饮食记录。'}
             </p>
           </div>
         </div>

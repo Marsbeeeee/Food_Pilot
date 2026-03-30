@@ -305,7 +305,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
     } catch (error) {
       const message = error instanceof Error
         ? error.message
-        : 'Unable to remove this saved entry right now.';
+        : '暂时无法移除该保存记录，请稍后重试。';
       window.alert(message);
     } finally {
       setDeletingEntryId((current) => (current === selectedEntry.id ? null : current));
@@ -324,7 +324,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
     } catch (error) {
       const message = error instanceof Error
         ? error.message
-        : 'Unable to restore this saved entry right now.';
+        : '暂时无法恢复该保存记录，请稍后重试。';
       window.alert(message);
     } finally {
       setRestoringEntryId(null);
@@ -407,7 +407,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
     } catch (error) {
       const message = error instanceof Error
         ? error.message
-        : 'Unable to update this saved entry right now.';
+        : '暂时无法更新该保存记录，请稍后重试。';
       window.alert(message);
     } finally {
       setIsSavingEdit(false);
@@ -468,15 +468,14 @@ export const Explorer: React.FC<ExplorerProps> = ({
         <div className="relative mx-auto w-full max-w-4xl pb-10">
           <div className="mb-8 flex flex-col gap-2">
             <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#FF8A65]/70">
-              Food Log
+              饮食记录
             </span>
             <h1 className="font-serif-brand text-4xl font-bold text-[#4A453E] md:text-5xl">
-              Saved Entries
+              已保存记录
             </h1>
             <p className="max-w-2xl text-sm leading-7 text-[#4A453E]/60 md:text-base">
-              Food Log keeps the meal analyses you choose to save. It is a list of saved entries
-              you can revisit and refine over time, not a full eating diary. Entries are organized
-              around when they were last saved or edited.
+              饮食记录会保存你主动保留的餐食分析结果。它是可回看、可持续优化的保存清单，
+              不是完整的饮食日记。记录按最近一次保存或编辑时间组织展示。
             </p>
           </div>
 
@@ -518,10 +517,10 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
             <div className="flex items-center justify-between px-1">
               <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-                Saved Entries
+                已保存记录
               </h2>
               <span className="text-[11px] font-semibold text-[#4A453E]/35">
-                {filteredEntries.length} result{filteredEntries.length === 1 ? '' : 's'}
+                共 {filteredEntries.length} 条
               </span>
             </div>
 
@@ -562,7 +561,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
                       <div className="min-w-0 flex-1 md:px-5">
                         <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-[#4A453E]/36">
-                          Update {savedMoment.date} / {savedMoment.time}
+                          更新于 {savedMoment.date} / {savedMoment.time}
                         </p>
                         <h4 className="truncate text-lg font-bold text-[#4A453E]">{entry.name}</h4>
                         <p className="mt-1 truncate text-xs text-[#4A453E]/55">{entry.description}</p>
@@ -587,7 +586,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                             handleAddToAnalysis(entry);
                           }}
                           className="flex size-10 items-center justify-center rounded-full bg-[#FFF2EC] text-[#FF8A65] transition-all hover:scale-[1.03] hover:bg-[#FF8A65] hover:text-white"
-                          title="Add to today analysis"
+                          title="添加到今日分析"
                         >
                           <span className="material-symbols-outlined text-[20px]">add</span>
                         </button>
@@ -604,12 +603,12 @@ export const Explorer: React.FC<ExplorerProps> = ({
                   </span>
                 </div>
                 <p className="text-base font-bold text-[#4A453E]/45">
-                  {logEntries.length === 0 ? 'Nothing in Food Log yet.' : 'No entries match current filters.'}
+                  {logEntries.length === 0 ? '饮食记录中还没有内容。' : '当前筛选条件下没有匹配项。'}
                 </p>
                 <p className="mt-2 text-sm text-[#4A453E]/35">
                   {logEntries.length === 0
-                    ? 'Save an analysis first. Food Log keeps only the results you choose to keep.'
-                    : 'Try a broader keyword, date range, or source filter.'}
+                    ? '先保存一次分析结果。饮食记录只保留你主动选择保存的结果。'
+                    : '试试更宽泛的关键词、日期范围或筛选条件。'}
                 </p>
               </div>
             )}
@@ -685,7 +684,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
             setShowAnalysisView(true);
           }}
           className="fixed bottom-6 right-6 z-[120] flex h-12 w-12 items-center justify-center rounded-full bg-[#FF8A65] text-white shadow-[0_14px_40px_rgba(255,138,101,0.35)] transition-all hover:scale-[1.03] hover:bg-[#FF7A50]"
-          title="Open today analysis"
+          title="打开今日分析"
         >
           <div className="relative flex items-center justify-center">
             <span className="material-symbols-outlined text-[22px] leading-none">pie_chart</span>
@@ -701,10 +700,10 @@ export const Explorer: React.FC<ExplorerProps> = ({
           <div className="pointer-events-auto flex items-center justify-between gap-4 rounded-[24px] border border-[#4A453E]/10 bg-white px-5 py-4 shadow-[0_20px_60px_rgba(74,69,62,0.15)]">
             <div className="min-w-0">
               <p className="text-sm font-bold text-[#4A453E]">
-                Removed from Food Log
+                已从饮食记录移除
               </p>
               <p className="mt-1 text-xs leading-5 text-[#4A453E]/55">
-                {undoableDeletedEntry.name} was soft-deleted. Chat links and audit metadata are still recoverable.
+                {undoableDeletedEntry.name} 已被软删除。聊天关联与审计信息仍可恢复。
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -714,7 +713,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                 disabled={Boolean(restoringEntryId)}
                 className="rounded-full border border-[#4A453E]/10 px-3 py-2 text-xs font-bold text-[#4A453E]/55 transition-colors hover:bg-[#F7F3E9] disabled:cursor-not-allowed disabled:opacity-70"
               >
-                Dismiss
+                关闭
               </button>
               <button
                 type="button"
@@ -726,7 +725,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                     : 'bg-[#FF8A65] hover:bg-[#FF8A65]/90'
                 }`}
               >
-                {restoringEntryId ? 'Restoring...' : 'Undo Delete'}
+                {restoringEntryId ? '恢复中...' : '撤销删除'}
               </button>
             </div>
           </div>
@@ -735,16 +734,16 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
       <ConfirmDialog
         open={Boolean(selectedEntry) && isDeleteDialogOpen}
-        title="Remove Entry?"
+        title="移除这条记录？"
         description={(
           <>
             <span className="font-bold text-[#4A453E]">
-              {selectedEntry?.name ?? 'This saved entry'}
+              {selectedEntry?.name ?? '这条已保存记录'}
             </span>{' '}
-            will disappear from Food Log, but you can save it again from a new analysis later.
+            将从饮食记录中移除，但之后仍可在新的分析里再次保存。
           </>
         )}
-        confirmLabel={deletingEntryId ? 'Removing...' : 'Remove Entry'}
+        confirmLabel={deletingEntryId ? '移除中...' : '移除记录'}
         icon="delete"
         isConfirming={Boolean(deletingEntryId)}
         onClose={() => {
@@ -1151,7 +1150,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   onClick={onBack}
                   className="mt-6 rounded-full bg-[#FF8A65] px-6 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:bg-[#FF8A65]/90"
                 >
-                  返回 Food Log
+                  返回饮食记录
                 </button>
               </div>
             ) : (
@@ -1567,7 +1566,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                     该日期暂无记录
                   </span>
                   <p className="text-xs leading-6 text-[#4A453E]/55">
-                    从 Food Log 中将已保存的菜品添加到当日分析即可在此显示。
+                    从饮食记录中将已保存的菜品添加到当日分析即可在此显示。
                   </p>
                 </div>
               )}
@@ -1786,10 +1785,10 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
         <div className="mb-4 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#FF8A65]">
-              {isEditing ? '编辑克重' : 'Saved Entry'}
+              {isEditing ? '编辑克重' : '已保存记录'}
             </span>
             <p className="mt-2 text-[11px] font-semibold text-[#4A453E]/35">
-              Last updated {savedMoment.date} / {savedMoment.time}
+              最近更新 {savedMoment.date} / {savedMoment.time}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -1798,7 +1797,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                 type="button"
                 onClick={onEdit}
                 className="flex size-9 items-center justify-center rounded-full text-[#4A453E]/40 transition-all hover:bg-[#FF8A65]/5 hover:text-[#FF8A65]"
-                title="Edit saved entry"
+                title="编辑已保存记录"
               >
                 <span className="material-symbols-outlined text-lg">edit</span>
               </button>
@@ -1844,7 +1843,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
               <span className="material-symbols-outlined text-lg text-[#FF8A65]">
                 notes
               </span>
-              Description
+              描述
             </h5>
 
             <p className="text-sm leading-7 text-[#4A453E]/60">
@@ -1858,7 +1857,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                 <span className="material-symbols-outlined text-lg text-[#FF8A65]">
                   analytics
                 </span>
-                Nutrition Details
+                营养详情
               </h5>
               <span className="font-serif-brand text-[26px] font-bold italic leading-none text-[#4A453E] md:text-[28px]">
                 {formatCalories(totalCalories)}{' '}
@@ -1984,7 +1983,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                 disabled={isSavingEdit}
                 className="flex-1 rounded-full bg-[#4A453E]/5 px-4 py-3.5 text-sm font-bold text-[#4A453E]/45 transition-all hover:bg-[#4A453E]/10 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                Cancel
+                取消
               </button>
               <button
                 type="button"
@@ -1992,7 +1991,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                 disabled={isSavingEdit}
                 className="flex-[1.5] rounded-full bg-[#FF8A65] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#FF8A65]/20 transition-all hover:bg-[#FF8A65]/90 disabled:cursor-wait disabled:opacity-80"
               >
-                {isSavingEdit ? 'Saving...' : 'Save Changes'}
+                {isSavingEdit ? '保存中...' : '保存修改'}
               </button>
             </div>
           ) : (
@@ -2008,7 +2007,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                 }`}
               >
                 <span className="material-symbols-outlined text-lg">delete</span>
-                {isDeleting ? 'Removing...' : 'Remove Entry'}
+                {isDeleting ? '移除中...' : '移除记录'}
               </button>
 
               <button
@@ -2022,7 +2021,7 @@ const SelectedEntryPanel: React.FC<SelectedEntryPanelProps> = ({
                 }`}
               >
                 <span className="material-symbols-outlined text-lg">forum</span>
-                {entry.sessionId ? 'Open Source Chat' : 'Source Chat Deleted'}
+                {entry.sessionId ? '打开来源对话' : '来源对话已删除'}
               </button>
             </>
           )}
@@ -2056,16 +2055,16 @@ const NutritionFactsLabel: React.FC<NutritionFactsLabelProps> = ({
   const fatPct = macroKcalTotal > 0 ? Math.round((fatKcal / macroKcalTotal) * 100) : 0;
 
   const macros = [
-    { label: '蛋白质', sub: 'Protein', value: proteinNum, pct: proteinPct, color: '#FF9A76' },
-    { label: '碳水化合物', sub: 'Carbs', value: carbsNum, pct: carbsPct, color: '#FFD166' },
-    { label: '脂肪', sub: 'Fat', value: fatNum, pct: fatPct, color: '#A1887F' },
+    { label: '蛋白质', sub: '蛋白', value: proteinNum, pct: proteinPct, color: '#FF9A76' },
+    { label: '碳水化合物', sub: '碳水', value: carbsNum, pct: carbsPct, color: '#FFD166' },
+    { label: '脂肪', sub: '脂肪', value: fatNum, pct: fatPct, color: '#A1887F' },
   ];
 
   return (
     <div className="rounded-[24px] border border-[#4A453E]/8 bg-[#FFFDF5] p-5 shadow-sm md:rounded-[28px] md:p-6">
       <h5 className="mb-5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#4A453E]/40 md:mb-6">
         <span className="material-symbols-outlined text-lg text-[#FF8A65]">nutrition</span>
-        营养成分 / Nutrition Facts
+        营养成分
       </h5>
 
       <div className="mb-5 flex h-2.5 w-full overflow-hidden rounded-full bg-[#F5F2ED] md:mb-6">
@@ -2174,9 +2173,9 @@ const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({ compact = false }) 
       </span>
       {!compact && (
         <>
-          <p className="mt-3 text-sm font-semibold text-[#4A453E]/55">No photo available</p>
+          <p className="mt-3 text-sm font-semibold text-[#4A453E]/55">暂无图片</p>
           <p className="mt-1 text-xs text-[#4A453E]/35">
-            This saved entry was stored without an image.
+            该已保存记录未包含图片。
           </p>
         </>
       )}

@@ -57,8 +57,8 @@ export function getInsightsLoadingHint(mode: InsightsAnalysisMode): string {
 
 export function getInsightsSnapshotLifecycleHint(mode: InsightsAnalysisMode): string {
   return mode === 'week'
-    ? '页面会优先展示本周最近一次分析快照。Food Log 变化后不会自动同步，请点击“重新分析周趋势”获取最新结果。'
-    : '页面会优先展示该日期最近一次分析快照。Food Log 变化后不会自动同步，请点击“重新分析”获取最新结果。';
+    ? '页面会优先展示本周最近一次分析快照。饮食记录变化后不会自动同步，请点击“重新分析周趋势”获取最新结果。'
+    : '页面会优先展示该日期最近一次分析快照。饮食记录变化后不会自动同步，请点击“重新分析”获取最新结果。';
 }
 
 export function getInsightsSnapshotNotice(
@@ -71,8 +71,8 @@ export function getInsightsSnapshotNotice(
       level: 'warning',
       title: '数据可能已变化',
       detail: mode === 'week'
-        ? '当前显示的是历史周趋势快照，Food Log 可能已变化，请重新分析周趋势。'
-        : '当前显示的是历史分析快照，Food Log 可能已变化，请重新分析。',
+        ? '当前显示的是历史周趋势快照，饮食记录可能已变化，请重新分析周趋势。'
+        : '当前显示的是历史分析快照，饮食记录可能已变化，请重新分析。',
     };
   }
 
@@ -80,7 +80,7 @@ export function getInsightsSnapshotNotice(
     level: 'info',
     title: '当前结果为快照',
     detail: mode === 'week'
-      ? '结果不会随 Food Log 自动更新。修改记录后，请重新分析周趋势。'
-      : '结果不会随 Food Log 自动更新。修改记录后，请重新分析。',
+      ? '结果不会随饮食记录自动更新。修改记录后，请重新分析周趋势。'
+      : '结果不会随饮食记录自动更新。修改记录后，请重新分析。',
   };
 }

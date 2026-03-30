@@ -58,31 +58,30 @@ export const AuthPage: React.FC<AuthPageProps> = ({
       <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-10 px-6 py-10 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:px-10">
         <section className="rounded-[36px] border border-white/70 bg-white/50 p-8 shadow-[0_24px_80px_rgba(74,69,62,0.08)] backdrop-blur-sm lg:p-10">
           <p className="mb-4 text-[11px] font-black uppercase tracking-[0.32em] text-[#FF8A65]">
-            Food Pilot Account
+            Food Pilot 账号
           </p>
           <h1 className="max-w-xl font-serif-brand text-5xl font-bold leading-tight text-[#4A453E]">
-            Keep your Assistant, Food Log, and Profile in sync.
+            让助手、饮食记录和个人档案保持同步。
           </h1>
           <p className="mt-6 max-w-xl text-base leading-8 text-[#4A453E]/70">
-            Sign in to restore your chats, Food Log, and Profile so the Assistant can pick up
-            with the right context.
+            登录后可恢复你的聊天、饮食记录和个人档案，让助手按正确上下文继续为你服务。
           </p>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-3">
             <InsightCard
-              eyebrow="Assistant"
-              title="Consistent replies"
-              body="Signing in gives the Assistant the same profile and account context each time you return."
+              eyebrow="助手"
+              title="回复更连贯"
+              body="登录后，助手每次都能读取同一份账号与档案上下文，回复更稳定。"
             />
             <InsightCard
-              eyebrow="Food Log"
-              title="Saved entries stay with you"
-              body="The analyses you choose to keep in Food Log reload with your account instead of staying on one device."
+              eyebrow="饮食记录"
+              title="已保存记录随账号同步"
+              body="你保存到饮食记录的分析会随账号加载，不再只留在当前设备。"
             />
             <InsightCard
-              eyebrow="Profile"
-              title="Personalization follows you"
-              body="Goals, allergies, and eating preferences restore with your session instead of being re-entered each visit."
+              eyebrow="个人档案"
+              title="个性化设置可延续"
+              body="目标、过敏项和饮食偏好会随会话恢复，无需每次重新填写。"
             />
           </div>
         </section>
@@ -101,7 +100,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 }`}
                 type="button"
               >
-                Sign in
+                登录
               </button>
               <button
                 onClick={() => onModeChange('register')}
@@ -112,36 +111,36 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 }`}
                 type="button"
               >
-                Create account
+                注册
               </button>
             </div>
 
             <div className="mb-8">
               <h2 className="text-3xl font-serif-brand font-bold text-[#4A453E]">
-                {isRegister ? 'Create your account' : 'Welcome back'}
+                {isRegister ? '创建账号' : '欢迎回来'}
               </h2>
               <p className="mt-2 text-sm leading-7 text-[#4A453E]/55">
                 {isRegister
-                  ? 'Create an account to save your Profile, keep Food Log entries attached to you, and give the Assistant a stable identity.'
-                  : 'Sign in with the same email and password used for your chats, Food Log, and Profile.'}
+                  ? '注册账号后可保存个人档案、绑定你的饮食记录，并让助手持续识别你的身份。'
+                  : '请使用你在聊天、饮食记录和个人档案中使用的同一邮箱与密码登录。'}
               </p>
             </div>
 
             <form className="space-y-5" onSubmit={handleSubmit}>
               {isRegister && (
-                <Field label="Display name">
+                <Field label="显示名称">
                   <input
                     className={INPUT_CLASSNAME}
                     value={displayName}
                     onChange={(event) => setDisplayName(event.target.value)}
-                    placeholder="How the Assistant should address you"
+                    placeholder="助手应如何称呼你"
                     autoComplete="name"
                     disabled={isSubmitting}
                   />
                 </Field>
               )}
 
-              <Field label="Email">
+              <Field label="邮箱">
                 <input
                   className={INPUT_CLASSNAME}
                   type="email"
@@ -153,13 +152,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 />
               </Field>
 
-              <Field label="Password">
+              <Field label="密码">
                 <input
                   className={INPUT_CLASSNAME}
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder={isRegister ? 'At least 8 characters' : 'Enter your password'}
+                  placeholder={isRegister ? '至少 8 个字符' : '请输入密码'}
                   autoComplete={isRegister ? 'new-password' : 'current-password'}
                   disabled={isSubmitting}
                 />
@@ -181,21 +180,21 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 }`}
               >
                 {isSubmitting
-                  ? 'Working...'
+                  ? '处理中...'
                   : isRegister
-                    ? 'Create account'
-                    : 'Sign in'}
+                    ? '注册'
+                    : '登录'}
               </button>
             </form>
 
             <p className="mt-6 text-sm text-[#4A453E]/45">
-              {isRegister ? 'Already have an account?' : 'Need an account?'}{' '}
+              {isRegister ? '已有账号？' : '还没有账号？'}{' '}
               <button
                 type="button"
                 onClick={() => onModeChange(isRegister ? 'login' : 'register')}
                 className="font-bold text-[#FF8A65]"
               >
-                {isRegister ? 'Sign in' : 'Create one'}
+                {isRegister ? '登录' : '去注册'}
               </button>
             </p>
           </div>
@@ -246,5 +245,5 @@ function getErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  return 'Authentication failed. Please try again.';
+  return '认证失败，请稍后重试。';
 }
