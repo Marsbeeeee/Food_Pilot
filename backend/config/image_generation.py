@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-DEFAULT_STANDARD_DISH_IMAGE_PROMPT_VERSION = "v1"
+DEFAULT_STANDARD_DISH_IMAGE_PROMPT_VERSION = "v2"
 DEFAULT_STANDARD_DISH_IMAGE_TIMEOUT_SECONDS = 45
 DEFAULT_STANDARD_DISH_IMAGE_PROMPT_TEMPLATE = """
 Generate a single high-quality food photo for the dish "{dish_name}".
@@ -29,18 +29,19 @@ class StandardDishImageGenerationConfig:
     timeout_seconds: int
     prompt_version: str
     prompt_template: str
-    mock_image_url: str
+    public_base_url: str
+    storage_dir: str
 
 
 def get_standard_dish_image_generation_config() -> StandardDishImageGenerationConfig:
+    project_root = Path(__file__).resolve().parents[2]
     api_key = _get_env_value("STANDARD_DISH_IMAGE_API_KEY")
     base_url = _get_env_value("STANDARD_DISH_IMAGE_BASE_URL")
     model = _get_env_value("STANDARD_DISH_IMAGE_MODEL")
-    mock_image_url = _get_env_value("STANDARD_DISH_IMAGE_MOCK_URL")
     enabled_flag = _get_env_value("STANDARD_DISH_IMAGE_GENERATION_ENABLED").lower()
     enabled = enabled_flag in {"1", "true", "yes", "on"}
     if not enabled:
-        enabled = bool(mock_image_url or (api_key and base_url and model))
+        enabled = bool(api_key and base_url and model)
 
     return StandardDishImageGenerationConfig(
         enabled=enabled,
@@ -56,7 +57,14 @@ def get_standard_dish_image_generation_config() -> StandardDishImageGenerationCo
             _get_env_value("STANDARD_DISH_IMAGE_PROMPT_TEMPLATE")
             or DEFAULT_STANDARD_DISH_IMAGE_PROMPT_TEMPLATE
         ),
-        mock_image_url=mock_image_url,
+        public_base_url=(
+            _get_env_value("STANDARD_DISH_IMAGE_PUBLIC_BASE_URL")
+            or "http://localhost:8000"
+        ),
+        storage_dir=(
+            _get_env_value("STANDARD_DISH_IMAGE_STORAGE_DIR")
+            or str(project_root / "backend" / "generated_assets" / "standard_dish_images")
+        ),
     )
 
 

@@ -1,11 +1,14 @@
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from backend.routers.health import router as health_router
 from fastapi.middleware.cors import CORSMiddleware
+from backend.config.image_generation import get_standard_dish_image_generation_config
 from backend.database.init_db import init_db
 from backend.routers.estimate import router as estimate_router
 from backend.routers.profile import router as profile_router
@@ -25,6 +28,14 @@ CORS_ORIGINS = ["http://localhost:3000", "http://100.64.164.2:3000"]
 
 app = FastAPI()
 init_db()
+
+image_generation_config = get_standard_dish_image_generation_config()
+Path(image_generation_config.storage_dir).mkdir(parents=True, exist_ok=True)
+app.mount(
+    "/generated-assets/standard-dish-images",
+    StaticFiles(directory=image_generation_config.storage_dir),
+    name="standard-dish-images",
+)
 
 app.add_middleware(
     CORSMiddleware,

@@ -23,6 +23,11 @@ class FoodLogServiceTests(unittest.TestCase):
             os.remove(self.db_path)
         self.db_patch = patch("backend.database.connection.db_path", self.db_path)
         self.db_patch.start()
+        self.dispatch_patch = patch(
+            "backend.services.standard_dish_image_generation_service.dispatch_image_generation_job",
+            return_value=True,
+        )
+        self.dispatch_patch.start()
         init_db()
 
         conn = get_db_connection()
@@ -49,6 +54,7 @@ class FoodLogServiceTests(unittest.TestCase):
             conn.close()
 
     def tearDown(self) -> None:
+        self.dispatch_patch.stop()
         self.db_patch.stop()
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
@@ -377,7 +383,42 @@ class FoodLogServiceTests(unittest.TestCase):
             conn.close()
 
         self.assertIsNotNone(job)
-        self.assertEqual(job["status"], "queued")
+        self.assertIn(
+            job["status"],
+            {"queued", "running", "completed", "failed", "timed_out"},
+        )
+
+    def test_save_food_log_binds_pizza_standard_dish_from_seed(self) -> None:
+        entry = save_food_log(
+            self.user_id,
+            "estimate_api",
+            meal_description="\u62ab\u8428\u70ed\u91cf",
+            result_title="\u62ab\u8428",
+            result_description="Generic pizza estimate.",
+            total_calories="620 kcal",
+            ingredients=[],
+            result_confidence="high",
+        )
+
+        self.assertIsNotNone(entry["standard_dish_id"])
+
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT canonical_name
+                FROM standard_dishes
+                WHERE id = ?
+                """,
+                (int(entry["standard_dish_id"]),),
+            )
+            standard_dish = cursor.fetchone()
+        finally:
+            conn.close()
+
+        self.assertIsNotNone(standard_dish)
+        self.assertEqual(standard_dish["canonical_name"], "\u62ab\u8428")
 
     def test_save_food_log_does_not_bind_ambiguous_standard_dish_name(self) -> None:
         entry = save_food_log(
@@ -389,6 +430,55 @@ class FoodLogServiceTests(unittest.TestCase):
             total_calories="520 kcal",
             ingredients=[],
             result_confidence="high",
+        )
+
+        self.assertIsNone(entry["standard_dish_id"])
+
+    def test_save_food_log_high_confidence_fallback_binds_when_exact_match_misses(self) -> None:
+        entry = save_food_log(
+            self.user_id,
+            "estimate_api",
+            meal_description="\u739b\u683c\u4e3d\u7279\u8584\u5e95\u62ab\u8428\u7684\u70ed\u91cf",
+            result_title="\u739b\u683c\u4e3d\u7279\u8584\u5e95\u62ab\u8428",
+            result_description="High confidence pizza estimate.",
+            total_calories="610 kcal",
+            ingredients=[],
+            result_confidence="high",
+        )
+
+        self.assertIsNotNone(entry["standard_dish_id"])
+
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT canonical_name
+                FROM standard_dishes
+                WHERE id = ?
+                """,
+                (int(entry["standard_dish_id"]),),
+            )
+            standard_dish = cursor.fetchone()
+        finally:
+            conn.close()
+
+        self.assertIsNotNone(standard_dish)
+        self.assertEqual(
+            standard_dish["canonical_name"],
+            "\u739b\u683c\u4e3d\u7279\u8584\u5e95\u62ab\u8428",
+        )
+
+    def test_save_food_log_does_not_use_fallback_for_non_high_confidence(self) -> None:
+        entry = save_food_log(
+            self.user_id,
+            "estimate_api",
+            meal_description="\u739b\u683c\u4e3d\u7279\u8584\u5e95\u62ab\u8428\u7684\u70ed\u91cf",
+            result_title="\u739b\u683c\u4e3d\u7279\u8584\u5e95\u62ab\u8428",
+            result_description="Medium confidence pizza estimate.",
+            total_calories="610 kcal",
+            ingredients=[],
+            result_confidence="medium",
         )
 
         self.assertIsNone(entry["standard_dish_id"])

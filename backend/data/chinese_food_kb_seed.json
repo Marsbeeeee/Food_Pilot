@@ -1,5 +1,5 @@
 {
-  "version": "2026-03-24",
+  "version": "2026-03-30",
   "scope": "cn_core_v1",
   "sources": [
     {
@@ -2133,14 +2133,83 @@
           "ratio": 0.20
         }
       ]
+    },
+    {
+      "id": "pizza-generic",
+      "food_id": "pizza-generic",
+      "canonical_name": "\u62ab\u8428",
+      "aliases": [
+        "pizza",
+        "\u610f\u5f0f\u62ab\u8428"
+      ],
+      "category": "dish",
+      "scene_tags": [
+        "takeout",
+        "western_meal"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 266,
+        "protein_g": 11.0,
+        "carbs_g": 33.0,
+        "fat_g": 10.0
+      },
+      "portion_hints": [
+        {
+          "name": "1\u4efd",
+          "grams": 260
+        }
+      ],
+      "cooking_notes": "Common takeaway pizza baseline for high-frequency estimate matching.",
+      "source_ids": [
+        "food-pilot-curated-portions-2026q1"
+      ],
+      "updated_at": "2026-03-30"
+    },
+    {
+      "id": "margherita-pizza",
+      "food_id": "margherita-pizza",
+      "canonical_name": "\u739b\u683c\u4e3d\u7279\u62ab\u8428",
+      "aliases": [
+        "\u739b\u683c\u4e3d\u5854\u62ab\u8428",
+        "margherita pizza",
+        "\u739b\u683c\u4e3d\u7279pizza"
+      ],
+      "category": "dish",
+      "scene_tags": [
+        "takeout",
+        "western_meal"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 250,
+        "protein_g": 10.0,
+        "carbs_g": 31.0,
+        "fat_g": 9.0
+      },
+      "portion_hints": [
+        {
+          "name": "1\u4efd",
+          "grams": 260
+        }
+      ],
+      "cooking_notes": "Cheese and crust density are the main calorie drivers for margherita style pizza.",
+      "source_ids": [
+        "food-pilot-curated-portions-2026q1"
+      ],
+      "updated_at": "2026-03-30"
     }
   ],
   "change_summary": [
     {
-      "version": "2026-03-24",
-      "updated_at": "2026-03-24",
+      "version": "2026-03-30",
+      "updated_at": "2026-03-30",
       "summary": "新增 43 条高频与次高频中文食物条目，覆盖地方菜、外卖常见菜和饮品变体，并补齐结构化来源追溯。",
-      "added_food_count": 49
+      "added_food_count": 2
     }
   ]
 }
