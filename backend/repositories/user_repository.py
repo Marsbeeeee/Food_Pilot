@@ -90,3 +90,26 @@ def delete_user(
     )
     conn.commit()
     return cursor.rowcount > 0
+
+
+def update_user_display_name(
+    conn: sqlite3.Connection,
+    user_id: int,
+    display_name: str,
+) -> UserOut | None:
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE users
+        SET display_name = ?
+        WHERE id = ?
+        """,
+        (
+            display_name,
+            user_id,
+        ),
+    )
+    conn.commit()
+    if cursor.rowcount <= 0:
+        return None
+    return get_user_by_id(conn, user_id)

@@ -7,6 +7,7 @@ from backend.repositories.user_repository import (
     delete_user as delete_user_record,
     get_user_auth_by_email as get_user_auth_by_email_record,
     get_user_by_id as get_user_by_id_record,
+    update_user_display_name as update_user_display_name_record,
 )
 from backend.schemas.user import UserCreate, UserOut
 
@@ -43,5 +44,13 @@ def delete_user(user_id: int) -> bool:
     conn = get_db_connection()
     try:
         return delete_user_record(conn, user_id)
+    finally:
+        conn.close()
+
+
+def update_user_display_name(user_id: int, display_name: str) -> UserOut | None:
+    conn = get_db_connection()
+    try:
+        return update_user_display_name_record(conn, user_id, display_name)
     finally:
         conn.close()

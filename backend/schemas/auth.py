@@ -55,6 +55,23 @@ class LoginRequest(BaseModel):
         return normalized
 
 
+class UpdateDisplayNameRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    display_name: str = Field(
+        validation_alias=AliasChoices("display_name", "displayName"),
+        serialization_alias="displayName",
+    )
+
+    @field_validator("display_name")
+    @classmethod
+    def validate_display_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("display_name cannot be empty")
+        return normalized
+
+
 class AuthResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 

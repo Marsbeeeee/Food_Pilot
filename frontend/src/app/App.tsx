@@ -1,6 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { AuthApiError, clearSession, deleteCurrentAccount, restoreSession } from '../api/auth';
+import {
+  AuthApiError,
+  clearSession,
+  deleteCurrentAccount,
+  restoreSession,
+  updateDisplayName,
+} from '../api/auth';
 import { buildFoodLogNavigationState } from './foodLogNavigation';
 import { buildInsightsCacheFromHistoryItems } from './insightsHistoryState';
 import { getChatSession, listChatSessions } from '../api/chat';
@@ -353,6 +359,19 @@ const App: React.FC = () => {
     applyAuthenticatedState(nextSession);
   };
 
+  const handleChangeDisplayName = async (displayName: string) => {
+    const updatedUser = await updateDisplayName(displayName);
+    setSession((currentSession) => {
+      if (!currentSession) {
+        return currentSession;
+      }
+      return {
+        ...currentSession,
+        user: updatedUser,
+      };
+    });
+  };
+
   const handleNavigateToSession = (sessionId: string) => {
     const nextState = buildFoodLogNavigationState(sessionId) as {
       activeSessionId: string;
@@ -489,6 +508,7 @@ const App: React.FC = () => {
         authMode={authMode}
         onAuthModeChange={setAuthMode}
         onLogout={handleLogout}
+        onChangeDisplayName={handleChangeDisplayName}
         onDeleteAccount={handleDeleteAccount}
         isDeletingAccount={isDeletingAccount}
       />

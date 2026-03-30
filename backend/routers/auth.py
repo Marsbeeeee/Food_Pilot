@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from backend.dependencies.auth import get_current_user
-from backend.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
+from backend.schemas.auth import (
+    AuthResponse,
+    LoginRequest,
+    RegisterRequest,
+    UpdateDisplayNameRequest,
+)
 from backend.schemas.user import UserOut
 from backend.services.auth_service import (
     DuplicateEmailError,
@@ -9,6 +14,7 @@ from backend.services.auth_service import (
     delete_current_user,
     login_user,
     register_user,
+    update_current_user_display_name,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -39,3 +45,11 @@ def get_me(user: UserOut = Depends(get_current_user)):
 def delete_me(user: UserOut = Depends(get_current_user)):
     delete_current_user(user.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.patch("/me", response_model=UserOut)
+def update_me(
+    request: UpdateDisplayNameRequest,
+    user: UserOut = Depends(get_current_user),
+):
+    return update_current_user_display_name(user.id, request.display_name)

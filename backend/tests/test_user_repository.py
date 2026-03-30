@@ -10,6 +10,7 @@ from backend.repositories.user_repository import (
     delete_user,
     get_user_auth_by_email,
     get_user_by_id,
+    update_user_display_name,
 )
 from backend.schemas.user import UserCreate
 from backend.tests.test_db_utils import create_workspace_db_path, remove_file_if_exists
@@ -111,6 +112,26 @@ class UserRepositoryTests(unittest.TestCase):
 
         self.assertTrue(deleted)
         self.assertIsNone(fetched)
+
+    def test_update_user_display_name_updates_value(self) -> None:
+        conn = get_db_connection()
+        try:
+            created = create_user(
+                conn,
+                UserCreate.model_validate(
+                    {
+                        "email": "alice@example.com",
+                        "passwordHash": "hashed-password",
+                        "displayName": "Alice",
+                    }
+                ),
+            )
+            updated = update_user_display_name(conn, created.id, "Alice Cooper")
+        finally:
+            conn.close()
+
+        self.assertIsNotNone(updated)
+        self.assertEqual(updated.display_name, "Alice Cooper")
 
 
 if __name__ == "__main__":

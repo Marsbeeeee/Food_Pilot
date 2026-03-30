@@ -14,6 +14,7 @@ from backend.services.user_service import (
     delete_user,
     get_user_auth_by_email,
     get_user_by_id,
+    update_user_display_name,
 )
 
 
@@ -71,6 +72,13 @@ def delete_current_user(user_id: int) -> None:
     deleted = delete_user(user_id)
     if not deleted:
         raise InvalidCredentialsError("user not found")
+
+
+def update_current_user_display_name(user_id: int, display_name: str) -> UserOut:
+    updated_user = update_user_display_name(user_id, display_name)
+    if updated_user is None:
+        raise InvalidCredentialsError("user not found")
+    return updated_user
 
 
 def _build_auth_response(user: UserOut) -> AuthResponse:

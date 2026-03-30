@@ -83,6 +83,39 @@ export async function deleteCurrentAccount(): Promise<void> {
   }
 }
 
+export async function updateDisplayName(displayName: string): Promise<AuthUser> {
+  const token = getStoredToken();
+  if (!token) {
+    throw new AuthApiError('Please sign in again.', 401);
+  }
+
+  const response = await fetch(`${AUTH_BASE_URL}/me`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ displayName: displayName.trim() }),
+  });
+  const data = await parseJson(response);
+
+  if (response.status === 401) {
+    clearSession();
+  }
+
+  if (!response.ok) {
+    throw new AuthApiError(getErrorMessage(data, response.status), response.status);
+  }
+
+  const user = data as AuthUser;
+  persistSession({
+    accessToken: token,
+    tokenType: 'bearer',
+    user,
+  });
+  return user;
+}
+
 export function persistSession(session: AuthSession): void {
   if (typeof window === 'undefined') {
     return;

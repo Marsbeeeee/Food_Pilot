@@ -625,6 +625,7 @@ const GenerationStatusBadge: React.FC<{
 }> = ({ job, nowMs }) => {
   const elapsedSeconds = getGenerationElapsedSeconds(job, nowMs);
   const isRunning = job.status === 'running';
+  const timerText = elapsedSeconds != null ? formatElapsedTimer(elapsedSeconds) : null;
 
   return (
     <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${
@@ -635,8 +636,8 @@ const GenerationStatusBadge: React.FC<{
     >
       <span className={`h-1.5 w-1.5 rounded-full ${isRunning ? 'animate-pulse bg-[#4D8C53]' : 'bg-[#D7653F]'}`} />
       {isRunning ? 'Generating' : 'Queued'}
-      {elapsedSeconds != null && (
-        <span className="tracking-normal">{formatElapsedDuration(elapsedSeconds)}</span>
+      {isRunning && timerText && (
+        <span className="font-mono tracking-normal">{timerText}</span>
       )}
     </span>
   );
@@ -690,7 +691,10 @@ function formatTimestamp(value: string): string {
 }
 
 function parseTimestamp(value: string): Date | null {
-  const date = new Date(value.replace(' ', 'T'));
+  const normalized = value.trim().replace(' ', 'T');
+  const hasTimezone = /[zZ]|[+\-]\d{2}:\d{2}$/.test(normalized);
+  const utcValue = hasTimezone ? normalized : `${normalized}Z`;
+  const date = new Date(utcValue);
   if (Number.isNaN(date.getTime())) {
     return null;
   }
@@ -708,18 +712,11 @@ function getGenerationElapsedSeconds(
   return Math.max(0, Math.floor((nowMs - startedAt.getTime()) / 1000));
 }
 
-function formatElapsedDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  if (mins < 1) {
-    return `${remainingSeconds}s`;
-  }
-  if (mins < 60) {
-    return `${mins}m ${remainingSeconds}s`;
-  }
-  const hours = Math.floor(mins / 60);
-  const remainingMins = mins % 60;
-  return `${hours}h ${remainingMins}m`;
+function formatElapsedTimer(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
 function getErrorMessage(error: unknown): string {

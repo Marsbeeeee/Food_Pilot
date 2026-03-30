@@ -4,8 +4,8 @@ from unittest.mock import patch
 from fastapi import HTTPException
 
 from backend.dependencies.auth import get_current_user
-from backend.routers.auth import delete_me, login, register
-from backend.schemas.auth import LoginRequest, RegisterRequest
+from backend.routers.auth import delete_me, login, register, update_me
+from backend.schemas.auth import LoginRequest, RegisterRequest, UpdateDisplayNameRequest
 from backend.schemas.user import UserOut
 from backend.services.auth_service import DuplicateEmailError, InvalidCredentialsError
 
@@ -84,6 +84,36 @@ class AuthRouterTests(unittest.TestCase):
 
         delete_current_user_mock.assert_called_once_with(1)
         self.assertEqual(response.status_code, 204)
+
+    def test_update_me_calls_update_current_user_display_name(self) -> None:
+        user = UserOut.model_validate(
+            {
+                "id": 1,
+                "email": "alice@example.com",
+                "display_name": "Alice",
+                "created_at": "2026-03-13 18:00:00",
+                "updated_at": "2026-03-13 18:00:00",
+            }
+        )
+        request = UpdateDisplayNameRequest.model_validate({"displayName": "Alice Cooper"})
+        updated_user = UserOut.model_validate(
+            {
+                "id": 1,
+                "email": "alice@example.com",
+                "display_name": "Alice Cooper",
+                "created_at": "2026-03-13 18:00:00",
+                "updated_at": "2026-03-13 19:00:00",
+            }
+        )
+
+        with patch(
+            "backend.routers.auth.update_current_user_display_name",
+            return_value=updated_user,
+        ) as update_display_name_mock:
+            result = update_me(request, user)
+
+        update_display_name_mock.assert_called_once_with(1, "Alice Cooper")
+        self.assertEqual(result.display_name, "Alice Cooper")
 
 
 if __name__ == "__main__":
