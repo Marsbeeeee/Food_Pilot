@@ -24,6 +24,11 @@ import {
   resolveHistoryInsightsState,
 } from '../app/insightsHistoryState';
 import {
+  buildInsightsLiveAggregation,
+  extractCaloriesValue as parseInsightsCaloriesValue,
+  extractNutritionValue,
+} from '../app/insightsLiveAggregation';
+import {
   getInsightsAIPanelDescription,
   getInsightsAnalyzeButtonText,
   getInsightsIdleHint,
@@ -822,24 +827,9 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     () => getSelectedLogIdsForAnalysis(filteredItems, logEntryIds),
     [filteredItems, logEntryIds],
   );
-
-  const hasOrphanedItems = filteredItems.some((item) => !logEntryIds.has(item.id));
-
-  const clientTotalCalories = filteredItems.reduce(
-    (sum, item) => sum + extractCaloriesValue(item.calories),
-    0,
-  );
-  const clientTotalProtein = filteredItems.reduce(
-    (sum, item) => sum + extractNutritionValue(item.protein),
-    0,
-  );
-  const clientTotalCarbs = filteredItems.reduce(
-    (sum, item) => sum + extractNutritionValue(item.carbs),
-    0,
-  );
-  const clientTotalFat = filteredItems.reduce(
-    (sum, item) => sum + extractNutritionValue(item.fat),
-    0,
+  const liveAggregation = React.useMemo(
+    () => buildInsightsLiveAggregation(filteredItems),
+    [filteredItems],
   );
   const currentCacheKey = buildInsightsCacheKey(
     mode,
@@ -854,17 +844,12 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const analysisState: AnalysisState = runtimeAnalysisState.status === 'idle'
     ? (historyMatchedState ?? IDLE_ANALYSIS_STATE)
     : runtimeAnalysisState;
+  const totalCalories = liveAggregation.totalCalories;
+  const totalProtein = liveAggregation.totalProtein;
+  const totalCarbs = liveAggregation.totalCarbs;
+  const totalFat = liveAggregation.totalFat;
 
-  const agg = analysisState.status === 'success' ? analysisState.data.aggregation : null;
-  // Week mode uses the currently selected weekly items as the single source of truth,
-  // keeping top-level totals consistent with the trend chart data points.
-  const useClientTotals = mode === 'week' || hasOrphanedItems || !agg;
-  const totalCalories = useClientTotals ? clientTotalCalories : agg!.totalCalories;
-  const totalProtein = useClientTotals ? clientTotalProtein : agg!.totalProtein;
-  const totalCarbs = useClientTotals ? clientTotalCarbs : agg!.totalCarbs;
-  const totalFat = useClientTotals ? clientTotalFat : agg!.totalFat;
-
-  const dailyTargetCalories = Math.max(extractCaloriesValue(profileKcalTarget ?? 0), 0);
+  const dailyTargetCalories = Math.max(parseInsightsCaloriesValue(profileKcalTarget ?? 0), 0);
   const targetCalories = mode === 'week' ? dailyTargetCalories * 7 : dailyTargetCalories;
   const intake = totalCalories;
   const progressRatio = targetCalories > 0 ? Math.min(intake / targetCalories, 1) : 0;
@@ -1154,7 +1139,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                 </button>
               </div>
             ) : (
-              <div className={`transition-opacity duration-300 ${analysisState.status === 'loading' ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+              <div>
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <div className="rounded-[28px] border border-[#4A453E]/08 bg-white p-6 shadow-sm">
                     <div className="mb-2 flex items-center justify-between gap-3">
@@ -1242,27 +1227,24 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                           value: totalProtein,
                           icon: 'protein',
                           color: '#FF9A76',
-                          backendRatio: agg?.proteinRatio,
+                          ratio: liveAggregation.proteinRatio,
                         },
                         {
                           label: '碳水化合物',
                           value: totalCarbs,
                           icon: 'carbs',
                           color: '#FFD166',
-                          backendRatio: agg?.carbsRatio,
+                          ratio: liveAggregation.carbsRatio,
                         },
                         {
                           label: '脂肪',
                           value: totalFat,
                           icon: 'fat',
                           color: '#A1887F',
-                          backendRatio: agg?.fatRatio,
+                          ratio: liveAggregation.fatRatio,
                         },
                       ].map((macro) => {
-                        const macroTotal = totalProtein + totalCarbs + totalFat;
-                        const percent = macro.backendRatio != null
-                          ? macro.backendRatio
-                          : macroTotal > 0 ? getPercent(macro.value, macroTotal) : 0;
+                        const percent = macro.ratio;
 
                         return (
                           <div
@@ -2236,37 +2218,6 @@ function getDraftTotalCalories(draft: FoodLogEditDraft): string {
   return draft.calories;
 }
 
-function extractCaloriesValue(value: string | number): number {
-  const match = String(value).match(/(\d+(?:\.\d+)?)/);
-  if (!match) {
-    return 0;
-  }
-
-  const parsed = Number.parseFloat(match[1]);
-  return Number.isFinite(parsed) ? Math.ceil(parsed) : 0;
-}
-
-function extractNutritionValue(value?: string | null): number {
-  if (!value) {
-    return 0;
-  }
-
-  const match = String(value).match(/(\d+(?:\.\d+)?)/);
-  if (!match) {
-    return 0;
-  }
-
-  const parsed = Number.parseFloat(match[1]);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function getPercent(value: number, total: number): number {
-  if (total <= 0) {
-    return 0;
-  }
-  return Number(((value / total) * 100).toFixed(2));
-}
-
 function formatNumber(value: number): string {
   if (Number.isInteger(value)) {
     return String(value);
@@ -2278,11 +2229,11 @@ function formatCalories(value: string | number): string {
   if (typeof value === 'number') {
     return String(Math.round(value));
   }
-  return String(Math.round(extractCaloriesValue(value)));
+  return String(Math.round(parseInsightsCaloriesValue(value)));
 }
 
 function formatEnergyString(energy: string): string {
-  const num = extractCaloriesValue(energy);
+  const num = parseInsightsCaloriesValue(energy);
   return `${Math.round(num)} kcal`;
 }
 
@@ -2304,4 +2255,3 @@ function getWeekRange(dateString: string): { start: string; end: string } {
 
   return { start: format(monday), end: format(sunday) };
 }
-
