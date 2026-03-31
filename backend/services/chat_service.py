@@ -22,7 +22,7 @@ from backend.services.recommendation import (
 from backend.services.profile_service import get_profile
 
 
-DEFAULT_SESSION_TITLE = "New chat"
+DEFAULT_SESSION_TITLE = "新对话"
 MAX_SESSION_TITLE_LENGTH = 120
 DEFAULT_ESTIMATE_ERROR_MESSAGE = "这次估算暂时没有完成，请稍后重试，或补充更具体的餐食描述。"
 DEFAULT_RECOMMENDATION_ERROR_MESSAGE = "这次推荐暂时没有完成，请稍后重试，或换一种更明确的问法。"

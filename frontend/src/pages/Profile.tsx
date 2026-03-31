@@ -249,21 +249,22 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
   };
 
   return (
-    <div className="relative mx-auto flex w-full max-w-[1200px] flex-1 flex-col overflow-y-auto custom-scrollbar px-8 py-12 lg:py-14">
-      {(status === 'success' || status === 'error') && bannerMessage && (
-        <div
-          className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300 ${
-            status === 'success' ? 'bg-[#81C784] text-white' : 'bg-red-400 text-white'
-          }`}
-        >
-          <span className="material-symbols-outlined text-sm font-bold">
-            {status === 'success' ? 'check_circle' : 'error'}
-          </span>
-          <span className="text-sm font-bold tracking-[0.08em]">{bannerMessage}</span>
-        </div>
-      )}
+    <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto">
+      <div className="relative mx-auto flex w-full max-w-[1200px] flex-col px-8 py-12 lg:py-14">
+        {(status === 'success' || status === 'error') && bannerMessage && (
+          <div
+            className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300 ${
+              status === 'success' ? 'bg-[#81C784] text-white' : 'bg-red-400 text-white'
+            }`}
+          >
+            <span className="material-symbols-outlined text-sm font-bold">
+              {status === 'success' ? 'check_circle' : 'error'}
+            </span>
+            <span className="text-sm font-bold tracking-[0.08em]">{bannerMessage}</span>
+          </div>
+        )}
 
-      <div className="mb-14 flex flex-col items-start justify-between gap-7 md:flex-row md:items-center">
+        <div className="mb-14 flex flex-col items-start justify-between gap-7 md:flex-row md:items-center">
         <div className="flex flex-col gap-2">
           <h1 className="font-serif-brand text-[2.5rem] font-bold leading-[1.18] text-[#4A453E] md:text-[2.9rem]">个人档案</h1>
           <p className="max-w-2xl text-[15px] leading-8 text-[#4A453E]/60 md:text-[16px]">
@@ -595,6 +596,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
         <p className="text-xs text-[#4A453E]/50 leading-relaxed font-medium">
           个人档案用于个性化助手回复，并为你保存的饮食记录提供上下文。它不能替代医疗建议、诊断或治疗。
         </p>
+      </div>
       </div>
     </div>
   );

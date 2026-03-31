@@ -36,7 +36,7 @@ class ChatRouterTests(unittest.TestCase):
             response = create_chat_session(self.user)
 
         self.assertEqual(response.id, 1)
-        self.assertEqual(response.title, "New chat")
+        self.assertEqual(response.title, "新对话")
 
     def test_get_chat_session_maps_missing_session_to_404(self) -> None:
         with patch("backend.routers.chat.get_session_detail", return_value=None):
@@ -112,7 +112,7 @@ class ChatRouterTests(unittest.TestCase):
 def build_session_summary(
     *,
     session_id: int = 1,
-    title: str = "New chat",
+    title: str = "新对话",
 ) -> dict:
     return {
         "id": session_id,

@@ -471,11 +471,11 @@ export const Explorer: React.FC<ExplorerProps> = ({
               饮食记录
             </span>
             <h1 className="font-serif-brand text-[2.5rem] font-bold leading-[1.18] text-[#4A453E] md:text-[2.9rem]">
-              已保存记录
+              收藏夹
             </h1>
             <p className="max-w-2xl text-[15px] leading-8 text-[#4A453E]/60 md:text-[16px]">
-              饮食记录会保存你主动保留的餐食分析结果。它是可回看、可持续优化的保存清单，
-              不是完整的饮食日记。记录按最近一次保存或编辑时间组织展示。
+              这里收着你主动保留的餐食分析，方便之后回看、对比和继续调整。
+              它更像你的个人营养参考夹，而不是完整的饮食日记。列表会按最近一次保存或编辑时间排序。
             </p>
           </div>
 
@@ -517,7 +517,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
             <div className="flex items-center justify-between px-1">
               <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-                已保存记录
+                保存列表
               </h2>
               <span className="text-[11px] font-semibold text-[#4A453E]/35">
                 共 {filteredEntries.length} 条
@@ -561,7 +561,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
                       <div className="min-w-0 flex-1 md:px-5">
                         <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-[#4A453E]/36">
-                          更新于 {savedMoment.date} / {savedMoment.time}
+                          {savedMoment.date} / {savedMoment.time}
                         </p>
                         <h4 className="truncate text-lg font-bold text-[#4A453E]">{entry.name}</h4>
                         <p className="mt-1 truncate text-xs text-[#4A453E]/55">{entry.description}</p>

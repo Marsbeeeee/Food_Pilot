@@ -145,7 +145,7 @@ export function applyChatExchange(
 function mapSessionSummary(session: ChatSessionSummaryResponse): ChatSession {
   return {
     id: String(session.id),
-    title: session.title,
+    title: normalizeSessionTitle(session.title),
     messages: [],
     timestamp: new Date(session.lastMessageAt),
     icon: 'chat_bubble',
@@ -156,7 +156,7 @@ function mapSessionSummary(session: ChatSessionSummaryResponse): ChatSession {
 function mapSessionDetail(session: ChatSessionDetailResponse): ChatSession {
   return {
     id: String(session.id),
-    title: session.title,
+    title: normalizeSessionTitle(session.title),
     messages: session.messages.map((message) => mapMessage(message)),
     timestamp: new Date(session.lastMessageAt),
     icon: 'chat_bubble',
@@ -170,6 +170,10 @@ function mapChatExchange(exchange: ChatMessageExchangeResponse): ChatExchange {
     userMessage: mapMessage(exchange.userMessage),
     assistantMessage: mapMessage(exchange.assistantMessage),
   };
+}
+
+function normalizeSessionTitle(title: string): string {
+  return title === 'New chat' ? '新对话' : title;
 }
 
 function mapMessage(message: ChatMessageResponse): Message {
