@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { buildWorkspaceMessagePresentation } from '../app/workspaceMessagePresentation';
+import { resolveEstimateBlocksForRendering } from '../app/workspaceEstimateCards';
 import { resolveFoodLogSavePresentation } from '../app/workspaceFoodLogState';
 import {
   ChatApiError,
@@ -569,6 +570,27 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 const mealDescription = isMealEstimate
                   ? resolveMealDescription(activeSession.messages, index, message)
                   : null;
+                const renderedEstimates = (
+                  isMealEstimate
+                    ? resolveEstimateBlocksForRendering({
+                      estimates: messagePresentation.estimates,
+                      mealDescription: mealDescription ?? undefined,
+                    })
+                    : null
+                ) as Array<{
+                  title: string;
+                  confidence?: string;
+                  description?: string;
+                  items: Array<{
+                    name: string;
+                    portion: string;
+                    energy: string;
+                    protein?: string;
+                    carbs?: string;
+                    fat?: string;
+                  }>;
+                  total: string;
+                }> | null;
                 const defaultSaveKey = message.id && message.title
                   ? `${message.id}::${message.title}`
                   : message.id ?? '';
@@ -611,8 +633,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     <div className={`flex max-w-[95%] flex-col gap-3 ${message.role === 'user' ? 'items-end max-w-[80%]' : 'items-start'}`}>
                       {isMealEstimate ? (
                         <div className="flex w-full flex-col gap-5">
-                          {(messagePresentation.estimates as Array<{ title: string; confidence?: string; description?: string; items: Array<{ name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }>; total: string }> | null)?.length ? (
-                            messagePresentation.estimates.map((est: { title: string; confidence?: string; description?: string; items: Array<{ name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }>; total: string }, estIdx: number) => {
+                          {renderedEstimates?.length ? (
+                            renderedEstimates.map((est: { title: string; confidence?: string; description?: string; items: Array<{ name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }>; total: string }, estIdx: number) => {
                               const estSaveKey = message.id ? `${message.id}::${est.title}` : '';
                               const estSavedId = estSaveKey ? (savedFoodLogMessageIds[estSaveKey] || persistedSavedFoodLogEntriesByMessageId.get(estSaveKey)?.id || null) : null;
                               const estSaveFailed = estSaveKey ? failedFoodLogSaves[estSaveKey] : undefined;
@@ -789,7 +811,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                               </div>
                             </div>
                           )}
-                          {!(messagePresentation.estimates as unknown[] | null)?.length ? (
+                          {!renderedEstimates?.length ? (
                           <div className="flex flex-col items-end gap-3 rounded-[32px] border border-[#4A453E]/5 bg-white px-9 py-6 shadow-sm">
                             {(messagePresentation.suggestion ?? message.content) && (
                               <p className="w-full text-[14px] leading-relaxed text-[#4A453E]/70">{messagePresentation.suggestion ?? message.content}</p>
