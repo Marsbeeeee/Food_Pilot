@@ -54,48 +54,50 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top_left,_rgba(255,138,101,0.2),_transparent_38%),linear-gradient(135deg,#fffdf5_0%,#f7f3e9_48%,#f1ebde_100%)]">
-      <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-12 px-6 py-12 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:px-10 lg:py-16">
-        <section className="rounded-[36px] border border-white/70 bg-white/50 p-9 shadow-[0_24px_80px_rgba(74,69,62,0.08)] backdrop-blur-sm lg:p-12">
-          <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.24em] text-[#FF8A65]">
-            Food Pilot 账号
-          </p>
-          <h1 className="max-w-xl font-serif-brand text-[2.8rem] font-bold leading-[1.18] text-[#4A453E] md:text-5xl">
-            让助手、饮食记录和个人档案保持同步。
-          </h1>
-          <p className="mt-6 max-w-xl text-[15px] leading-8 text-[#4A453E]/70 md:text-[17px]">
-            登录后可恢复你的聊天、饮食记录和个人档案，让助手按正确上下文继续为你服务。
-          </p>
+    <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top_left,_rgba(255,138,101,0.12),_transparent_34%),linear-gradient(135deg,#fffdf7_0%,#f8f3ea_50%,#f3ede2_100%)]">
+      <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-10 px-6 py-12 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-start lg:px-10 lg:py-14">
+        <section className="relative overflow-hidden rounded-[36px] border border-[#4A453E]/12 bg-[linear-gradient(165deg,rgba(255,255,255,0.95),rgba(255,248,240,0.92))] p-9 shadow-[0_28px_84px_rgba(74,69,62,0.12)] lg:p-12">
+          <div className="pointer-events-none absolute -left-16 -top-16 size-40 rounded-full bg-[#FF8A65]/6 blur-3xl" />
 
-          <div className="mt-12 grid gap-5 sm:grid-cols-3">
-            <InsightCard
-              eyebrow="助手"
-              title="回复更连贯"
-              body="登录后，助手每次都能读取同一份账号与档案上下文，回复更稳定。"
-            />
-            <InsightCard
-              eyebrow="饮食记录"
-              title="已保存记录随账号同步"
-              body="你保存到饮食记录的分析会随账号加载，不再只留在当前设备。"
-            />
-            <InsightCard
-              eyebrow="个人档案"
-              title="个性化设置可延续"
-              body="目标、过敏项和饮食偏好会随会话恢复，无需每次重新填写。"
-            />
+          <div className="relative">
+            <p className="mb-4 text-xs font-semibold tracking-[0.06em] text-[#FF8A65]">
+              继续使用 Food Pilot
+            </p>
+            <h1 className="max-w-xl text-[2rem] font-bold leading-[1.22] text-[#4A453E] md:text-[2.55rem]">
+              登录后继续你的助手与记录。
+            </h1>
+            <p className="mt-5 max-w-xl text-[15px] leading-7 text-[#4A453E]/68 md:text-[16px]">
+              同一账号可同步聊天上下文、饮食记录和个人档案，换设备后也能无缝继续。
+            </p>
+
+            <div className="mt-10 space-y-3">
+              <BenefitItem
+                icon="forum"
+                title="助手上下文更稳定"
+                body="同一账号持续累积聊天背景，回复更连贯。"
+              />
+              <BenefitItem
+                icon="receipt_long"
+                title="饮食记录自动跟随账号"
+                body="保存过的分析可跨设备查看，不再只留在当前浏览器。"
+              />
+              <BenefitItem
+                icon="person"
+                title="个人偏好持续生效"
+                body="目标、过敏项和饮食偏好会随登录状态延续。"
+              />
+            </div>
           </div>
         </section>
 
-        <section className="relative overflow-hidden rounded-[36px] border border-[#4A453E]/10 bg-white px-7 py-9 shadow-[0_24px_80px_rgba(74,69,62,0.12)] sm:px-9 lg:px-10 lg:py-11">
-          <div className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(90deg,rgba(255,138,101,0.16),rgba(129,199,132,0.12),transparent)]" />
-
+        <section className="relative overflow-hidden rounded-[36px] border border-[#4A453E]/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,252,247,0.96))] px-7 py-8 shadow-[0_24px_80px_rgba(74,69,62,0.12)] sm:px-9 lg:px-10 lg:py-9">
           <div className="relative">
-            <div className="mb-10 inline-flex rounded-full bg-[#F7F3E9] p-1">
+            <div className="mb-7 inline-flex rounded-[18px] border border-[#4A453E]/8 bg-[#F7F3E9] p-1">
               <button
                 onClick={() => onModeChange('login')}
-                className={`rounded-full px-5 py-2 text-sm font-bold transition-all ${
+                className={`rounded-[14px] px-5 py-2 text-sm font-semibold transition-all ${
                   mode === 'login'
-                    ? 'bg-white text-[#4A453E] shadow-sm'
+                    ? 'bg-white text-[#4A453E] shadow-[0_6px_14px_rgba(74,69,62,0.08)]'
                     : 'text-[#4A453E]/45 hover:text-[#4A453E]'
                 }`}
                 type="button"
@@ -104,9 +106,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               </button>
               <button
                 onClick={() => onModeChange('register')}
-                className={`rounded-full px-5 py-2 text-sm font-bold transition-all ${
+                className={`rounded-[14px] px-5 py-2 text-sm font-semibold transition-all ${
                   mode === 'register'
-                    ? 'bg-white text-[#4A453E] shadow-sm'
+                    ? 'bg-white text-[#4A453E] shadow-[0_6px_14px_rgba(74,69,62,0.08)]'
                     : 'text-[#4A453E]/45 hover:text-[#4A453E]'
                 }`}
                 type="button"
@@ -115,18 +117,18 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               </button>
             </div>
 
-            <div className="mb-10">
-              <h2 className="font-serif-brand text-[2rem] font-bold leading-[1.22] text-[#4A453E]">
+            <div className="mb-8">
+              <h2 className="font-serif-brand text-[1.85rem] font-bold leading-[1.2] text-[#4A453E]">
                 {isRegister ? '创建账号' : '欢迎回来'}
               </h2>
-              <p className="mt-3 text-[15px] leading-8 text-[#4A453E]/55">
+              <p className="mt-3 text-[15px] leading-7 text-[#4A453E]/55">
                 {isRegister
-                  ? '注册账号后可保存个人档案、绑定你的饮食记录，并让助手持续识别你的身份。'
-                  : '请使用你在聊天、饮食记录和个人档案中使用的同一邮箱与密码登录。'}
+                  ? '注册后可同步个人档案与饮食记录，并让助手持续识别你的身份。'
+                  : '请使用你在 Food Pilot 中使用的邮箱与密码登录。'}
               </p>
             </div>
 
-            <form className="space-y-6" onSubmit={handleSubmit}>
+            <form className="space-y-5" onSubmit={handleSubmit}>
               {isRegister && (
                 <Field label="显示名称">
                   <input
@@ -212,7 +214,7 @@ interface FieldProps {
 const Field: React.FC<FieldProps> = ({ label, children }) => {
   return (
     <label className="block">
-      <span className="mb-2 block px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/40">
+      <span className="mb-2 block px-1 text-[12px] font-semibold tracking-[0.04em] text-[#4A453E]/46">
         {label}
       </span>
       {children}
@@ -220,18 +222,22 @@ const Field: React.FC<FieldProps> = ({ label, children }) => {
   );
 };
 
-interface InsightCardProps {
-  eyebrow: string;
+interface BenefitItemProps {
+  icon: string;
   title: string;
   body: string;
 }
 
-const InsightCard: React.FC<InsightCardProps> = ({ eyebrow, title, body }) => {
+const BenefitItem: React.FC<BenefitItemProps> = ({ icon, title, body }) => {
   return (
-    <article className="rounded-[28px] border border-[#4A453E]/8 bg-white/75 p-6">
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4A453E]/32">{eyebrow}</p>
-      <h3 className="mt-3 font-serif-brand text-[22px] font-bold leading-[1.28] text-[#4A453E] break-words">{title}</h3>
-      <p className="mt-3 text-[15px] leading-7 text-[#4A453E]/55">{body}</p>
+    <article className="flex items-start gap-3 rounded-[18px] border border-[#4A453E]/12 bg-white px-4 py-3.5 shadow-[0_8px_22px_rgba(74,69,62,0.06)]">
+      <span className="mt-0.5 flex size-7 items-center justify-center rounded-full bg-[#FF8A65]/10 text-[#FF8A65]">
+        <span className="material-symbols-outlined text-[17px] leading-none">{icon}</span>
+      </span>
+      <div>
+        <h3 className="text-[16px] font-semibold leading-6 text-[#4A453E]">{title}</h3>
+        <p className="mt-0.5 text-[14px] leading-6 text-[#4A453E]/58">{body}</p>
+      </div>
     </article>
   );
 };

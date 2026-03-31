@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-import { AppView, AuthScreenMode, AuthUser } from '../types/types';
+import { AppView, AuthUser } from '../types/types';
 import { Logo } from './Logo';
 
 interface HeaderProps {
@@ -8,8 +8,6 @@ interface HeaderProps {
   onViewChange: (view: AppView) => void;
   isLoggedIn: boolean;
   currentUser: AuthUser | null;
-  authMode: AuthScreenMode;
-  onAuthModeChange: (mode: AuthScreenMode) => void;
   onLogout: () => void;
   onChangeDisplayName: (displayName: string) => Promise<void>;
   onDeleteAccount: () => void;
@@ -21,8 +19,6 @@ export const Header: React.FC<HeaderProps> = ({
   onViewChange,
   isLoggedIn,
   currentUser,
-  authMode,
-  onAuthModeChange,
   onLogout,
   onChangeDisplayName,
   onDeleteAccount,
@@ -252,27 +248,11 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </>
             ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onAuthModeChange('login')}
-                  className={`rounded-full px-4 py-2 text-sm font-bold transition-all ${
-                    authMode === 'login'
-                      ? 'bg-[#4A453E] text-white'
-                      : 'border border-[#4A453E]/10 bg-white text-[#4A453E]/60 hover:text-[#4A453E]'
-                  }`}
-                >
-                  登录
-                </button>
-                <button
-                  onClick={() => onAuthModeChange('register')}
-                  className={`rounded-full px-4 py-2 text-sm font-bold transition-all ${
-                    authMode === 'register'
-                      ? 'bg-[#FF8A65] text-white shadow-lg shadow-[#FF8A65]/15'
-                      : 'bg-[#FF8A65]/10 text-[#FF8A65] hover:bg-[#FF8A65]/15'
-                  }`}
-                >
-                  注册
-                </button>
+              <div className="hidden items-center gap-2 rounded-full border border-[#4A453E]/6 bg-[#F7F3E9]/80 px-4 py-2 md:flex">
+                <span className="material-symbols-outlined text-[16px] text-[#FF8A65]">sync</span>
+                <p className="text-xs font-semibold tracking-[0.04em] text-[#4A453E]/55">
+                  登录后同步记录
+                </p>
               </div>
             )}
           </div>

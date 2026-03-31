@@ -18,7 +18,7 @@ export const Logo: React.FC<LogoProps> = ({ className = "" }) => {
       </div>
       <div className="flex flex-col leading-none">
         <h1 className="font-serif-brand text-xl tracking-[0.08em] text-[#4A453E]">Food Pilot</h1>
-        <p className="mt-1 hidden text-[9px] font-bold uppercase tracking-[0.18em] text-[#4A453E]/35 md:block">
+        <p className="mt-1 hidden text-[10px] font-semibold tracking-[0.04em] text-[#4A453E]/40 md:block">
           助手 / 饮食记录 / 个人档案
         </p>
       </div>

@@ -505,8 +505,6 @@ const App: React.FC = () => {
         onViewChange={setCurrentView}
         isLoggedIn={authStatus === 'authenticated'}
         currentUser={session?.user ?? null}
-        authMode={authMode}
-        onAuthModeChange={setAuthMode}
         onLogout={handleLogout}
         onChangeDisplayName={handleChangeDisplayName}
         onDeleteAccount={handleDeleteAccount}
