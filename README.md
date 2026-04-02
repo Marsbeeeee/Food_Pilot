@@ -3,9 +3,17 @@
 ![Status](https://img.shields.io/badge/status-active%20development-ff8a65)
 ![Frontend](https://img.shields.io/badge/frontend-React%2019-61dafb)
 ![Backend](https://img.shields.io/badge/backend-FastAPI-009688)
-![License](https://img.shields.io/badge/license-not%20specified-lightgrey)
+![License](https://img.shields.io/badge/license-not%20open%20source-lightgrey)
 
 Food Pilot 是一个以对话为主入口的营养助手。用户可以通过自然语言发起餐食推荐、热量与营养估算，并把有价值的结果保存到 `Food Log`，再进入 `Insights` 做日/周分析；`Profile` 为推荐和估算提供目标、饮食风格与过敏原等个性化上下文。
+
+## Usage Notice
+
+This repository is provided publicly for product demonstration, portfolio review, and judging only.
+
+No open-source license is granted. Except for viewing the code on GitHub and GitHub's standard forking functionality as permitted by GitHub Terms of Service, you may not reproduce, modify, redistribute, publish, sublicense, or use this codebase for commercial purposes without prior written permission from the author.
+
+本仓库公开仅用于作品展示、评审和交流，不提供开源授权；未经作者书面许可，不得复制、修改、分发、商用或二次发布。
 
 ---
 
@@ -336,28 +344,9 @@ curl -X POST http://localhost:8000/estimate \
 
 ## Contributing
 
-欢迎贡献。建议按以下流程：
+当前仓库公开的主要目的是作品展示、评审和交流，**暂不接受外部代码复用、二次发布或未经授权的商业使用**。
 
-1. Fork 或新建分支，例如 `feature/xxx` 或 `fix/xxx`
-2. 在本地完成开发并确认前后端可运行
-3. 运行基础检查：
-   - `python -m pytest backend/tests`
-   - `python scripts/validate_food_kb_rag.py`
-   - `cd frontend && npm test`
-4. 如改动涉及关键主链路，建议额外执行：
-   - `cd frontend && npm run test:e2e`
-   - `.\scripts\run_release_gate.ps1`
-5. 提交 PR 时说明：
-   - 背景问题
-   - 变更内容
-   - 测试方式
-   - 影响范围
-
-建议规范：
-
-- 保持 PR 小而聚焦。
-- 修改接口契约或核心流程时补充最小回归测试。
-- 不要提交密钥、数据库文件或生成产物等敏感内容。
+如确有合作、试用、授权或评审需要，请先联系作者。
 
 ---
 
@@ -390,9 +379,11 @@ curl -X POST http://localhost:8000/estimate \
 
 ## License
 
-当前仓库**尚未包含 LICENSE 文件**。
+No open-source license is provided for this repository.
 
-在明确添加开源许可证之前，建议视为“保留所有权利（All Rights Reserved）”。如计划开源，请补充 `LICENSE` 文件并同步更新本节。
+This repository is shared publicly for demonstration and judging only. All rights are reserved by the author, except for the limited rights required by GitHub's Terms of Service.
+
+本仓库未提供开源许可证。除 GitHub 服务条款要求的有限展示与平台内 fork 权限外，其余权利均由作者保留。
 
 ---
 
