@@ -379,7 +379,13 @@ export const Explorer: React.FC<ExplorerProps> = ({
       const updatedIngredient: IngredientResult = {
         ...original,
         portion: newGramsInput ? `${newGramsInput} ${unit}` : '',
-        energy: ratio > 0 ? `${Math.round(extractCaloriesValue(original.energy) * ratio)} kcal` : '0 kcal',
+        energy: (() => {
+          if (ratio <= 0) {
+            return '0 kcal';
+          }
+          const scaledCalories = parseInsightsCaloriesValue(original.energy) * ratio;
+          return `${Number.isFinite(scaledCalories) ? Math.round(scaledCalories) : 0} kcal`;
+        })(),
         protein: original.protein ? `${formatNumber(extractNutritionValue(original.protein) * ratio)} g` : undefined,
         carbs: original.carbs ? `${formatNumber(extractNutritionValue(original.carbs) * ratio)} g` : undefined,
         fat: original.fat ? `${formatNumber(extractNutritionValue(original.fat) * ratio)} g` : undefined,
@@ -2207,7 +2213,10 @@ function getPortionUnit(portion: string): string {
 
 function getDraftTotalCalories(draft: FoodLogEditDraft): string {
   const total = draft.ingredients.reduce(
-    (sum, ingredient) => sum + extractCaloriesValue(ingredient.energy),
+    (sum, ingredient) => {
+      const calories = parseInsightsCaloriesValue(ingredient.energy);
+      return sum + (Number.isFinite(calories) ? calories : 0);
+    },
     0,
   );
 

@@ -31,3 +31,7 @@
 {"sessionId": "9096da", "location": "insights_service.py", "message": "AI request start", "data": {"model": "qwen-plus"}, "timestamp": 1774892970769, "hypothesisId": "H5"}
 {"sessionId": "9096da", "location": "insights_service.py", "message": "AI config before call", "data": {"api_key_present": true, "model": "qwen-plus", "timeout": 20}, "timestamp": 1774969591109, "hypothesisId": "H1"}
 {"sessionId": "9096da", "location": "insights_service.py", "message": "AI request start", "data": {"model": "qwen-plus"}, "timestamp": 1774969591111, "hypothesisId": "H5"}
+{"sessionId": "9096da", "location": "insights_service.py", "message": "AI config before call", "data": {"api_key_present": true, "model": "qwen-plus", "timeout": 20}, "timestamp": 1774978932393, "hypothesisId": "H1"}
+{"sessionId": "9096da", "location": "insights_service.py", "message": "AI request start", "data": {"model": "qwen-plus"}, "timestamp": 1774978932395, "hypothesisId": "H5"}
+{"sessionId": "9096da", "location": "insights_service.py", "message": "AI config before call", "data": {"api_key_present": true, "model": "qwen-plus", "timeout": 20}, "timestamp": 1774978967931, "hypothesisId": "H1"}
+{"sessionId": "9096da", "location": "insights_service.py", "message": "AI request start", "data": {"model": "qwen-plus"}, "timestamp": 1774978967934, "hypothesisId": "H5"}
