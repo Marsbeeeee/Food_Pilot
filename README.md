@@ -5,7 +5,7 @@
 ![Backend](https://img.shields.io/badge/backend-FastAPI-009688)
 ![License](https://img.shields.io/badge/license-not%20specified-lightgrey)
 
-Food Pilot 是一个以对话为主入口的营养助手应用。用户可以通过自然语言询问“吃什么更合适”或“这餐大概多少热量/营养”，将有价值结果保存到 `Food Log`，并进一步做日/周饮食分析。
+Food Pilot 是一个以对话为主入口的营养助手。用户可以通过自然语言发起餐食推荐、热量与营养估算，并把有价值的结果保存到 `Food Log`，再进入 `Insights` 做日/周分析；`Profile` 为推荐和估算提供目标、饮食风格与过敏原等个性化上下文。
 
 ---
 
@@ -19,7 +19,6 @@ Food Pilot 是一个以对话为主入口的营养助手应用。用户可以通
 - [Installation](#installation)
 - [Usage](#usage)
 - [API Quick Reference](#api-quick-reference)
-- [Visuals / Demo](#visuals--demo)
 - [Project Status](#project-status)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
@@ -33,32 +32,34 @@ Food Pilot 是一个以对话为主入口的营养助手应用。用户可以通
 
 **Purpose**
 
-Food Pilot 解决“营养建议难落地、记录难复用”的问题：
+Food Pilot 当前解决的是“营养建议有了，但难复用、难持续跟踪”的问题：
 
-1. 用自然语言问 AI（推荐 / 估算）
-2. 将有价值结果保存为可复用条目（Food Log）
-3. 结合 Profile（目标、过敏原、饮食风格）持续个性化
-4. 进入 Insights 做进一步分析和调整
+1. 通过 Chat 统一承接推荐、估算和澄清提问。
+2. 将有价值的估算结果显式保存到 `Food Log`。
+3. 结合 `Profile` 的目标、活动水平、饮食风格和过敏原做个性化约束。
+4. 基于已保存数据进入 `Insights` 做日/周分析与历史回看。
 
 **Why Useful**
 
-- 降低饮食管理门槛（无需复杂手工录入）
-- 让分析结果可复用，而不是一次性聊天内容
-- 通过过敏原硬约束提升推荐安全性
+- 降低饮食管理门槛，不需要从一开始就手工维护完整饮食流水。
+- 让估算结果可以复用、编辑、回看和继续分析，而不是停留在一次性聊天结果里。
+- 对中国用户常见菜品做了首期知识库增强，提升中文问法下的估算与推荐稳定性。
+- 通过过敏原约束、显式保存和分析快照机制，让主链路更可控。
 
 ---
 
 ## Core Features
 
-- 账号体系：注册 / 登录 / 会话恢复 / 删除账号
-- Assistant 双核心意图：
-  - `meal_recommendation`（推荐吃什么）
-  - `meal_estimate`（这餐大概多少热量/营养）
-- `/estimate` 能力层：系统级结构化估算接口（当前不作为独立用户主入口）
-- Chat 会话管理：新建、续聊、重命名、删除
-- Food Log：保存、详情、编辑、删除、恢复、回跳来源聊天
-- Profile：目标、热量目标、饮食风格、过敏原等约束接入
-- Insights（当前为进行中模块）：日分析流程基础能力
+- 账号体系：注册、登录、会话恢复、修改显示名、删除当前账号。
+- Assistant 主链路：基于规则分流处理 `meal_recommendation`、`meal_estimate` 和文本解释类请求。
+- Chat 会话管理：新建、续聊、重命名、删除，会话消息持久化。
+- 估算能力：支持结构化餐食估算、多菜品拆卡、单菜品内部成分拆解和保存前澄清。
+- Food Log：保存、详情、编辑、软删除、恢复、关键词检索、时间范围筛选、来源回跳。
+- Profile：单用户单档案，支持热量目标、活动水平、饮食风格、运动类型和过敏原配置。
+- Insights：支持日/周分析、历史快照、分析篮子同步。
+- 中文食物知识库：首期离线知识库、检索增强、引用透传、质量基线校验。
+- 标准菜品图片能力：支持标准菜品官方图复用、后台候选图审核和生成任务编排。
+- Admin 能力：管理员可在独立审核台审批、拒绝、重生成标准菜品图片候选图。
 
 ---
 
@@ -66,17 +67,19 @@ Food Pilot 解决“营养建议难落地、记录难复用”的问题：
 
 - **Frontend**: React 19 + TypeScript + Vite
 - **Backend**: FastAPI + SQLite
-- **AI**: Qwen-plus (backend-only call)
-- **Auth**: Token-based session auth
+- **AI**: Gemini（默认） / DashScope Qwen（可选，OpenAI-compatible）
+- **Testing**: pytest + Node test runner + Playwright
+- **Auth**: Bearer Token + HMAC JWT session auth
 
 ---
 
 ## Project Structure
 
 ```text
-backend/      FastAPI API, services, schemas, repositories, tests
-frontend/     React app (Assistant / Food Log / Insights / Profile)
-docs/         Product and setup documentation
+backend/      FastAPI API, services, schemas, repositories, tests, local data
+frontend/     React app (Workspace / Food Log / Insights / Profile / Admin review)
+docs/         Product, setup, governance, and testing documentation
+scripts/      Release gate and knowledge-base validation scripts
 ```
 
 ---
@@ -88,10 +91,16 @@ docs/         Product and setup documentation
 - Python 3.10+
 - Node.js 18+
 - npm 9+
-- 可用的 Qwen API Key（阿里云 DashScope）
+- 可用的 AI API Key
 - 推荐系统：Windows 10+/macOS/Linux
 
-> 说明：后端依赖来自 `requirements.txt`，前端依赖来自 `frontend/package.json`。
+AI 配置说明：
+
+- 默认使用 Gemini：需要 `GEMINI_API_KEY`
+- 可切换到 DashScope/Qwen：需要 `DASHSCOPE_API_KEY`
+- 如果要启用标准菜品图片生成，需要额外配置图片模型相关环境变量
+
+> 后端依赖来自 `requirements.txt`，前端依赖来自 `frontend/package.json`。
 
 ---
 
@@ -106,7 +115,17 @@ cd Food_Pilot
 
 ### 2) Configure environment variables
 
-在项目根目录创建 `.env`：
+根目录可参考 `.env.example` 创建 `.env`。
+
+**默认 Gemini 配置**
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-3-flash-preview
+GEMINI_TIMEOUT_SECONDS=20
+```
+
+**可选 DashScope / Qwen 配置**
 
 ```env
 DASHSCOPE_API_KEY=sk-xxx
@@ -114,12 +133,21 @@ AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 AI_MODEL=qwen-plus
 ```
 
-可选认证配置（不填则走默认）：
+**可选功能开关**
 
 ```env
-AUTH_SECRET=foodpilot-dev-secret
-AUTH_TOKEN_EXPIRE_SECONDS=604800
-PASSWORD_HASH_ITERATIONS=120000
+FOOD_KB_ENABLED=1
+# STANDARD_DISH_IMAGE_GENERATION_ENABLED=1
+# STANDARD_DISH_IMAGE_API_KEY=sk-xxx
+# STANDARD_DISH_IMAGE_BASE_URL=https://api.openai.com/v1
+# STANDARD_DISH_IMAGE_MODEL=gpt-image-1
+# ADMIN_EMAILS=admin@example.com
+```
+
+前端如需指定后端地址，可在 `frontend/.env.local` 中设置：
+
+```env
+VITE_API_BASE_URL=http://localhost:8000
 ```
 
 ### 3) Setup and run backend
@@ -142,7 +170,7 @@ pip install -r requirements.txt
 uvicorn backend.main:app --reload --port 8000
 ```
 
-If you will run tests locally:
+如需运行后端测试：
 
 ```bash
 pip install -r requirements-dev.txt
@@ -168,13 +196,12 @@ npm run dev
 
 ### Typical user flow
 
-1. 注册/登录
-2. 在 Assistant 输入问题：
-   - “晚饭怎么吃更适合减脂？”
-   - “一碗牛肉面大概多少热量？”
-3. 对估算结果点击保存到 Food Log
-4. 在 Food Log 中复用、编辑、回跳聊天
-5. 进入 Insights 做每日/每周分析（持续迭代中）
+1. 注册或登录账号。
+2. 在 `Workspace` 中发起推荐或估算请求，例如“晚饭怎么吃更适合减脂”或“番茄炒蛋盖饭大概多少热量”。
+3. 对有价值的估算结果点击保存到 `Food Log`。
+4. 在 `Food Log` 中查看详情、编辑、恢复、回跳来源会话，或加入分析篮子。
+5. 进入 `Insights` 查看日/周分析和历史快照。
+6. 如有需要，在 `Profile` 中调整目标、饮食风格、运动信息和过敏原。
 
 ### Dev commands
 
@@ -185,17 +212,14 @@ cd frontend
 npm run dev
 npm run build
 npm test
-npm run test:e2e      # E2E 关键流程（无 DASHSCOPE_API_KEY 时自动 skip）
-```
-
-**E2E 测试（Playwright）**
-
-覆盖登录、聊天、保存 Food Log、进入 Insights。运行前需确保**后端已启动**（`uvicorn backend.main:app --reload`）：
-
-```bash
-cd frontend
 npm run test:e2e
 ```
+
+说明：
+
+- `npm test` 使用 Node 内置测试运行器。
+- `npm run test:e2e` 为 Playwright 关键流程回归。
+- 当前 E2E 用例依赖实时 AI 返回；若未设置 `DASHSCOPE_API_KEY`，会自动 skip。
 
 **Backend tests**
 
@@ -203,7 +227,7 @@ npm run test:e2e
 python -m pytest backend/tests
 ```
 
-**中文食物知识库 RAG 校验**
+**中文食物知识库质量校验**
 
 ```bash
 python scripts/validate_food_kb_rag.py
@@ -215,7 +239,13 @@ python scripts/validate_food_kb_rag.py
 .\scripts\run_release_gate.ps1
 ```
 
-See `docs/TEST_BASELINE.md` for gate scope and isolation rules.
+当前默认发布门禁包含：
+
+- 后端测试
+- 食物知识库检索质量校验
+- 前端单元测试
+
+详见 `docs/TEST_BASELINE.md`。
 
 ### Example API call (health)
 
@@ -228,10 +258,11 @@ curl http://localhost:8000/health
 ```bash
 curl -X POST http://localhost:8000/estimate \
   -H "Content-Type: application/json" \
-  -d '{"query":"一碗牛肉面大概多少热量？"}'
+  -H "Authorization: Bearer <access_token>" \
+  -d "{\"query\":\"一份牛肉汉堡和一杯无糖拿铁大概多少热量\",\"clientRequestId\":\"demo-estimate-001\"}"
 ```
 
-> 当前产品策略：用户估算入口统一走 Chat；`/estimate` 作为系统能力接口保留，用于结构化估算复用。
+> 当前产品策略是以 Chat 为用户主入口；`/estimate` 作为底层结构化估算能力保留，用于统一估算链路和后续复用。
 
 ---
 
@@ -241,20 +272,38 @@ curl -X POST http://localhost:8000/estimate \
 - `POST /auth/register`
 - `POST /auth/login`
 - `GET /auth/me`
+- `PATCH /auth/me`
 - `DELETE /auth/me`
-- `GET /chat/sessions`
 - `POST /chat/sessions`
+- `GET /chat/sessions`
+- `GET /chat/sessions/{session_id}`
+- `PATCH /chat/sessions/{session_id}`
+- `DELETE /chat/sessions/{session_id}`
 - `POST /chat/messages`
 - `POST /chat/sessions/{session_id}/messages`
 - `POST /estimate`
 - `GET /food-logs`
+- `GET /food-logs/{food_log_id}`
 - `POST /food-logs`
+- `POST /food-logs/from-estimate`
 - `PATCH /food-logs/{food_log_id}`
 - `POST /food-logs/{food_log_id}/restore`
 - `DELETE /food-logs/{food_log_id}`
-- `GET /profile/me`
 - `POST /profile`
+- `GET /profile/me`
+- `GET /profile/{profile_id}`
 - `PUT /profile/{profile_id}`
+- `POST /api/insights/analyze`
+- `GET /api/insights/history`
+- `GET /api/insights/basket`
+- `PUT /api/insights/basket`
+- `GET /admin/dish-images`（admin only）
+- `GET /admin/dish-images/generation-jobs`（admin only）
+- `GET /admin/dish-images/{dish_image_id}`（admin only）
+- `POST /admin/dish-images/{dish_image_id}/approve`（admin only）
+- `POST /admin/dish-images/{dish_image_id}/reject`（admin only）
+- `POST /admin/dish-images/{dish_image_id}/regenerate`（admin only）
+- `POST /admin/dish-images/{dish_image_id}/reject-and-regenerate`（admin only）
 
 ---
 
@@ -262,8 +311,9 @@ curl -X POST http://localhost:8000/estimate \
 
 **Active Development**
 
-- 核心链路（Assistant + Food Log + Profile）可用
-- Insights 与数据层能力仍在持续迭代
+- 核心用户主链路已可用：Auth、Workspace/Chat、Food Log、Profile、Insights 已接通。
+- 中文食物知识库、标准菜品图片资产和管理员审核能力已落地首期版本。
+- 当前仍在持续迭代分析表达、数据覆盖、图片生成质量和整体产品收敛。
 
 ---
 
@@ -271,15 +321,16 @@ curl -X POST http://localhost:8000/estimate \
 
 ### Near-term
 
-- Insights 闭环能力（按天/按周分析 + AI建议）
-- Food Log 真实图片来源接入与回填流程
-- 中文饮食知识库 RAG（提升中餐估算准确度）
+- 继续扩充中文高频菜品、套餐、饮品和便利店场景数据覆盖。
+- 继续优化 Chat 估算澄清策略和多菜品拆卡稳定性。
+- 补强标准菜品图片 prompt 自动扩写与生成质量。
+- 优化 Insights 的长期趋势表达和可解释性。
 
 ### Mid-term
 
-- 趋势分析（7/30天）
-- 更细粒度筛选与复用推荐
-- 模型微调评估与可控上线
+- 扩展更长周期的趋势分析能力。
+- 增强 Food Log 的数值筛选和来源聚合筛选。
+- 继续收敛标准菜品数据、官方图资产和 Food Log 复用链路。
 
 ---
 
@@ -287,37 +338,42 @@ curl -X POST http://localhost:8000/estimate \
 
 欢迎贡献。建议按以下流程：
 
-1. Fork / 新建分支：`feature/xxx` 或 `fix/xxx`
-2. 本地开发并保证可运行
-3. 运行测试：
+1. Fork 或新建分支，例如 `feature/xxx` 或 `fix/xxx`
+2. 在本地完成开发并确认前后端可运行
+3. 运行基础检查：
    - `python -m pytest backend/tests`
+   - `python scripts/validate_food_kb_rag.py`
    - `cd frontend && npm test`
-4. 提交 PR，描述：
+4. 如改动涉及关键主链路，建议额外执行：
+   - `cd frontend && npm run test:e2e`
+   - `.\scripts\run_release_gate.ps1`
+5. 提交 PR 时说明：
    - 背景问题
    - 变更内容
    - 测试方式
-   - 影响范围（API/UI/数据）
+   - 影响范围
 
 建议规范：
 
-- 保持 PR 小而聚焦
-- 新增接口需补最小测试
-- 避免提交密钥、数据库文件等敏感内容
+- 保持 PR 小而聚焦。
+- 修改接口契约或核心流程时补充最小回归测试。
+- 不要提交密钥、数据库文件或生成产物等敏感内容。
 
 ---
 
 ## Support / Contact
 
-如需帮助，请优先通过：
+如需帮助，建议优先通过以下方式：
 
-- GitHub Issues（Bug / Feature Request）
-- 项目维护者（在仓库主页维护者信息中联系）
+- GitHub Issues：提交 Bug、功能请求或文档问题
+- 仓库维护者：如需管理员配置、环境排查或方向确认，可在仓库主页联系维护者
 
 提问时建议附上：
 
 - 复现步骤
-- 错误日志 / 截图
-- 运行环境（OS、Python、Node 版本）
+- 错误日志或截图
+- 运行环境信息（OS、Python、Node 版本）
+- 是否已配置 AI Key 与相关环境变量
 
 ---
 
@@ -325,8 +381,10 @@ curl -X POST http://localhost:8000/estimate \
 
 - FastAPI
 - React / Vite
-- 阿里云千问 API（Qwen）
-- 所有测试与文档贡献者
+- Google Gemini
+- 阿里云 DashScope / Qwen
+- Playwright / pytest
+- 所有为测试、知识库和产品文档做出贡献的参与者
 
 ---
 
@@ -334,9 +392,8 @@ curl -X POST http://localhost:8000/estimate \
 
 当前仓库**尚未包含 LICENSE 文件**。
 
-在你明确添加许可证（如 MIT / Apache-2.0）前，默认视为“保留所有权利（All Rights Reserved）”。
-如果你计划开源，建议尽快补充 `LICENSE` 文件并在本节更新。
+在明确添加开源许可证之前，建议视为“保留所有权利（All Rights Reserved）”。如计划开源，请补充 `LICENSE` 文件并同步更新本节。
 
 ---
 
-> Disclaimer: Food Pilot 提供的是估算性质信息，不构成医疗建议或诊断结论。
+> Disclaimer: Food Pilot 提供的是估算和饮食管理辅助信息，不构成医疗建议、诊断或治疗意见。
