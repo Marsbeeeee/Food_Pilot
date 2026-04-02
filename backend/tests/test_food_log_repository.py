@@ -1064,6 +1064,54 @@ class FoodLogRepositoryTests(unittest.TestCase):
         self.assertEqual(rows[0]["meal_occurred_at"], "2026-03-14 09:00:00")
         self.assertEqual(rows[1]["meal_occurred_at"], "2026-03-14 10:00:00")
 
+    def test_init_db_does_not_touch_updated_at_when_normalized_query_exists(self) -> None:
+        conn = get_db_connection()
+        try:
+            created = create_food_log(
+                conn,
+                self.user_id,
+                source_type="chat_message",
+                session_id=self.session_id,
+                meal_description="  Chicken   Salad  ",
+                result_title="Chicken Salad",
+                result_description="Initial description.",
+                total_calories="240 kcal",
+                ingredients=[],
+                logged_at="2026-03-14 09:00:00",
+                created_at="2026-03-14 09:00:00",
+            )
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE food_logs
+                SET updated_at = ?
+                WHERE id = ?
+                """,
+                ("2026-03-14 09:05:00", int(created["id"])),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        init_db()
+
+        conn = get_db_connection()
+        try:
+            row = conn.execute(
+                """
+                SELECT normalized_query, updated_at
+                FROM food_logs
+                WHERE id = ?
+                """,
+                (int(created["id"]),),
+            ).fetchone()
+        finally:
+            conn.close()
+
+        self.assertIsNotNone(row)
+        self.assertEqual(row["normalized_query"], "chicken salad")
+        self.assertEqual(row["updated_at"], "2026-03-14 09:05:00")
+
     def test_init_db_backfills_deleted_status_without_removing_duplicate_rows(self) -> None:
         conn = get_db_connection()
         try:

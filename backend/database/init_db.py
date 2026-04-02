@@ -1550,6 +1550,7 @@ def _backfill_food_log_normalized_queries(cursor) -> None:
         """
         SELECT id, meal_description
         FROM food_logs
+        WHERE normalized_query IS NULL OR trim(normalized_query) = ''
         """
     ).fetchall()
     for row in rows:
