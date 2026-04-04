@@ -1,5 +1,7 @@
 ﻿import json
 
+import re
+
 from backend.database.connection import get_db_connection
 from backend.repositories.chat_session_repository import (
     create_session as create_session_record,
@@ -44,6 +46,8 @@ RECOMMENDATION_ROUTE_PHRASES = (
     "吃什么更合适",
     "午饭吃什么",
     "晚饭吃什么",
+    "午餐吃什么",
+    "晚餐吃什么",
     "早餐吃什么",
     "宵夜吃什么",
     "夜宵吃什么",
@@ -61,6 +65,8 @@ RECOMMENDATION_ROUTE_PHRASES = (
     "有什么替代",
     "怎么优化",
     "优化一下",
+    "套餐怎么选",
+    "套餐选哪个",
 )
 ESTIMATE_ROUTE_PHRASES = (
     "多少热量",
@@ -141,12 +147,25 @@ FOOD_QUANTITY_PATTERNS = (
 AMBIGUOUS_STANDARD_DISH_ESTIMATE_HINTS = (
     "热量",
     "营养",
+    "卡路里",
+    "千卡",
+    "大卡",
+    "能量",
     "蛋白质",
     "碳水",
     "脂肪",
     "多少卡",
     "多少热量",
     "多少",
+)
+GENERIC_AMBIGUOUS_DISH_PREFIXES = (
+    "一份",
+    "一个",
+    "这份",
+    "那个",
+    "这个",
+    "这种",
+    "那种",
 )
 ADDITIONAL_RECOMMENDATION_ROUTE_PHRASES = (
     "更值得选",
@@ -170,12 +189,21 @@ EXPLANATORY_FOLLOW_UP_PHRASES = (
     "为什么推荐",
     "为什么这么推荐",
     "为什么这样推荐",
+    "为什么这么建议",
+    "为什么这样建议",
     "为啥推荐",
     "为啥这么推荐",
     "为啥这样推荐",
+    "你刚才推荐",
+    "刚才推荐",
+    "刚才那个推荐",
+    "刚才那个估算",
+    "这个建议",
+    "这个方案",
 )
 COMPARISON_CONNECTOR_PHRASES = (
     "还是",
+    "比",
     "和",
     "跟",
     "与",
@@ -516,7 +544,7 @@ def resolve_message_type(
         return CLARIFICATION_NEEDED
 
     if is_estimate_request:
-        if query_needs_standard_dish_clarification(normalized_content):
+        if _needs_standard_dish_estimate_clarification(normalized_content):
             return CLARIFICATION_NEEDED
         return DEFAULT_RESOLVED_MESSAGE_TYPE
 
@@ -605,43 +633,47 @@ def _build_meal_recommendation_response_with_conn(
     profile_id: int | None,
 ) -> dict[str, object]:
     recommendation = generate_meal_recommendation(content, profile_id, user_id)
-
-    # If we have a profile with recorded allergies, run a simple safety check
-    # to avoid returning recommendations that contain those allergens.
+    profile_allergies: list[str] = []
     if profile_id is not None:
         profile = get_profile(profile_id, user_id)
         if profile is not None and getattr(profile, "allergies", None):
-            ok, violations = check_allergen_violations(
-                {
-                    "title": recommendation.title,
-                    "description": recommendation.description,
-                    "response": recommendation.response,
-                },
-                list(profile.allergies),
-            )
-            if not ok and violations:
-                violations_str = "、".join(str(v) for v in violations)
-                warning_title = "推荐已拦截（与过敏原冲突）"
-                warning_description = (
-                    f"你的档案中标记了以下过敏原：{violations_str}。"
-                    "为避免风险，本次不展示包含这些成分的推荐结果。"
-                )
-                warning_content = (
-                    f"由于推荐内容可能包含你过敏的食物（{violations_str}），本次推荐已被系统拦截。"
-                    "你可以：\n"
-                    "- 在 Profile 中确认或更新过敏原信息；\n"
-                    "- 在提问时明确强调“不要包含这些成分”；\n"
-                    "- 或改问其他不含这些过敏原的选择。"
-                )
-                return _create_meal_recommendation_message_with_conn(
-                    conn,
-                    user_id,
-                    session_id,
-                    title=warning_title,
-                    description=warning_description,
-                    content=warning_content,
-                    knowledge_refs=None,
-                )
+            profile_allergies = list(profile.allergies)
+
+    # Post-check recommendation safety using three sources:
+    # 1) profile allergens, 2) explicit user restrictions in this query,
+    # 3) lightweight contraindication cues (e.g. 痛风/高血压/糖尿病).
+    ok, violations = check_allergen_violations(
+        {
+            "title": recommendation.title,
+            "description": recommendation.description,
+            "response": recommendation.response,
+        },
+        profile_allergies,
+        user_query=content,
+    )
+    if not ok and violations:
+        violations_str = "、".join(str(v) for v in violations)
+        warning_title = "推荐已拦截（触发安全限制）"
+        warning_description = (
+            f"系统检测到推荐内容与以下限制冲突：{violations_str}。"
+            "为避免风险，本次不展示原始推荐结果。"
+        )
+        warning_content = (
+            f"由于推荐内容可能违反你的过敏原、禁忌或显式限制（{violations_str}），本次推荐已被系统拦截。"
+            "你可以：\n"
+            "- 在 Profile 中确认或更新过敏原信息；\n"
+            "- 在问题里继续明确“不要包含哪些食材”；\n"
+            "- 或改问其他不含这些限制项的选择。"
+        )
+        return _create_meal_recommendation_message_with_conn(
+            conn,
+            user_id,
+            session_id,
+            title=warning_title,
+            description=warning_description,
+            content=warning_content,
+            knowledge_refs=None,
+        )
 
     return _create_meal_recommendation_message_with_conn(
         conn,
@@ -878,8 +910,54 @@ def _looks_like_food_description(value: str) -> bool:
     return _contains_any_phrase(value, FOOD_QUANTITY_PATTERNS)
 
 
+def _is_specific_ambiguous_standard_dish_query(value: str) -> bool:
+    """
+    对「套餐/盖饭/炒面」这类词做轻量判定：
+    - 若出现了非泛化修饰（如「板烧鸡腿堡套餐」），按可估算处理；
+    - 若仅是「套餐热量多少」等泛化问法，仍走澄清。
+    """
+    normalized_value = value
+    for prefix in GENERIC_AMBIGUOUS_DISH_PREFIXES:
+        if normalized_value.startswith(prefix):
+            normalized_value = normalized_value[len(prefix):]
+            break
+
+    if any(
+        generic in value
+        for generic in (
+            "套餐",
+            "炒面",
+            "盖饭",
+            "炒饭",
+            "拌饭",
+            "盖浇饭",
+            "米线",
+        )
+    ):
+        patterns = (
+            r"[\u4e00-\u9fff]{2,}套餐",
+            r"[\u4e00-\u9fff]{2,}炒面",
+            r"[\u4e00-\u9fff]{2,}盖饭",
+            r"[\u4e00-\u9fff]{2,}炒饭",
+            r"[\u4e00-\u9fff]{2,}拌饭",
+            r"[\u4e00-\u9fff]{2,}盖浇饭",
+            r"[\u4e00-\u9fff]{2,}米线",
+        )
+        for pattern in patterns:
+            matched = re.search(pattern, normalized_value)
+            if not matched:
+                continue
+            phrase = matched.group(0)
+            if any(phrase.startswith(prefix) for prefix in GENERIC_AMBIGUOUS_DISH_PREFIXES):
+                continue
+            return True
+    return False
+
+
 def _needs_standard_dish_estimate_clarification(value: str) -> bool:
     if not query_needs_standard_dish_clarification(value):
+        return False
+    if _is_specific_ambiguous_standard_dish_query(value):
         return False
     return _contains_any_phrase(value, AMBIGUOUS_STANDARD_DISH_ESTIMATE_HINTS)
 

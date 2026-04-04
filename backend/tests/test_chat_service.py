@@ -164,6 +164,33 @@ class ChatServiceTests(unittest.TestCase):
 
                 self.assertEqual(resolved, "meal_recommendation")
 
+    def test_resolve_message_type_routes_combo_comparison_with_bi_pattern_to_recommendation(self) -> None:
+        resolved = resolve_message_type(
+            "黑咖啡比奶茶更适合控糖吗？",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "meal_recommendation")
+
+    def test_resolve_message_type_routes_combo_set_meal_question_to_estimate(self) -> None:
+        resolved = resolve_message_type(
+            "板烧鸡腿堡套餐大概多少热量？",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "meal_estimate")
+
+    def test_resolve_message_type_returns_clarification_for_ambiguous_standard_dish_with_calorie_hint(self) -> None:
+        resolved = resolve_message_type(
+            "套餐卡路里多少？",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "_clarification")
+
     def test_resolve_message_type_routes_flat_substitute_phrase_to_recommendation(self) -> None:
         resolved = resolve_message_type(
             "奶茶有没有更健康的平替？",
@@ -230,6 +257,15 @@ class ChatServiceTests(unittest.TestCase):
     def test_resolve_message_type_routes_explanation_request_about_recommendation_to_text(self) -> None:
         resolved = resolve_message_type(
             "解释一下这个推荐为什么更适合减脂",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "text")
+
+    def test_resolve_message_type_routes_explanatory_follow_up_with_previous_reference_to_text(self) -> None:
+        resolved = resolve_message_type(
+            "你刚才推荐的鸡胸肉沙拉，为什么更合适？",
             profile_id=12,
             user_id=self.user_id,
         )
@@ -386,6 +422,56 @@ class ChatServiceTests(unittest.TestCase):
         )
         self.assertIsNone(exchange["assistant_message"]["result_total"])
         self.assertIsNone(exchange["assistant_message"]["result_items_json"])
+
+    def test_send_message_in_session_intercepts_recommendation_that_violates_explicit_user_limit(self) -> None:
+        session = create_empty_session(self.user_id)
+
+        with patch(
+            "backend.services.chat_service.generate_meal_recommendation",
+            return_value=GuidanceReply(
+                title="晚餐推荐",
+                description="高蛋白晚餐。",
+                response="可以选黑椒牛柳配米饭。",
+            ),
+        ):
+            exchange = send_message_in_session(
+                self.user_id,
+                int(session["id"]),
+                "我不吃牛肉，晚餐推荐吃什么？",
+                profile_id=None,
+            )
+
+        self.assertIsNotNone(exchange)
+        self.assertEqual(exchange["assistant_message"]["message_type"], "meal_recommendation")
+        self.assertIn("已被系统拦截", exchange["assistant_message"]["content"])
+        self.assertIn("牛肉", exchange["assistant_message"]["content"])
+
+    def test_send_message_in_session_intercepts_recommendation_that_violates_contraindication(self) -> None:
+        session = create_empty_session(self.user_id)
+
+        with patch(
+            "backend.services.chat_service.generate_meal_recommendation",
+            return_value=GuidanceReply(
+                title="晚餐推荐",
+                description="暖胃搭配。",
+                response="推荐你吃海鲜粥，配一小杯啤酒。",
+            ),
+        ):
+            exchange = send_message_in_session(
+                self.user_id,
+                int(session["id"]),
+                "我痛风，晚餐推荐吃什么？",
+                profile_id=None,
+            )
+
+        self.assertIsNotNone(exchange)
+        self.assertEqual(exchange["assistant_message"]["message_type"], "meal_recommendation")
+        self.assertIn("已被系统拦截", exchange["assistant_message"]["content"])
+        self.assertTrue(
+            "海鲜" in exchange["assistant_message"]["content"]
+            or "酒精" in exchange["assistant_message"]["content"]
+            or "啤酒" in exchange["assistant_message"]["content"]
+        )
 
     def test_send_message_in_session_uses_recommendation_fallback_message_when_recommendation_fails(self) -> None:
         session = create_empty_session(self.user_id)

@@ -37,6 +37,10 @@ REAL_USER_CASES = [
     ("炸鸡想换成更健康的，为什么这么换更合适？", RECOMMENDATION),
     ("米饭还是红薯更适合减脂吗？", RECOMMENDATION),
     ("奶茶有没有更健康的平替？", RECOMMENDATION),
+    ("黑咖啡比奶茶更适合控糖吗？", RECOMMENDATION),
+    ("麦香鸡套餐和板烧鸡腿堡套餐哪个更适合减脂？", RECOMMENDATION),
+    ("炸鸡套餐想换掉，给我一个更稳妥的平替", RECOMMENDATION),
+    ("晚餐吃什么更合适，顺便给个替代方案", RECOMMENDATION),
     # ----- 估算意图：描述一餐 + 问热量/营养/大概多少 -----
     ("这份鸡胸肉沙拉大概多少热量？", ESTIMATE),
     ("一碗牛肉面大概多少卡？", ESTIMATE),
@@ -57,4 +61,7 @@ REAL_USER_CASES = [
     ("两根玉米一个水煮蛋", ESTIMATE),
     ("一杯拿铁一个可颂", ESTIMATE),
     ("一份凉皮加肉夹馍", ESTIMATE),
+    ("板烧鸡腿堡套餐大概多少热量？", ESTIMATE),
+    ("双层牛肉堡套餐大概多少卡路里？", ESTIMATE),
+    ("午餐我吃了鸡腿堡套餐和无糖可乐，大概多少热量？", ESTIMATE),
 ]

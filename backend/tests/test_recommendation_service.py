@@ -159,6 +159,35 @@ class RecommendationServiceTests(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(violations, [])
 
+    def test_check_allergen_violations_blocks_explicit_user_restriction_from_query(self) -> None:
+        ok, violations = check_allergen_violations(
+            "建议晚餐吃黑椒牛柳配米饭。",
+            allergens=[],
+            user_query="我不吃牛肉，晚餐推荐吃什么？",
+        )
+
+        self.assertFalse(ok)
+        self.assertIn("牛肉", violations)
+
+    def test_check_allergen_violations_blocks_contraindication_terms_from_query(self) -> None:
+        ok, violations = check_allergen_violations(
+            "推荐你晚餐吃海鲜粥，再来一杯啤酒。",
+            allergens=[],
+            user_query="我痛风，推荐吃什么？",
+        )
+
+        self.assertFalse(ok)
+        self.assertTrue(any(term in violations for term in ("海鲜", "啤酒", "酒精")))
+
+    def test_check_allergen_violations_allows_avoidance_only_context(self) -> None:
+        ok, violations = check_allergen_violations(
+            "建议选择不含花生的鸡胸肉沙拉，避免花生酱。",
+            allergens=["花生"],
+        )
+
+        self.assertTrue(ok)
+        self.assertEqual(violations, [])
+
 
 if __name__ == "__main__":
     unittest.main()
