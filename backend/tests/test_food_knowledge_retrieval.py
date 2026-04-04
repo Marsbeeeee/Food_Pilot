@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -75,22 +76,32 @@ class FoodKnowledgeRetrievalTests(unittest.TestCase):
     def test_dataset_has_required_fields_traceability_and_minimum_size(self) -> None:
         payload = json.loads(self.data_path.read_text(encoding="utf-8"))
         foods = payload["foods"]
-        self.assertGreaterEqual(len(foods), 60)
+        self.assertGreaterEqual(len(foods), 80)
         self.assertEqual(len({food["canonical_name"] for food in foods}), len(foods))
         version = payload["version"]
         self.assertEqual(len(version.split("-")), 3)
         self.assertTrue(any(item["version"] == version for item in payload["change_summary"]))
 
         source_ids = {source["id"] for source in payload["sources"]}
+        source_id_pattern = re.compile(r"^SRC_\d{8}_[a-z0-9_]+$")
+        food_id_pattern = re.compile(r"^[a-z0-9_]+$")
+        self.assertTrue(all(source_id_pattern.fullmatch(source["id"]) for source in payload["sources"]))
         for food in foods:
-            self.assertTrue((food.get("food_id") or food.get("id") or "").strip())
+            self.assertIn("food_id", food)
+            self.assertNotIn("id", food)
+            self.assertTrue(food["food_id"].strip())
+            self.assertIsNotNone(food_id_pattern.fullmatch(food["food_id"]))
             self.assertTrue(food["canonical_name"].strip())
-            self.assertTrue(food["aliases"])
+            self.assertGreaterEqual(len(set(food["aliases"])), 2)
             self.assertTrue(food["portion_hints"])
             self.assertTrue(food["source_ids"])
             self.assertTrue(food["updated_at"].strip())
             self.assertEqual(set(food["nutrition_per_100g"]), {"kcal", "protein_g", "carbs_g", "fat_g"})
             self.assertTrue(set(food["source_ids"]).issubset(source_ids))
+            self.assertTrue(all(source_id_pattern.fullmatch(source_id) for source_id in food["source_ids"]))
+            for hint in food["portion_hints"]:
+                self.assertIn("scene", hint)
+                self.assertTrue(str(hint["scene"]).strip())
 
     def test_retrieve_hits_low_sugar_milk_tea_variant_with_traceable_refs(self) -> None:
         with self._patch_config():
@@ -155,7 +166,7 @@ class FoodKnowledgeRetrievalTests(unittest.TestCase):
 
         self.assertTrue(result.has_hits)
         self.assertEqual(result.references[0]["food_name"], "金枪鱼全麦三明治")
-        self.assertEqual(result.references[0]["food_id"], "tuna-wholewheat-sandwich")
+        self.assertEqual(result.references[0]["food_id"], "tuna_wholewheat_sandwich")
 
     def test_retrieve_hits_fitness_meal_for_brown_rice_chicken_bowl(self) -> None:
         with self._patch_config():
@@ -163,7 +174,7 @@ class FoodKnowledgeRetrievalTests(unittest.TestCase):
 
         self.assertTrue(result.has_hits)
         self.assertEqual(result.references[0]["food_name"], "糙米鸡胸健身餐")
-        self.assertEqual(result.references[0]["food_id"], "brown-rice-chicken-fitness-bowl")
+        self.assertEqual(result.references[0]["food_id"], "brown_rice_chicken_fitness_bowl")
 
 
 if __name__ == "__main__":

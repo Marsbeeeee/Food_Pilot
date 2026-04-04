@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from dataclasses import asdict, dataclass
 from datetime import date
@@ -21,11 +22,13 @@ from backend.services.food_knowledge import (
     _score_entries,
 )
 
-MIN_FOOD_COUNT = 60
+MIN_FOOD_COUNT = 80
 REQUIRED_NUTRITION_KEYS = ("kcal", "protein_g", "carbs_g", "fat_g")
-RELATIVE_IMPROVEMENT_THRESHOLD = 0.10
+RELATIVE_IMPROVEMENT_THRESHOLD = 0.08
 EPSILON = 1e-9
 ALLOWED_SCENE_TAG_CHARS = set("abcdefghijklmnopqrstuvwxyz0123456789_")
+FOOD_ID_PATTERN = re.compile(r"^[a-z0-9_]+$")
+SOURCE_ID_PATTERN = re.compile(r"^SRC_\d{8}_[a-z0-9_]+$")
 
 
 @dataclass(frozen=True)
@@ -126,7 +129,7 @@ def main() -> int:
     )
 
     failures = validate_metric_thresholds(legacy_metrics, enhanced_metrics)
-    if baseline_path.exists():
+    if baseline_path.exists() and not args.update_baseline:
         failures.extend(validate_against_baseline(baseline_path, enhanced_metrics))
 
     if failures:
@@ -420,6 +423,10 @@ def validate_dataset_payload(payload: dict[str, Any], dataset: Any) -> list[str]
             updated_at = source.get("updated_at")
             if not _is_non_empty_text(source_id):
                 failures.append(f"sources[{index}].id is required")
+            elif not SOURCE_ID_PATTERN.fullmatch(str(source_id).strip()):
+                failures.append(
+                    f"sources[{index}].id must match {SOURCE_ID_PATTERN.pattern}"
+                )
             if not _is_non_empty_text(source_name):
                 failures.append(f"sources[{index}].name is required")
             if not _is_non_empty_text(source_type):
@@ -455,17 +462,24 @@ def validate_dataset_payload(payload: dict[str, Any], dataset: Any) -> list[str]
         failures.append(f"duplicate canonical names: {', '.join(sorted(duplicate_names))}")
 
     duplicate_ids = _find_duplicates(
-        (
-            str(food.get("food_id") or food.get("id") or "").strip()
-            for food in raw_foods
-            if isinstance(food, dict)
-        )
+        (str(food.get("food_id") or "").strip() for food in raw_foods if isinstance(food, dict))
     )
     if duplicate_ids:
         failures.append(f"duplicate food ids: {', '.join(sorted(duplicate_ids))}")
 
     known_source_ids = set(dataset.sources)
+    canonical_name_to_food_ids: dict[str, list[str]] = {}
+    for food in raw_foods:
+        if not isinstance(food, dict):
+            continue
+        canonical_name = str(food.get("canonical_name", "")).strip()
+        food_id = str(food.get("food_id", "")).strip()
+        if canonical_name and food_id:
+            canonical_name_to_food_ids.setdefault(canonical_name, []).append(food_id)
+
+    canonical_name_set = set(canonical_name_to_food_ids)
     missing_critical_fields = 0
+    has_release_date_rows = False
     for index, food in enumerate(raw_foods):
         if not isinstance(food, dict):
             failures.append(f"foods[{index}] must be an object")
@@ -474,7 +488,7 @@ def validate_dataset_payload(payload: dict[str, Any], dataset: Any) -> list[str]
 
         food_label = f"foods[{index}]"
         canonical_name = food.get("canonical_name")
-        food_id = food.get("food_id") or food.get("id")
+        food_id = food.get("food_id")
         category = food.get("category")
         aliases = food.get("aliases")
         portion_hints = food.get("portion_hints")
@@ -485,8 +499,15 @@ def validate_dataset_payload(payload: dict[str, Any], dataset: Any) -> list[str]
         nutrition = food.get("nutrition_per_100g")
         ingredient_breakdown = food.get("ingredient_breakdown")
 
+        if "id" in food:
+            failures.append(f"{food_label}.id is deprecated; use food_id only")
         if not _is_non_empty_text(food_id):
-            failures.append(f"{food_label}.food_id (or legacy id) is required")
+            failures.append(f"{food_label}.food_id is required")
+            missing_critical_fields += 1
+        elif not FOOD_ID_PATTERN.fullmatch(str(food_id).strip()):
+            failures.append(
+                f"{food_label}.food_id must match {FOOD_ID_PATTERN.pattern}"
+            )
             missing_critical_fields += 1
         if not _is_non_empty_text(canonical_name):
             failures.append(f"{food_label}.canonical_name is required")
@@ -497,8 +518,22 @@ def validate_dataset_payload(payload: dict[str, Any], dataset: Any) -> list[str]
         if not isinstance(aliases, list) or not aliases or not all(_is_non_empty_text(alias) for alias in aliases):
             failures.append(f"{food_label}.aliases must be a non-empty list of strings")
             missing_critical_fields += 1
-        elif len({str(alias).strip() for alias in aliases}) != len(aliases):
-            failures.append(f"{food_label}.aliases must not contain duplicates")
+        else:
+            deduped_aliases = {str(alias).strip() for alias in aliases}
+            if len(deduped_aliases) != len(aliases):
+                failures.append(f"{food_label}.aliases must not contain duplicates")
+            if len(deduped_aliases) < 2:
+                failures.append(f"{food_label}.aliases must contain at least 2 unique values")
+            if _is_non_empty_text(canonical_name):
+                for alias in deduped_aliases:
+                    if alias == str(canonical_name).strip():
+                        continue
+                    if alias in canonical_name_set:
+                        alias_target_food_ids = canonical_name_to_food_ids.get(alias, [])
+                        if str(food_id).strip() not in alias_target_food_ids:
+                            failures.append(
+                                f"{food_label}.aliases contains canonical-name collision: {alias}"
+                            )
         if not isinstance(portion_hints, list) or not portion_hints:
             failures.append(f"{food_label}.portion_hints must be a non-empty list")
             missing_critical_fields += 1
@@ -512,10 +547,24 @@ def validate_dataset_payload(payload: dict[str, Any], dataset: Any) -> list[str]
                 grams = hint.get("grams")
                 if not isinstance(grams, (int, float)) or grams <= 0:
                     failures.append(f"{food_label}.portion_hints[{hint_index}].grams must be a positive number")
+                scene = hint.get("scene")
+                if not _is_non_empty_text(scene):
+                    failures.append(f"{food_label}.portion_hints[{hint_index}].scene is required")
+                elif not _is_valid_normalized_tag(scene):
+                    failures.append(
+                        f"{food_label}.portion_hints[{hint_index}].scene must use lowercase underscore tag"
+                    )
         if not isinstance(source_ids, list) or not source_ids or not all(_is_non_empty_text(item) for item in source_ids):
             failures.append(f"{food_label}.source_ids must be a non-empty list of strings")
             missing_critical_fields += 1
         else:
+            invalid_source_ids = sorted(
+                {str(item).strip() for item in source_ids if not SOURCE_ID_PATTERN.fullmatch(str(item).strip())}
+            )
+            if invalid_source_ids:
+                failures.append(
+                    f"{food_label}.source_ids must match {SOURCE_ID_PATTERN.pattern}: {', '.join(invalid_source_ids)}"
+                )
             unknown_source_ids = sorted(
                 {str(item).strip() for item in source_ids if str(item).strip() not in known_source_ids}
             )
@@ -528,6 +577,10 @@ def validate_dataset_payload(payload: dict[str, Any], dataset: Any) -> list[str]
             missing_critical_fields += 1
         elif not _is_valid_iso_date(updated_at):
             failures.append(f"{food_label}.updated_at must be ISO date")
+        elif _is_non_empty_text(version) and _is_valid_iso_date(version) and str(updated_at).strip() > str(version).strip():
+            failures.append(f"{food_label}.updated_at must not be later than dataset version {version}")
+        elif str(updated_at).strip() == str(version).strip():
+            has_release_date_rows = True
         if not isinstance(nutrition, dict):
             failures.append(f"{food_label}.nutrition_per_100g must be an object")
             missing_critical_fields += 1
@@ -594,6 +647,9 @@ def validate_dataset_payload(payload: dict[str, Any], dataset: Any) -> list[str]
                     total_ratio += float(ratio)
                 if total_ratio > 1.05:
                     failures.append(f"{food_label}.ingredient_breakdown total ratio must not exceed 1.05")
+
+    if _is_non_empty_text(version) and not has_release_date_rows:
+        failures.append("at least one food row must use updated_at equal to dataset version")
 
     if missing_critical_fields:
         failures.append(f"critical field missing count must be 0, got {missing_critical_fields}")

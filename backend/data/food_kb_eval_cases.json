@@ -5,7 +5,9 @@
     "scenario": "estimate",
     "expected_hit": true,
     "expected_top1": "牛肉面",
-    "expected_any": ["牛肉面"]
+    "expected_any": [
+      "牛肉面"
+    ]
   },
   {
     "id": "estimate_tomato_egg_noodle",
@@ -13,7 +15,9 @@
     "scenario": "estimate",
     "expected_hit": true,
     "expected_top1": "西红柿鸡蛋面",
-    "expected_any": ["西红柿鸡蛋面"]
+    "expected_any": [
+      "西红柿鸡蛋面"
+    ]
   },
   {
     "id": "estimate_lanzhou_noodle",
@@ -21,7 +25,9 @@
     "scenario": "estimate",
     "expected_hit": true,
     "expected_top1": "兰州牛肉面",
-    "expected_any": ["兰州牛肉面"]
+    "expected_any": [
+      "兰州牛肉面"
+    ]
   },
   {
     "id": "estimate_luosifen",
@@ -29,7 +35,9 @@
     "scenario": "estimate",
     "expected_hit": true,
     "expected_top1": "螺蛳粉",
-    "expected_any": ["螺蛳粉"]
+    "expected_any": [
+      "螺蛳粉"
+    ]
   },
   {
     "id": "estimate_roujiamo",
@@ -37,7 +45,9 @@
     "scenario": "estimate",
     "expected_hit": true,
     "expected_top1": "肉夹馍",
-    "expected_any": ["肉夹馍"]
+    "expected_any": [
+      "肉夹馍"
+    ]
   },
   {
     "id": "estimate_jianbing_egg",
@@ -45,7 +55,10 @@
     "scenario": "estimate",
     "expected_hit": true,
     "expected_top1": "煎饼果子",
-    "expected_any": ["煎饼果子", "鸡蛋"]
+    "expected_any": [
+      "煎饼果子",
+      "鸡蛋"
+    ]
   },
   {
     "id": "estimate_douhua",
@@ -53,7 +66,9 @@
     "scenario": "estimate",
     "expected_hit": true,
     "expected_top1": "豆腐脑",
-    "expected_any": ["豆腐脑"]
+    "expected_any": [
+      "豆腐脑"
+    ]
   },
   {
     "id": "estimate_shengye_latte",
@@ -61,7 +76,9 @@
     "scenario": "estimate",
     "expected_hit": true,
     "expected_top1": "生椰拿铁",
-    "expected_any": ["生椰拿铁"]
+    "expected_any": [
+      "生椰拿铁"
+    ]
   },
   {
     "id": "estimate_half_sugar_milk_tea",
@@ -69,7 +86,10 @@
     "scenario": "estimate",
     "expected_hit": true,
     "expected_top1": "低糖珍珠奶茶",
-    "expected_any": ["低糖珍珠奶茶", "珍珠奶茶"]
+    "expected_any": [
+      "低糖珍珠奶茶",
+      "珍珠奶茶"
+    ]
   },
   {
     "id": "estimate_chicken_wrap",
@@ -77,14 +97,19 @@
     "scenario": "estimate",
     "expected_hit": true,
     "expected_top1": "老北京鸡肉卷",
-    "expected_any": ["老北京鸡肉卷"]
+    "expected_any": [
+      "老北京鸡肉卷"
+    ]
   },
   {
     "id": "estimate_breakfast_combo",
     "query": "早饭两个肉包一杯豆浆大概多少热量",
     "scenario": "estimate",
     "expected_hit": true,
-    "expected_any": ["猪肉白菜包子", "无糖豆浆"]
+    "expected_any": [
+      "猪肉白菜包子",
+      "无糖豆浆"
+    ]
   },
   {
     "id": "rec_milk_tea_swap",
@@ -92,7 +117,9 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "珍珠奶茶",
-    "expected_any": ["珍珠奶茶"]
+    "expected_any": [
+      "珍珠奶茶"
+    ]
   },
   {
     "id": "rec_low_sugar_boba",
@@ -100,7 +127,10 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "低糖珍珠奶茶",
-    "expected_any": ["低糖珍珠奶茶", "珍珠奶茶"]
+    "expected_any": [
+      "低糖珍珠奶茶",
+      "珍珠奶茶"
+    ]
   },
   {
     "id": "rec_boba_vs_americano",
@@ -108,7 +138,10 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "低糖珍珠奶茶",
-    "expected_any": ["低糖珍珠奶茶", "美式咖啡"]
+    "expected_any": [
+      "低糖珍珠奶茶",
+      "美式咖啡"
+    ]
   },
   {
     "id": "rec_lemon_tea_alias",
@@ -116,7 +149,9 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "柠檬茶",
-    "expected_any": ["柠檬茶"]
+    "expected_any": [
+      "柠檬茶"
+    ]
   },
   {
     "id": "rec_cheese_foam_alias",
@@ -124,7 +159,9 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "奶盖茶",
-    "expected_any": ["奶盖茶"]
+    "expected_any": [
+      "奶盖茶"
+    ]
   },
   {
     "id": "rec_hot_latte_vs_coconut_latte",
@@ -132,7 +169,10 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "生椰拿铁",
-    "expected_any": ["生椰拿铁", "拿铁咖啡"]
+    "expected_any": [
+      "生椰拿铁",
+      "拿铁咖啡"
+    ]
   },
   {
     "id": "rec_beef_rice_noodle_vs_sour_spicy",
@@ -140,7 +180,10 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "牛肉米线",
-    "expected_any": ["牛肉米线", "酸辣粉"]
+    "expected_any": [
+      "牛肉米线",
+      "酸辣粉"
+    ]
   },
   {
     "id": "rec_malatang_vs_kungpao",
@@ -148,7 +191,10 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "宫保鸡丁",
-    "expected_any": ["麻辣烫", "宫保鸡丁"]
+    "expected_any": [
+      "麻辣烫",
+      "宫保鸡丁"
+    ]
   },
   {
     "id": "rec_yuxiang_oily",
@@ -156,7 +202,9 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "鱼香肉丝",
-    "expected_any": ["鱼香肉丝"]
+    "expected_any": [
+      "鱼香肉丝"
+    ]
   },
   {
     "id": "rec_huangmenji_takeout",
@@ -164,7 +212,9 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "黄焖鸡米饭",
-    "expected_any": ["黄焖鸡米饭"]
+    "expected_any": [
+      "黄焖鸡米饭"
+    ]
   },
   {
     "id": "rec_shengye_vs_latte",
@@ -172,7 +222,10 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "生椰拿铁",
-    "expected_any": ["生椰拿铁", "拿铁咖啡"]
+    "expected_any": [
+      "生椰拿铁",
+      "拿铁咖啡"
+    ]
   },
   {
     "id": "rec_suancaiyu_rice",
@@ -180,7 +233,10 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "酸菜鱼",
-    "expected_any": ["酸菜鱼", "米饭"]
+    "expected_any": [
+      "酸菜鱼",
+      "米饭"
+    ]
   },
   {
     "id": "rec_americano_vs_mango",
@@ -188,21 +244,30 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "杨枝甘露",
-    "expected_any": ["美式咖啡", "杨枝甘露"]
+    "expected_any": [
+      "美式咖啡",
+      "杨枝甘露"
+    ]
   },
   {
     "id": "rec_wonton_vs_xiaolongbao",
     "query": "云吞和小笼包哪个更适合减脂早餐",
     "scenario": "meal_recommendation",
     "expected_hit": true,
-    "expected_any": ["馄饨", "小笼包"]
+    "expected_any": [
+      "馄饨",
+      "小笼包"
+    ]
   },
   {
     "id": "rec_roujiamo_vs_wrap",
     "query": "西安肉夹馍和老北京鸡肉卷哪个更适合午饭",
     "scenario": "meal_recommendation",
     "expected_hit": true,
-    "expected_any": ["肉夹馍", "老北京鸡肉卷"]
+    "expected_any": [
+      "肉夹馍",
+      "老北京鸡肉卷"
+    ]
   },
   {
     "id": "rec_doufuhua_vs_liangpi",
@@ -210,7 +275,10 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "豆腐脑",
-    "expected_any": ["豆腐脑", "凉皮"]
+    "expected_any": [
+      "豆腐脑",
+      "凉皮"
+    ]
   },
   {
     "id": "rec_doufuhua_vs_wonton",
@@ -218,28 +286,40 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "豆腐脑",
-    "expected_any": ["豆腐脑", "馄饨"]
+    "expected_any": [
+      "豆腐脑",
+      "馄饨"
+    ]
   },
   {
     "id": "rec_doufuhua_vs_tomato_egg_noodle",
     "query": "豆腐花和番茄鸡蛋面哪个更适合早餐",
     "scenario": "meal_recommendation",
     "expected_hit": true,
-    "expected_any": ["豆腐脑", "西红柿鸡蛋面"]
+    "expected_any": [
+      "豆腐脑",
+      "西红柿鸡蛋面"
+    ]
   },
   {
     "id": "rec_doufuhua_vs_cheese_foam",
     "query": "豆腐花和芝士奶盖茶哪个更适合控糖",
     "scenario": "meal_recommendation",
     "expected_hit": true,
-    "expected_any": ["豆腐脑", "奶盖茶"]
+    "expected_any": [
+      "豆腐脑",
+      "奶盖茶"
+    ]
   },
   {
     "id": "rec_doufuhua_vs_americano",
     "query": "豆腐花和冰美式哪个更适合控糖",
     "scenario": "meal_recommendation",
     "expected_hit": true,
-    "expected_any": ["豆腐脑", "美式咖啡"]
+    "expected_any": [
+      "豆腐脑",
+      "美式咖啡"
+    ]
   },
   {
     "id": "rec_half_sugar_vs_cheese_foam",
@@ -247,7 +327,10 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "低糖珍珠奶茶",
-    "expected_any": ["低糖珍珠奶茶", "奶盖茶"]
+    "expected_any": [
+      "低糖珍珠奶茶",
+      "奶盖茶"
+    ]
   },
   {
     "id": "text_shengye_reason",
@@ -255,7 +338,10 @@
     "scenario": "text",
     "expected_hit": true,
     "expected_top1": "生椰拿铁",
-    "expected_any": ["生椰拿铁", "珍珠奶茶"]
+    "expected_any": [
+      "生椰拿铁",
+      "珍珠奶茶"
+    ]
   },
   {
     "id": "text_yuxiang_reason",
@@ -263,7 +349,9 @@
     "scenario": "text",
     "expected_hit": true,
     "expected_top1": "鱼香肉丝",
-    "expected_any": ["鱼香肉丝"]
+    "expected_any": [
+      "鱼香肉丝"
+    ]
   },
   {
     "id": "text_low_sugar_reason",
@@ -271,7 +359,10 @@
     "scenario": "text",
     "expected_hit": true,
     "expected_top1": "低糖珍珠奶茶",
-    "expected_any": ["低糖珍珠奶茶", "珍珠奶茶"]
+    "expected_any": [
+      "低糖珍珠奶茶",
+      "珍珠奶茶"
+    ]
   },
   {
     "id": "text_wrap_vs_roujiamo_reason",
@@ -279,7 +370,10 @@
     "scenario": "text",
     "expected_hit": true,
     "expected_top1": "老北京鸡肉卷",
-    "expected_any": ["老北京鸡肉卷", "肉夹馍"]
+    "expected_any": [
+      "老北京鸡肉卷",
+      "肉夹馍"
+    ]
   },
   {
     "id": "text_rice_noodle_reason",
@@ -287,7 +381,10 @@
     "scenario": "text",
     "expected_hit": true,
     "expected_top1": "牛肉米线",
-    "expected_any": ["牛肉米线", "酸辣粉"]
+    "expected_any": [
+      "牛肉米线",
+      "酸辣粉"
+    ]
   },
   {
     "id": "estimate_convenience_store_tuna_sandwich",
@@ -295,7 +392,9 @@
     "scenario": "estimate",
     "expected_hit": true,
     "expected_top1": "金枪鱼全麦三明治",
-    "expected_any": ["金枪鱼全麦三明治"]
+    "expected_any": [
+      "金枪鱼全麦三明治"
+    ]
   },
   {
     "id": "estimate_light_meal_chicken_salad",
@@ -303,7 +402,9 @@
     "scenario": "estimate",
     "expected_hit": true,
     "expected_top1": "鸡胸肉沙拉",
-    "expected_any": ["鸡胸肉沙拉"]
+    "expected_any": [
+      "鸡胸肉沙拉"
+    ]
   },
   {
     "id": "rec_fitness_bowl",
@@ -311,7 +412,9 @@
     "scenario": "meal_recommendation",
     "expected_hit": true,
     "expected_top1": "糙米鸡胸健身餐",
-    "expected_any": ["糙米鸡胸健身餐"]
+    "expected_any": [
+      "糙米鸡胸健身餐"
+    ]
   },
   {
     "id": "negative_english_query",
@@ -336,5 +439,128 @@
     "query": "帮我查一下明天上海天气",
     "scenario": "text",
     "expected_hit": false
+  },
+  {
+    "id": "estimate_tomato_egg_rice",
+    "query": "番茄炒蛋盖饭大概多少热量",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "番茄炒蛋盖饭",
+    "expected_any": [
+      "番茄炒蛋盖饭"
+    ]
+  },
+  {
+    "id": "estimate_burger_fries_cola_set",
+    "query": "汉堡薯条可乐套餐热量高吗",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "汉堡薯条可乐套餐",
+    "expected_any": [
+      "汉堡薯条可乐套餐"
+    ]
+  },
+  {
+    "id": "estimate_chicken_leg_rice_cola_set",
+    "query": "鸡腿饭加可乐套餐大概多少卡",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "鸡腿饭可乐套餐",
+    "expected_any": [
+      "鸡腿饭可乐套餐"
+    ]
+  },
+  {
+    "id": "estimate_youtiao_soymilk_combo",
+    "query": "早餐一根油条一杯豆浆热量多少",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "油条豆浆组合",
+    "expected_any": [
+      "油条豆浆组合"
+    ]
+  },
+  {
+    "id": "estimate_baozi_soymilk_combo",
+    "query": "两个包子一杯豆浆大概多少热量",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "包子豆浆早餐",
+    "expected_any": [
+      "包子豆浆早餐"
+    ]
+  },
+  {
+    "id": "estimate_jianbing_soymilk_combo",
+    "query": "煎饼果子配豆浆热量高不高",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "煎饼果子豆浆早餐",
+    "expected_any": [
+      "煎饼果子豆浆早餐",
+      "煎饼果子"
+    ]
+  },
+  {
+    "id": "estimate_oat_latte",
+    "query": "燕麦拿铁一杯大概多少卡路里",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "燕麦拿铁",
+    "expected_any": [
+      "燕麦拿铁"
+    ]
+  },
+  {
+    "id": "estimate_honey_lemon_tea",
+    "query": "蜂蜜柠檬茶是低热量饮料吗",
+    "scenario": "estimate",
+    "expected_hit": true,
+    "expected_top1": "蜂蜜柠檬茶",
+    "expected_any": [
+      "蜂蜜柠檬茶"
+    ]
+  },
+  {
+    "id": "rec_zero_cola_vs_milk_tea",
+    "query": "无糖可乐和珍珠奶茶哪个更适合控糖",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "零度可乐",
+    "expected_any": [
+      "零度可乐",
+      "珍珠奶茶"
+    ]
+  },
+  {
+    "id": "rec_sugar_free_oolong_swap",
+    "query": "奶茶想换成无糖乌龙茶可以吗",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_top1": "无糖乌龙茶",
+    "expected_any": [
+      "无糖乌龙茶",
+      "珍珠奶茶"
+    ]
+  },
+  {
+    "id": "rec_mapo_tofu_rice_vs_fish_flavored",
+    "query": "麻婆豆腐盖饭和鱼香肉丝盖饭哪个更适合减脂",
+    "scenario": "meal_recommendation",
+    "expected_hit": true,
+    "expected_any": [
+      "麻婆豆腐盖饭",
+      "鱼香肉丝盖饭"
+    ]
+  },
+  {
+    "id": "text_combo_breakfast_reason",
+    "query": "为什么油条豆浆组合不算低脂早餐",
+    "scenario": "text",
+    "expected_hit": true,
+    "expected_top1": "油条豆浆组合",
+    "expected_any": [
+      "油条豆浆组合"
+    ]
   }
 ]

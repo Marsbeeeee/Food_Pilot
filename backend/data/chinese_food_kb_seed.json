@@ -1,29 +1,34 @@
 {
-  "version": "2026-03-30",
+  "version": "2026-04-04",
   "scope": "cn_core_v1",
   "sources": [
     {
-      "id": "cnfct-6th",
-      "name": "中国食物成分表（第6版）",
+      "id": "SRC_20180101_cnfct6",
+      "name": "?????????6??",
       "type": "official_food_composition",
       "updated_at": "2018-01-01"
     },
     {
-      "id": "dietary-guideline-2022",
-      "name": "中国居民膳食指南（2022）",
+      "id": "SRC_20220426_chinese_dietary_guideline",
+      "name": "?????????2022?",
       "type": "dietary_guideline",
       "updated_at": "2022-04-26"
     },
     {
-      "id": "food-pilot-curated-portions-2026q1",
-      "name": "Food Pilot 份量经验库（2026Q1）",
+      "id": "SRC_20260323_foodpilot_curated_portions_q1",
+      "name": "Food Pilot ??????2026Q1?",
       "type": "internal_curated",
       "updated_at": "2026-03-23"
+    },
+    {
+      "id": "SRC_20260404_foodpilot_task2_curated",
+      "name": "Food Pilot ??2???????2026-04?",
+      "type": "internal_curated",
+      "updated_at": "2026-04-04"
     }
   ],
   "foods": [
     {
-      "id": "white-rice-cooked",
       "canonical_name": "米饭",
       "aliases": [
         "白米饭",
@@ -40,22 +45,31 @@
       "portion_hints": [
         {
           "name": "小碗",
-          "grams": 150
+          "grams": 150,
+          "scene": "home_cooking"
         },
         {
           "name": "中碗",
-          "grams": 200
+          "grams": 200,
+          "scene": "home_cooking"
         }
       ],
       "cooking_notes": "蒸煮米饭热量较稳定，炒饭会因烹调油增加热量。",
       "source_ids": [
-        "cnfct-6th",
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20180101_cnfct6",
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "white_rice_cooked",
+      "scene_tags": [
+        "home_cooking"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "noodle-cooked",
       "canonical_name": "面条",
       "aliases": [
         "挂面",
@@ -72,17 +86,25 @@
       "portion_hints": [
         {
           "name": "一碗",
-          "grams": 220
+          "grams": 220,
+          "scene": "home_cooking"
         }
       ],
       "cooking_notes": "汤面和拌面差异主要来自汤底、浇头和油脂。",
       "source_ids": [
-        "cnfct-6th"
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "noodle_cooked",
+      "scene_tags": [
+        "home_cooking"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "mantou-steamed",
       "canonical_name": "馒头",
       "aliases": [
         "白馒头",
@@ -91,24 +113,32 @@
       "category": "staple",
       "nutrition_per_100g": {
         "kcal": 223,
-        "protein_g": 7.0,
-        "carbs_g": 47.0,
+        "protein_g": 7,
+        "carbs_g": 47,
         "fat_g": 1.1
       },
       "portion_hints": [
         {
           "name": "中等大小",
-          "grams": 80
+          "grams": 80,
+          "scene": "home_cooking"
         }
       ],
       "cooking_notes": "馒头属于高碳水主食，适合和蛋白类食物搭配。",
       "source_ids": [
-        "cnfct-6th"
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "mantou_steamed",
+      "scene_tags": [
+        "home_cooking"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "baozi-pork-cabbage",
       "canonical_name": "猪肉白菜包子",
       "aliases": [
         "包子",
@@ -119,28 +149,37 @@
       "nutrition_per_100g": {
         "kcal": 230,
         "protein_g": 8.5,
-        "carbs_g": 31.0,
-        "fat_g": 8.0
+        "carbs_g": 31,
+        "fat_g": 8
       },
       "portion_hints": [
         {
           "name": "1个",
-          "grams": 90
+          "grams": 90,
+          "scene": "takeout"
         },
         {
           "name": "2个",
-          "grams": 180
+          "grams": 180,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "不同馅料和包子大小差异明显，份量需结合个数估算。",
       "source_ids": [
-        "cnfct-6th",
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20180101_cnfct6",
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "baozi_pork_cabbage",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "dumpling-pork-cabbage",
       "canonical_name": "猪肉白菜水饺",
       "aliases": [
         "水饺",
@@ -151,23 +190,31 @@
       "nutrition_per_100g": {
         "kcal": 218,
         "protein_g": 9.2,
-        "carbs_g": 28.0,
+        "carbs_g": 28,
         "fat_g": 7.6
       },
       "portion_hints": [
         {
           "name": "10个",
-          "grams": 250
+          "grams": 250,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "蘸料会额外增加钠和热量，估算时应单独说明。",
       "source_ids": [
-        "cnfct-6th"
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "dumpling_pork_cabbage",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "chicken-breast-cooked",
       "canonical_name": "鸡胸肉",
       "aliases": [
         "鸡胸",
@@ -177,27 +224,36 @@
       "category": "protein",
       "nutrition_per_100g": {
         "kcal": 165,
-        "protein_g": 31.0,
-        "carbs_g": 0.0,
+        "protein_g": 31,
+        "carbs_g": 0,
         "fat_g": 3.6
       },
       "portion_hints": [
         {
           "name": "一块",
-          "grams": 120
+          "grams": 120,
+          "scene": "fitness_meal"
         }
       ],
       "cooking_notes": "同重量下鸡胸肉蛋白密度高，适合减脂与控能量方案。",
       "source_ids": [
-        "cnfct-6th",
-        "dietary-guideline-2022"
+        "SRC_20180101_cnfct6",
+        "SRC_20220426_chinese_dietary_guideline",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "chicken_breast_cooked",
+      "scene_tags": [
+        "fitness_meal"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "cucumber",
       "canonical_name": "黄瓜",
       "aliases": [
+        "黄瓜",
         "青瓜"
       ],
       "category": "vegetable",
@@ -210,17 +266,25 @@
       "portion_hints": [
         {
           "name": "1根中等黄瓜",
-          "grams": 200
+          "grams": 200,
+          "scene": "home_cooking"
         }
       ],
       "cooking_notes": "热量较低，主要提供体积和纤维。",
       "source_ids": [
-        "cnfct-6th"
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "cucumber",
+      "scene_tags": [
+        "home_cooking"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "peanut",
       "canonical_name": "花生米",
       "aliases": [
         "花生",
@@ -236,17 +300,25 @@
       "portion_hints": [
         {
           "name": "一小把",
-          "grams": 20
+          "grams": 20,
+          "scene": "general_cn"
         }
       ],
       "cooking_notes": "能量密度高，少量即可显著增加脂肪与总热量。",
       "source_ids": [
-        "cnfct-6th"
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "peanut",
+      "scene_tags": [
+        "general_cn"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "cooking-oil",
       "canonical_name": "烹调油",
       "aliases": [
         "食用油",
@@ -255,24 +327,32 @@
       "category": "fat",
       "nutrition_per_100g": {
         "kcal": 884,
-        "protein_g": 0.0,
-        "carbs_g": 0.0,
-        "fat_g": 100.0
+        "protein_g": 0,
+        "carbs_g": 0,
+        "fat_g": 100
       },
       "portion_hints": [
         {
           "name": "1汤匙",
-          "grams": 10
+          "grams": 10,
+          "scene": "general_cn"
         }
       ],
       "cooking_notes": "烹调油会明显抬高菜品总热量，估算时应优先关注。",
       "source_ids": [
-        "cnfct-6th"
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "cooking_oil",
+      "scene_tags": [
+        "general_cn"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "egg-boiled",
       "canonical_name": "鸡蛋",
       "aliases": [
         "水煮蛋",
@@ -289,21 +369,30 @@
       "portion_hints": [
         {
           "name": "1个",
-          "grams": 50
+          "grams": 50,
+          "scene": "fitness_meal"
         },
         {
           "name": "2个",
-          "grams": 100
+          "grams": 100,
+          "scene": "fitness_meal"
         }
       ],
       "cooking_notes": "煎蛋通常较水煮蛋额外增加油脂。",
       "source_ids": [
-        "cnfct-6th"
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "egg_boiled",
+      "scene_tags": [
+        "fitness_meal"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "tofu-firm",
       "canonical_name": "北豆腐",
       "aliases": [
         "豆腐",
@@ -315,23 +404,31 @@
         "kcal": 81,
         "protein_g": 8.1,
         "carbs_g": 1.9,
-        "fat_g": 4.0
+        "fat_g": 4
       },
       "portion_hints": [
         {
           "name": "半盒",
-          "grams": 150
+          "grams": 150,
+          "scene": "fitness_meal"
         }
       ],
       "cooking_notes": "豆腐是常见植物蛋白来源，烹调方式会显著影响总热量。",
       "source_ids": [
-        "cnfct-6th",
-        "dietary-guideline-2022"
+        "SRC_20180101_cnfct6",
+        "SRC_20220426_chinese_dietary_guideline",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "tofu_firm",
+      "scene_tags": [
+        "fitness_meal"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "beef-lean-cooked",
       "canonical_name": "瘦牛肉",
       "aliases": [
         "牛肉",
@@ -342,23 +439,31 @@
       "nutrition_per_100g": {
         "kcal": 187,
         "protein_g": 26.4,
-        "carbs_g": 0.0,
+        "carbs_g": 0,
         "fat_g": 8.2
       },
       "portion_hints": [
         {
           "name": "一份",
-          "grams": 120
+          "grams": 120,
+          "scene": "fitness_meal"
         }
       ],
       "cooking_notes": "牛肉蛋白含量高，肥瘦部位差异较大。",
       "source_ids": [
-        "cnfct-6th"
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "beef_lean_cooked",
+      "scene_tags": [
+        "fitness_meal"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "salmon-cooked",
       "canonical_name": "三文鱼",
       "aliases": [
         "烤三文鱼",
@@ -368,24 +473,32 @@
       "nutrition_per_100g": {
         "kcal": 208,
         "protein_g": 20.4,
-        "carbs_g": 0.0,
+        "carbs_g": 0,
         "fat_g": 13.4
       },
       "portion_hints": [
         {
           "name": "一块",
-          "grams": 120
+          "grams": 120,
+          "scene": "fitness_meal"
         }
       ],
       "cooking_notes": "三文鱼脂肪以不饱和脂肪酸为主，但仍需关注总量。",
       "source_ids": [
-        "cnfct-6th",
-        "dietary-guideline-2022"
+        "SRC_20180101_cnfct6",
+        "SRC_20220426_chinese_dietary_guideline",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "salmon_cooked",
+      "scene_tags": [
+        "fitness_meal"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "kungpao-chicken",
       "canonical_name": "宫保鸡丁",
       "aliases": [
         "宫保鸡丁盖饭",
@@ -394,14 +507,15 @@
       "category": "dish",
       "nutrition_per_100g": {
         "kcal": 175,
-        "protein_g": 12.0,
-        "carbs_g": 8.0,
-        "fat_g": 10.0
+        "protein_g": 12,
+        "carbs_g": 8,
+        "fat_g": 10
       },
       "portion_hints": [
         {
           "name": "一份",
-          "grams": 260
+          "grams": 260,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "含油和糖调味较多，配米饭后总热量上升明显。",
@@ -428,17 +542,24 @@
         }
       ],
       "source_ids": [
-        "cnfct-6th",
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20180101_cnfct6",
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "kungpao_chicken",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "mapo-tofu",
       "canonical_name": "麻婆豆腐",
       "aliases": [
         "一份麻婆豆腐",
-        "麻婆豆腐盖饭"
+        "麻婆豆腐"
       ],
       "category": "dish",
       "nutrition_per_100g": {
@@ -450,18 +571,26 @@
       "portion_hints": [
         {
           "name": "一份",
-          "grams": 280
+          "grams": 280,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "油脂和肉末比例影响热量，常与米饭一起食用。",
       "source_ids": [
-        "cnfct-6th",
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20180101_cnfct6",
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "mapo_tofu",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "braised-pork-belly",
       "canonical_name": "红烧肉",
       "aliases": [
         "一份红烧肉",
@@ -470,24 +599,32 @@
       "category": "dish",
       "nutrition_per_100g": {
         "kcal": 430,
-        "protein_g": 13.0,
-        "carbs_g": 7.0,
-        "fat_g": 39.0
+        "protein_g": 13,
+        "carbs_g": 7,
+        "fat_g": 39
       },
       "portion_hints": [
         {
           "name": "一份",
-          "grams": 180
+          "grams": 180,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "脂肪含量高，估算时应优先确认分量和肥瘦比例。",
       "source_ids": [
-        "cnfct-6th"
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "braised_pork_belly",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "beef-noodle-soup",
       "canonical_name": "牛肉面",
       "aliases": [
         "一碗牛肉面",
@@ -497,24 +634,32 @@
       "nutrition_per_100g": {
         "kcal": 132,
         "protein_g": 6.2,
-        "carbs_g": 17.0,
-        "fat_g": 4.0
+        "carbs_g": 17,
+        "fat_g": 4
       },
       "portion_hints": [
         {
           "name": "一大碗",
-          "grams": 550
+          "grams": 550,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "牛肉面热量通常由面量、汤底油脂和浇头决定。",
       "source_ids": [
-        "cnfct-6th",
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20180101_cnfct6",
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "beef_noodle_soup",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "hotpot-spicy-mix",
       "canonical_name": "麻辣烫",
       "aliases": [
         "一碗麻辣烫",
@@ -530,17 +675,25 @@
       "portion_hints": [
         {
           "name": "常见一碗",
-          "grams": 500
+          "grams": 500,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "不同食材组合差异巨大，估算需重点拆分食材和汤底。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "hotpot_spicy_mix",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "xihongshi-jidan-noodle",
       "canonical_name": "西红柿鸡蛋面",
       "aliases": [
         "番茄鸡蛋面",
@@ -556,17 +709,25 @@
       "portion_hints": [
         {
           "name": "一碗",
-          "grams": 480
+          "grams": 480,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "油量和鸡蛋数量会影响整体热量与脂肪。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "xihongshi_jidan_noodle",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "fried-dough-stick",
       "canonical_name": "油条",
       "aliases": [
         "一根油条",
@@ -582,17 +743,25 @@
       "portion_hints": [
         {
           "name": "1根",
-          "grams": 55
+          "grams": 55,
+          "scene": "breakfast"
         }
       ],
       "cooking_notes": "油炸食品能量密度高，早餐组合容易超标。",
       "source_ids": [
-        "cnfct-6th"
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "fried_dough_stick",
+      "scene_tags": [
+        "breakfast"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "soy-milk-unsweetened",
       "canonical_name": "无糖豆浆",
       "aliases": [
         "豆浆",
@@ -608,17 +777,25 @@
       "portion_hints": [
         {
           "name": "1杯",
-          "grams": 300
+          "grams": 300,
+          "scene": "branded_drink"
         }
       ],
       "cooking_notes": "含糖豆浆热量会明显高于无糖版本。",
       "source_ids": [
-        "cnfct-6th"
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "soy_milk_unsweetened",
+      "scene_tags": [
+        "branded_drink"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "bubble-tea-standard",
       "canonical_name": "珍珠奶茶",
       "aliases": [
         "奶茶",
@@ -635,17 +812,25 @@
       "portion_hints": [
         {
           "name": "中杯",
-          "grams": 500
+          "grams": 500,
+          "scene": "branded_drink"
         }
       ],
       "cooking_notes": "糖度和配料（珍珠、奶盖）是热量差异的主要来源。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "bubble_tea_standard",
+      "scene_tags": [
+        "branded_drink"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "yogurt-plain",
       "canonical_name": "原味酸奶",
       "aliases": [
         "酸奶",
@@ -656,24 +841,32 @@
       "nutrition_per_100g": {
         "kcal": 72,
         "protein_g": 3.1,
-        "carbs_g": 9.0,
+        "carbs_g": 9,
         "fat_g": 2.7
       },
       "portion_hints": [
         {
           "name": "1杯",
-          "grams": 200
+          "grams": 200,
+          "scene": "breakfast"
         }
       ],
       "cooking_notes": "风味酸奶通常含糖更高，推荐优先无糖款。",
       "source_ids": [
-        "cnfct-6th",
-        "dietary-guideline-2022"
+        "SRC_20180101_cnfct6",
+        "SRC_20220426_chinese_dietary_guideline",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "yogurt_plain",
+      "scene_tags": [
+        "breakfast"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "banana",
       "canonical_name": "香蕉",
       "aliases": [
         "一根香蕉",
@@ -683,24 +876,32 @@
       "nutrition_per_100g": {
         "kcal": 93,
         "protein_g": 1.4,
-        "carbs_g": 22.0,
+        "carbs_g": 22,
         "fat_g": 0.2
       },
       "portion_hints": [
         {
           "name": "中等大小1根",
-          "grams": 120
+          "grams": 120,
+          "scene": "general_cn"
         }
       ],
       "cooking_notes": "适合训练前后补充碳水，但应结合全天总量。",
       "source_ids": [
-        "cnfct-6th",
-        "dietary-guideline-2022"
+        "SRC_20180101_cnfct6",
+        "SRC_20220426_chinese_dietary_guideline",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-23"
+      "updated_at": "2026-04-04",
+      "food_id": "banana",
+      "scene_tags": [
+        "general_cn"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "egg-fried-rice",
       "canonical_name": "蛋炒饭",
       "aliases": [
         "鸡蛋炒饭",
@@ -717,17 +918,25 @@
       "portion_hints": [
         {
           "name": "一盘",
-          "grams": 320
+          "grams": 320,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "米饭和油量决定热量，上桌常见分量偏大。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "egg_fried_rice",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "yangzhou-fried-rice",
       "canonical_name": "扬州炒饭",
       "aliases": [
         "扬州饭",
@@ -744,17 +953,25 @@
       "portion_hints": [
         {
           "name": "一盘",
-          "grams": 350
+          "grams": 350,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "通常会加入火腿、鸡蛋和蔬菜，油量比白米饭明显更高。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "yangzhou_fried_rice",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "soy-sauce-fried-noodles",
       "canonical_name": "酱油炒面",
       "aliases": [
         "炒面",
@@ -765,23 +982,31 @@
       "nutrition_per_100g": {
         "kcal": 172,
         "protein_g": 5.7,
-        "carbs_g": 27.0,
+        "carbs_g": 27,
         "fat_g": 4.8
       },
       "portion_hints": [
         {
           "name": "一盒",
-          "grams": 320
+          "grams": 320,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "热量主要来自面量和拌炒用油，外卖版往往会偏油。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "soy_sauce_fried_noodles",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "fried-rice-noodles",
       "canonical_name": "炒河粉",
       "aliases": [
         "牛河",
@@ -791,24 +1016,32 @@
       "category": "dish",
       "nutrition_per_100g": {
         "kcal": 176,
-        "protein_g": 5.0,
+        "protein_g": 5,
         "carbs_g": 24.4,
         "fat_g": 6.1
       },
       "portion_hints": [
         {
           "name": "一盒",
-          "grams": 320
+          "grams": 320,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "河粉含水量高，但大火爆炒会带入较多油脂。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "fried_rice_noodles",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "lanzhou-beef-noodle",
       "canonical_name": "兰州牛肉面",
       "aliases": [
         "兰州拉面",
@@ -825,18 +1058,26 @@
       "portion_hints": [
         {
           "name": "一大碗",
-          "grams": 520
+          "grams": 520,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "汤底相对清爽，但面量大时总热量依然不低。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1",
-        "cnfct-6th"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "lanzhou_beef_noodle",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "chongqing-noodles",
       "canonical_name": "重庆小面",
       "aliases": [
         "小面",
@@ -853,17 +1094,25 @@
       "portion_hints": [
         {
           "name": "一碗",
-          "grams": 420
+          "grams": 420,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "红油和臊子会拉高脂肪与钠，清汤版通常更轻。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "chongqing_noodles",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "reganmian",
       "canonical_name": "热干面",
       "aliases": [
         "武汉热干面",
@@ -880,17 +1129,25 @@
       "portion_hints": [
         {
           "name": "一碗",
-          "grams": 300
+          "grams": 300,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "芝麻酱和辣油是热量核心来源，酱料足时能量明显上升。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "reganmian",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "crossing-bridge-rice-noodles",
       "canonical_name": "过桥米线",
       "aliases": [
         "云南过桥米线",
@@ -907,17 +1164,25 @@
       "portion_hints": [
         {
           "name": "一碗",
-          "grams": 500
+          "grams": 500,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "基础汤底不算高热量，但配菜和浇油会带来波动。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "crossing_bridge_rice_noodles",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "luosifen",
       "canonical_name": "螺蛳粉",
       "aliases": [
         "柳州螺蛳粉",
@@ -934,17 +1199,25 @@
       "portion_hints": [
         {
           "name": "一碗",
-          "grams": 430
+          "grams": 430,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "腐竹、花生和红油是额外热量来源，汤底也偏咸。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "luosifen",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "suanlafen",
       "canonical_name": "酸辣粉",
       "aliases": [
         "一碗酸辣粉",
@@ -961,17 +1234,25 @@
       "portion_hints": [
         {
           "name": "一碗",
-          "grams": 400
+          "grams": 400,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "粉量和辣油决定能量，通常碳水占比偏高。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "suanlafen",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "huangmenji-rice",
       "canonical_name": "黄焖鸡米饭",
       "aliases": [
         "黄焖鸡",
@@ -988,20 +1269,27 @@
       "portion_hints": [
         {
           "name": "一份套餐",
-          "grams": 520
+          "grams": 520,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "酱汁拌饭后热量会明显增加，建议区分鸡肉和米饭份量。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "huangmenji_rice",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "yuxiang-shredded-pork",
       "canonical_name": "鱼香肉丝",
       "aliases": [
-        "鱼香肉丝盖饭",
         "一份鱼香肉丝",
         "鱼香肉丝套餐"
       ],
@@ -1015,23 +1303,30 @@
       "portion_hints": [
         {
           "name": "一份",
-          "grams": 260
+          "grams": 260,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "勾芡和糖醋口会带来隐性碳水，盖饭场景总热量更高。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1",
-        "cnfct-6th"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "yuxiang_shredded_pork",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "greenpepper-pork",
       "canonical_name": "青椒肉丝",
       "aliases": [
         "尖椒肉丝",
         "一份青椒肉丝",
-        "青椒肉丝盖饭",
         "辣椒炒肉",
         "青椒炒肉"
       ],
@@ -1045,15 +1340,17 @@
       "portion_hints": [
         {
           "name": "一份",
-          "grams": 240
+          "grams": 240,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "青椒本身热量低，主要能量来自肉丝和炒菜油。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1",
-        "cnfct-6th"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24",
+      "updated_at": "2026-04-04",
       "ingredient_breakdown": [
         {
           "name": "猪瘦肉末",
@@ -1065,12 +1362,18 @@
         },
         {
           "name": "植物油（炒制用）",
-          "ratio": 0.20
+          "ratio": 0.2
         }
+      ],
+      "food_id": "greenpepper_pork",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
       ]
     },
     {
-      "id": "scrambled-egg-tomato",
       "canonical_name": "西红柿炒鸡蛋",
       "aliases": [
         "番茄炒蛋",
@@ -1087,15 +1390,17 @@
       "portion_hints": [
         {
           "name": "一份",
-          "grams": 220
+          "grams": 220,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "糖和油的多少决定波动，家常版通常比外卖版更轻。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1",
-        "cnfct-6th"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24",
+      "updated_at": "2026-04-04",
       "ingredient_breakdown": [
         {
           "name": "鸡蛋（全蛋）",
@@ -1109,10 +1414,16 @@
           "name": "烹饪用油（如大豆油）",
           "ratio": 0.15
         }
+      ],
+      "food_id": "scrambled_egg_tomato",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
       ]
     },
     {
-      "id": "disanxian",
       "canonical_name": "地三鲜",
       "aliases": [
         "一份地三鲜",
@@ -1123,23 +1434,31 @@
       "nutrition_per_100g": {
         "kcal": 152,
         "protein_g": 2.8,
-        "carbs_g": 14.0,
+        "carbs_g": 14,
         "fat_g": 9.8
       },
       "portion_hints": [
         {
           "name": "一份",
-          "grams": 260
+          "grams": 260,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "茄子吸油明显，是这道菜热量偏高的重要原因。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "disanxian",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "twice-cooked-pork",
       "canonical_name": "回锅肉",
       "aliases": [
         "川味回锅肉",
@@ -1156,18 +1475,26 @@
       "portion_hints": [
         {
           "name": "一份",
-          "grams": 220
+          "grams": 220,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "肥瘦相间猪肉和豆瓣油脂让整体能量密度偏高。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1",
-        "cnfct-6th"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "twice_cooked_pork",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "sweet-sour-pork",
       "canonical_name": "糖醋里脊",
       "aliases": [
         "糖醋肉",
@@ -1184,17 +1511,25 @@
       "portion_hints": [
         {
           "name": "一份",
-          "grams": 230
+          "grams": 230,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "裹粉油炸加糖醋汁，会同时提高脂肪和碳水。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "sweet_sour_pork",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "boiled-beef",
       "canonical_name": "水煮牛肉",
       "aliases": [
         "川味水煮牛肉",
@@ -1211,17 +1546,25 @@
       "portion_hints": [
         {
           "name": "一份",
-          "grams": 320
+          "grams": 320,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "表面辣油和垫底配菜会显著影响总热量。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "boiled_beef",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "spicy-dry-pot",
       "canonical_name": "麻辣香锅",
       "aliases": [
         "一份麻辣香锅",
@@ -1238,17 +1581,25 @@
       "portion_hints": [
         {
           "name": "常见一份",
-          "grams": 450
+          "grams": 450,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "食材和油量差异极大，估算时应结合选菜明细。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "spicy_dry_pot",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "grilled-fish",
       "canonical_name": "烤鱼",
       "aliases": [
         "一份烤鱼",
@@ -1259,24 +1610,32 @@
       "nutrition_per_100g": {
         "kcal": 154,
         "protein_g": 16.4,
-        "carbs_g": 3.0,
+        "carbs_g": 3,
         "fat_g": 8.8
       },
       "portion_hints": [
         {
           "name": "半条常见鱼",
-          "grams": 300
+          "grams": 300,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "鱼本身蛋白较高，但配菜和调味油会推高总热量。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1",
-        "cnfct-6th"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "grilled_fish",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "roujiamo",
       "canonical_name": "肉夹馍",
       "aliases": [
         "腊汁肉夹馍",
@@ -1293,17 +1652,25 @@
       "portion_hints": [
         {
           "name": "1个",
-          "grams": 180
+          "grams": 180,
+          "scene": "breakfast"
         }
       ],
       "cooking_notes": "主食和卤肉叠加，单个就能提供较高能量。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "roujiamo",
+      "scene_tags": [
+        "breakfast"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "jianbing-guozi",
       "canonical_name": "煎饼果子",
       "aliases": [
         "一个煎饼果子",
@@ -1315,22 +1682,30 @@
         "kcal": 226,
         "protein_g": 8.3,
         "carbs_g": 25.7,
-        "fat_g": 10.0
+        "fat_g": 10
       },
       "portion_hints": [
         {
           "name": "1个",
-          "grams": 220
+          "grams": 220,
+          "scene": "breakfast"
         }
       ],
       "cooking_notes": "薄脆、酱料和双蛋配置都会让热量继续上浮。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "jianbing_guozi",
+      "scene_tags": [
+        "breakfast"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "shouzhua-bing",
       "canonical_name": "手抓饼",
       "aliases": [
         "一个手抓饼",
@@ -1347,17 +1722,25 @@
       "portion_hints": [
         {
           "name": "1个",
-          "grams": 120
+          "grams": 120,
+          "scene": "breakfast"
         }
       ],
       "cooking_notes": "饼皮本身含油较高，再加香肠培根后热量增长很快。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "shouzhua_bing",
+      "scene_tags": [
+        "breakfast"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "jiucai-jidan-box",
       "canonical_name": "韭菜鸡蛋盒子",
       "aliases": [
         "韭菜盒子",
@@ -1374,17 +1757,25 @@
       "portion_hints": [
         {
           "name": "1个",
-          "grams": 140
+          "grams": 140,
+          "scene": "breakfast"
         }
       ],
       "cooking_notes": "煎制会带入额外油脂，和豆浆搭配很常见。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "jiucai_jidan_box",
+      "scene_tags": [
+        "breakfast"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "chicken-leg-rice",
       "canonical_name": "鸡腿饭",
       "aliases": [
         "照烧鸡腿饭",
@@ -1401,17 +1792,25 @@
       "portion_hints": [
         {
           "name": "一份套餐",
-          "grams": 450
+          "grams": 450,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "酱汁鸡腿配米饭是外卖高频组合，去皮会更轻一些。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "chicken_leg_rice",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "chicken-cutlet-rice",
       "canonical_name": "鸡排饭",
       "aliases": [
         "一份鸡排饭",
@@ -1428,17 +1827,25 @@
       "portion_hints": [
         {
           "name": "一份套餐",
-          "grams": 430
+          "grams": 430,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "裹粉油炸鸡排通常比鸡腿饭更高热量。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "chicken_cutlet_rice",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "congee-pork-centuryegg",
       "canonical_name": "皮蛋瘦肉粥",
       "aliases": [
         "一碗皮蛋瘦肉粥",
@@ -1449,23 +1856,31 @@
       "nutrition_per_100g": {
         "kcal": 46,
         "protein_g": 2.3,
-        "carbs_g": 6.0,
+        "carbs_g": 6,
         "fat_g": 1.3
       },
       "portion_hints": [
         {
           "name": "一碗",
-          "grams": 350
+          "grams": 350,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "单看每百克不高，但大碗和配油条后整体会升高。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "congee_pork_centuryegg",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "suancai-fish",
       "canonical_name": "酸菜鱼",
       "aliases": [
         "一份酸菜鱼",
@@ -1482,18 +1897,26 @@
       "portion_hints": [
         {
           "name": "一份",
-          "grams": 380
+          "grams": 380,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "鱼片本身蛋白不错，但汤油和配米饭会提升总量。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1",
-        "cnfct-6th"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "suancai_fish",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "xiaolongbao",
       "canonical_name": "小笼包",
       "aliases": [
         "一笼小笼包",
@@ -1503,24 +1926,32 @@
       "category": "snack",
       "nutrition_per_100g": {
         "kcal": 228,
-        "protein_g": 8.0,
+        "protein_g": 8,
         "carbs_g": 29.2,
         "fat_g": 8.4
       },
       "portion_hints": [
         {
           "name": "1笼",
-          "grams": 180
+          "grams": 180,
+          "scene": "breakfast"
         }
       ],
       "cooking_notes": "汤汁和肉馅让口感更强，但也会抬高脂肪和钠。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "xiaolongbao",
+      "scene_tags": [
+        "breakfast"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "guotie",
       "canonical_name": "锅贴",
       "aliases": [
         "煎饺",
@@ -1537,17 +1968,25 @@
       "portion_hints": [
         {
           "name": "一份",
-          "grams": 180
+          "grams": 180,
+          "scene": "breakfast"
         }
       ],
       "cooking_notes": "底部煎制会用到额外油，通常比水饺更高热量。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "guotie",
+      "scene_tags": [
+        "breakfast"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "wonton",
       "canonical_name": "馄饨",
       "aliases": [
         "一碗馄饨",
@@ -1564,17 +2003,25 @@
       "portion_hints": [
         {
           "name": "一碗",
-          "grams": 300
+          "grams": 300,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "汤馄饨含水量高，若油葱和辣油较少则整体偏轻。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "wonton",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "liangpi",
       "canonical_name": "凉皮",
       "aliases": [
         "陕西凉皮",
@@ -1591,17 +2038,25 @@
       "portion_hints": [
         {
           "name": "一份",
-          "grams": 280
+          "grams": 280,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "基础凉皮热量不高，但麻酱和辣油会迅速提高能量。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "liangpi",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "tofu-pudding",
       "canonical_name": "豆腐脑",
       "aliases": [
         "豆花",
@@ -1618,18 +2073,26 @@
       "portion_hints": [
         {
           "name": "一碗",
-          "grams": 250
+          "grams": 250,
+          "scene": "breakfast"
         }
       ],
       "cooking_notes": "若加糖浆或油条，整餐热量会远高于豆腐脑本体。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1",
-        "cnfct-6th"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "tofu_pudding",
+      "scene_tags": [
+        "breakfast"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "americano",
       "canonical_name": "美式咖啡",
       "aliases": [
         "冰美式",
@@ -1640,23 +2103,31 @@
       "nutrition_per_100g": {
         "kcal": 2,
         "protein_g": 0.2,
-        "carbs_g": 0.0,
-        "fat_g": 0.0
+        "carbs_g": 0,
+        "fat_g": 0
       },
       "portion_hints": [
         {
           "name": "大杯",
-          "grams": 400
+          "grams": 400,
+          "scene": "branded_drink"
         }
       ],
       "cooking_notes": "不额外加糖浆和奶时，整体热量很低。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "americano",
+      "scene_tags": [
+        "branded_drink"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "latte",
       "canonical_name": "拿铁咖啡",
       "aliases": [
         "拿铁",
@@ -1673,17 +2144,25 @@
       "portion_hints": [
         {
           "name": "中杯",
-          "grams": 350
+          "grams": 350,
+          "scene": "branded_drink"
         }
       ],
       "cooking_notes": "主要热量来自牛奶，如加糖浆则会继续上升。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "latte",
+      "scene_tags": [
+        "branded_drink"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "coconut-latte",
       "canonical_name": "生椰拿铁",
       "aliases": [
         "瑞幸生椰拿铁",
@@ -1693,24 +2172,32 @@
       "category": "drink",
       "nutrition_per_100g": {
         "kcal": 66,
-        "protein_g": 1.0,
+        "protein_g": 1,
         "carbs_g": 6.8,
         "fat_g": 3.8
       },
       "portion_hints": [
         {
           "name": "中杯",
-          "grams": 350
+          "grams": 350,
+          "scene": "branded_drink"
         }
       ],
       "cooking_notes": "椰乳会让脂肪和总热量高于普通拿铁。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "coconut_latte",
+      "scene_tags": [
+        "branded_drink"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "lemon-tea",
       "canonical_name": "柠檬茶",
       "aliases": [
         "鸭屎香柠檬茶",
@@ -1727,17 +2214,25 @@
       "portion_hints": [
         {
           "name": "大杯",
-          "grams": 500
+          "grams": 500,
+          "scene": "branded_drink"
         }
       ],
       "cooking_notes": "糖度是主要变量，正常糖版本的热量会明显更高。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "lemon_tea",
+      "scene_tags": [
+        "branded_drink"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "milk-foam-tea",
       "canonical_name": "奶盖茶",
       "aliases": [
         "芝士奶盖茶",
@@ -1754,17 +2249,25 @@
       "portion_hints": [
         {
           "name": "大杯",
-          "grams": 500
+          "grams": 500,
+          "scene": "branded_drink"
         }
       ],
       "cooking_notes": "奶盖和糖浆会让能量接近甜奶茶，去奶盖可显著降低热量。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "milk_foam_tea",
+      "scene_tags": [
+        "branded_drink"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "bubble-tea-less-sugar",
       "canonical_name": "低糖珍珠奶茶",
       "aliases": [
         "三分糖珍珠奶茶",
@@ -1781,17 +2284,25 @@
       "portion_hints": [
         {
           "name": "中杯",
-          "grams": 500
+          "grams": 500,
+          "scene": "branded_drink"
         }
       ],
       "cooking_notes": "降低糖度后热量会下降，但珍珠仍会提供较多碳水。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "bubble_tea_less_sugar",
+      "scene_tags": [
+        "branded_drink"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "chicken-wrap-old-beijing",
       "canonical_name": "老北京鸡肉卷",
       "aliases": [
         "鸡肉卷",
@@ -1808,17 +2319,25 @@
       "portion_hints": [
         {
           "name": "1个",
-          "grams": 180
+          "grams": 180,
+          "scene": "breakfast"
         }
       ],
       "cooking_notes": "饼皮和酱料会贡献较多碳水与脂肪。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "chicken_wrap_old_beijing",
+      "scene_tags": [
+        "breakfast"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "zhajiangmian",
       "canonical_name": "炸酱面",
       "aliases": [
         "一碗炸酱面",
@@ -1835,17 +2354,25 @@
       "portion_hints": [
         {
           "name": "一碗",
-          "grams": 420
+          "grams": 420,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "酱料含油和盐较高，面量也是主要热量来源。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "zhajiangmian",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "beef-rice-noodle",
       "canonical_name": "牛肉米线",
       "aliases": [
         "一碗牛肉米线",
@@ -1862,18 +2389,26 @@
       "portion_hints": [
         {
           "name": "一碗",
-          "grams": 500
+          "grams": 500,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "清汤版本相对更轻，辣油和浇头会额外提高热量。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1",
-        "cnfct-6th"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "beef_rice_noodle",
+      "scene_tags": [
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "mango-pomelo-sago",
       "canonical_name": "杨枝甘露",
       "aliases": [
         "一杯杨枝甘露",
@@ -1885,23 +2420,31 @@
         "kcal": 91,
         "protein_g": 0.8,
         "carbs_g": 19.4,
-        "fat_g": 1.0
+        "fat_g": 1
       },
       "portion_hints": [
         {
           "name": "大杯",
-          "grams": 450
+          "grams": 450,
+          "scene": "branded_drink"
         }
       ],
       "cooking_notes": "椰浆和西米会带来较多碳水，通常属于高糖甜品饮品。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04",
+      "food_id": "mango_pomelo_sago",
+      "scene_tags": [
+        "branded_drink"
+      ],
+      "region_tags": [
+        "nationwide"
+      ]
     },
     {
-      "id": "tea-egg",
-      "food_id": "tea-egg",
+      "food_id": "tea_egg",
       "canonical_name": "茶叶蛋",
       "aliases": [
         "一个茶叶蛋",
@@ -1925,22 +2468,24 @@
       "portion_hints": [
         {
           "name": "1个",
-          "grams": 55
+          "grams": 55,
+          "scene": "breakfast"
         },
         {
           "name": "2个",
-          "grams": 110
+          "grams": 110,
+          "scene": "breakfast"
         }
       ],
       "cooking_notes": "茶叶蛋蛋白密度较高，适合作为早餐或加餐中的补蛋白选项。",
       "source_ids": [
-        "cnfct-6th",
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20180101_cnfct6",
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04"
     },
     {
-      "id": "oden",
       "food_id": "oden",
       "canonical_name": "关东煮",
       "aliases": [
@@ -1960,27 +2505,29 @@
         "kcal": 68,
         "protein_g": 4.2,
         "carbs_g": 6.1,
-        "fat_g": 3.0
+        "fat_g": 3
       },
       "portion_hints": [
         {
           "name": "小份",
-          "grams": 180
+          "grams": 180,
+          "scene": "convenience_store"
         },
         {
           "name": "大份",
-          "grams": 300
+          "grams": 300,
+          "scene": "convenience_store"
         }
       ],
       "cooking_notes": "热量差异主要来自丸类、鱼豆腐和汤底中的加工制品占比。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04"
     },
     {
-      "id": "tuna-wholewheat-sandwich",
-      "food_id": "tuna-wholewheat-sandwich",
+      "food_id": "tuna_wholewheat_sandwich",
       "canonical_name": "金枪鱼全麦三明治",
       "aliases": [
         "全麦金枪鱼三明治",
@@ -2004,18 +2551,19 @@
       "portion_hints": [
         {
           "name": "1份",
-          "grams": 170
+          "grams": 170,
+          "scene": "convenience_store"
         }
       ],
       "cooking_notes": "蛋黄酱和夹馅酱料会明显抬高脂肪与总热量，全麦面包能提升饱腹感。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04"
     },
     {
-      "id": "high-protein-unsweetened-yogurt",
-      "food_id": "high-protein-unsweetened-yogurt",
+      "food_id": "high_protein_unsweetened_yogurt",
       "canonical_name": "高蛋白无糖酸奶",
       "aliases": [
         "高蛋白酸奶",
@@ -2039,18 +2587,19 @@
       "portion_hints": [
         {
           "name": "1杯",
-          "grams": 200
+          "grams": 200,
+          "scene": "convenience_store"
         }
       ],
       "cooking_notes": "相比普通风味酸奶，这类产品通常蛋白更高、添加糖更低，适合减脂期加餐。",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04"
     },
     {
-      "id": "chicken-salad",
-      "food_id": "chicken-salad",
+      "food_id": "chicken_salad",
       "canonical_name": "鸡胸肉沙拉",
       "aliases": [
         "鸡肉沙拉",
@@ -2074,19 +2623,20 @@
       "portion_hints": [
         {
           "name": "1份",
-          "grams": 260
+          "grams": 260,
+          "scene": "light_meal"
         }
       ],
       "cooking_notes": "热量高低主要取决于酱汁、坚果和谷物配料，去掉高脂酱汁后更适合减脂。",
       "source_ids": [
-        "cnfct-6th",
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20180101_cnfct6",
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24"
+      "updated_at": "2026-04-04"
     },
     {
-      "id": "brown-rice-chicken-fitness-bowl",
-      "food_id": "brown-rice-chicken-fitness-bowl",
+      "food_id": "brown_rice_chicken_fitness_bowl",
       "canonical_name": "糙米鸡胸健身餐",
       "aliases": [
         "鸡胸糙米饭",
@@ -2110,15 +2660,17 @@
       "portion_hints": [
         {
           "name": "1份",
-          "grams": 350
+          "grams": 350,
+          "scene": "fitness_meal"
         }
       ],
       "cooking_notes": "常见搭配为糙米、鸡胸肉和西兰花，属于高蛋白、相对稳妥的外卖健身餐组合。",
       "source_ids": [
-        "cnfct-6th",
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20180101_cnfct6",
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-24",
+      "updated_at": "2026-04-04",
       "ingredient_breakdown": [
         {
           "name": "糙米饭",
@@ -2130,17 +2682,16 @@
         },
         {
           "name": "西兰花",
-          "ratio": 0.20
+          "ratio": 0.2
         }
       ]
     },
     {
-      "id": "pizza-generic",
-      "food_id": "pizza-generic",
-      "canonical_name": "\u62ab\u8428",
+      "food_id": "pizza_generic",
+      "canonical_name": "披萨",
       "aliases": [
         "pizza",
-        "\u610f\u5f0f\u62ab\u8428"
+        "意式披萨"
       ],
       "category": "dish",
       "scene_tags": [
@@ -2152,30 +2703,31 @@
       ],
       "nutrition_per_100g": {
         "kcal": 266,
-        "protein_g": 11.0,
-        "carbs_g": 33.0,
-        "fat_g": 10.0
+        "protein_g": 11,
+        "carbs_g": 33,
+        "fat_g": 10
       },
       "portion_hints": [
         {
-          "name": "1\u4efd",
-          "grams": 260
+          "name": "1份",
+          "grams": 260,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "Common takeaway pizza baseline for high-frequency estimate matching.",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-30"
+      "updated_at": "2026-04-04"
     },
     {
-      "id": "margherita-pizza",
-      "food_id": "margherita-pizza",
-      "canonical_name": "\u739b\u683c\u4e3d\u7279\u62ab\u8428",
+      "food_id": "margherita_pizza",
+      "canonical_name": "玛格丽特披萨",
       "aliases": [
-        "\u739b\u683c\u4e3d\u5854\u62ab\u8428",
+        "玛格丽塔披萨",
         "margherita pizza",
-        "\u739b\u683c\u4e3d\u7279pizza"
+        "玛格丽特pizza"
       ],
       "category": "dish",
       "scene_tags": [
@@ -2187,21 +2739,720 @@
       ],
       "nutrition_per_100g": {
         "kcal": 250,
-        "protein_g": 10.0,
-        "carbs_g": 31.0,
-        "fat_g": 9.0
+        "protein_g": 10,
+        "carbs_g": 31,
+        "fat_g": 9
       },
       "portion_hints": [
         {
-          "name": "1\u4efd",
-          "grams": 260
+          "name": "1份",
+          "grams": 260,
+          "scene": "takeout"
         }
       ],
       "cooking_notes": "Cheese and crust density are the main calorie drivers for margherita style pizza.",
       "source_ids": [
-        "food-pilot-curated-portions-2026q1"
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
       ],
-      "updated_at": "2026-03-30"
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "tomato_egg_rice",
+      "canonical_name": "番茄炒蛋盖饭",
+      "aliases": [
+        "番茄鸡蛋盖饭",
+        "西红柿炒蛋盖饭",
+        "番茄炒蛋饭"
+      ],
+      "category": "dish",
+      "scene_tags": [
+        "takeout",
+        "lunch_combo"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 152,
+        "protein_g": 5.8,
+        "carbs_g": 19.5,
+        "fat_g": 5.6
+      },
+      "portion_hints": [
+        {
+          "name": "????",
+          "grams": 380,
+          "scene": "takeout"
+        },
+        {
+          "name": "??",
+          "grams": 460,
+          "scene": "takeout"
+        }
+      ],
+      "cooking_notes": "??????????????????????",
+      "source_ids": [
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "green_pepper_pork_rice",
+      "canonical_name": "青椒肉丝盖饭",
+      "aliases": [
+        "辣椒炒肉盖饭",
+        "青椒肉丝饭",
+        "青椒炒肉盖饭"
+      ],
+      "category": "dish",
+      "scene_tags": [
+        "takeout",
+        "lunch_combo"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 176,
+        "protein_g": 7.4,
+        "carbs_g": 18.6,
+        "fat_g": 8.1
+      },
+      "portion_hints": [
+        {
+          "name": "????",
+          "grams": 400,
+          "scene": "takeout"
+        },
+        {
+          "name": "???",
+          "grams": 450,
+          "scene": "takeout"
+        }
+      ],
+      "cooking_notes": "???????????????????????",
+      "source_ids": [
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "fish_flavored_shredded_pork_rice",
+      "canonical_name": "鱼香肉丝盖饭",
+      "aliases": [
+        "鱼香肉丝饭",
+        "鱼香肉丝套餐饭",
+        "鱼香盖饭"
+      ],
+      "category": "dish",
+      "scene_tags": [
+        "takeout",
+        "lunch_combo"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 183,
+        "protein_g": 7.2,
+        "carbs_g": 19.3,
+        "fat_g": 8.7
+      },
+      "portion_hints": [
+        {
+          "name": "????",
+          "grams": 400,
+          "scene": "takeout"
+        },
+        {
+          "name": "??",
+          "grams": 470,
+          "scene": "takeout"
+        }
+      ],
+      "cooking_notes": "????????????????????????",
+      "source_ids": [
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "mapo_tofu_rice",
+      "canonical_name": "麻婆豆腐盖饭",
+      "aliases": [
+        "麻婆豆腐饭",
+        "麻婆豆腐套餐饭",
+        "麻婆盖饭"
+      ],
+      "category": "dish",
+      "scene_tags": [
+        "takeout",
+        "lunch_combo"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 171,
+        "protein_g": 6.2,
+        "carbs_g": 18.8,
+        "fat_g": 8.1
+      },
+      "portion_hints": [
+        {
+          "name": "????",
+          "grams": 390,
+          "scene": "takeout"
+        },
+        {
+          "name": "????",
+          "grams": 440,
+          "scene": "takeout"
+        }
+      ],
+      "cooking_notes": "??????????????????????",
+      "source_ids": [
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "burger_fries_cola_set",
+      "canonical_name": "汉堡薯条可乐套餐",
+      "aliases": [
+        "汉堡套餐",
+        "汉堡加薯条可乐",
+        "快乐套餐"
+      ],
+      "category": "dish",
+      "scene_tags": [
+        "takeout",
+        "combo_set"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 265,
+        "protein_g": 8.2,
+        "carbs_g": 25.3,
+        "fat_g": 14.2
+      },
+      "portion_hints": [
+        {
+          "name": "????",
+          "grams": 480,
+          "scene": "combo_set"
+        },
+        {
+          "name": "?????",
+          "grams": 560,
+          "scene": "combo_set"
+        }
+      ],
+      "cooking_notes": "???????????????????????",
+      "source_ids": [
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "fried_chicken_burger_set",
+      "canonical_name": "炸鸡汉堡套餐",
+      "aliases": [
+        "炸鸡堡套餐",
+        "炸鸡加汉堡套餐",
+        "炸鸡可乐套餐"
+      ],
+      "category": "dish",
+      "scene_tags": [
+        "takeout",
+        "combo_set"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 286,
+        "protein_g": 13.1,
+        "carbs_g": 20.5,
+        "fat_g": 16.4
+      },
+      "portion_hints": [
+        {
+          "name": "????",
+          "grams": 460,
+          "scene": "combo_set"
+        },
+        {
+          "name": "????",
+          "grams": 540,
+          "scene": "combo_set"
+        }
+      ],
+      "cooking_notes": "?????????????????????????",
+      "source_ids": [
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "beef_noodle_egg_set",
+      "canonical_name": "牛肉面卤蛋套餐",
+      "aliases": [
+        "牛肉面加卤蛋套餐",
+        "牛肉面套餐",
+        "面加蛋套餐"
+      ],
+      "category": "dish",
+      "scene_tags": [
+        "takeout",
+        "combo_set"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 154,
+        "protein_g": 7.1,
+        "carbs_g": 18.0,
+        "fat_g": 5.8
+      },
+      "portion_hints": [
+        {
+          "name": "????",
+          "grams": 620,
+          "scene": "combo_set"
+        },
+        {
+          "name": "???",
+          "grams": 700,
+          "scene": "combo_set"
+        }
+      ],
+      "cooking_notes": "???????????????????",
+      "source_ids": [
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "chicken_leg_rice_cola_set",
+      "canonical_name": "鸡腿饭可乐套餐",
+      "aliases": [
+        "鸡腿饭套餐",
+        "鸡排饭可乐套餐",
+        "鸡腿饭加可乐"
+      ],
+      "category": "dish",
+      "scene_tags": [
+        "takeout",
+        "combo_set"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 228,
+        "protein_g": 10.0,
+        "carbs_g": 23.0,
+        "fat_g": 10.2
+      },
+      "portion_hints": [
+        {
+          "name": "????",
+          "grams": 520,
+          "scene": "combo_set"
+        },
+        {
+          "name": "???",
+          "grams": 620,
+          "scene": "combo_set"
+        }
+      ],
+      "cooking_notes": "??????????????????????",
+      "source_ids": [
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "youtiao_soymilk_combo",
+      "canonical_name": "油条豆浆组合",
+      "aliases": [
+        "油条配豆浆",
+        "一根油条一杯豆浆",
+        "早餐油条豆浆"
+      ],
+      "category": "snack",
+      "scene_tags": [
+        "breakfast",
+        "street_food"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 206,
+        "protein_g": 6.4,
+        "carbs_g": 20.9,
+        "fat_g": 10.7
+      },
+      "portion_hints": [
+        {
+          "name": "1???+1???",
+          "grams": 360,
+          "scene": "breakfast"
+        },
+        {
+          "name": "2???+1???",
+          "grams": 420,
+          "scene": "breakfast"
+        }
+      ],
+      "cooking_notes": "???????????????????????",
+      "source_ids": [
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "baozi_soymilk_combo",
+      "canonical_name": "包子豆浆早餐",
+      "aliases": [
+        "两个包子一杯豆浆",
+        "包子配豆浆",
+        "早餐包子豆浆"
+      ],
+      "category": "snack",
+      "scene_tags": [
+        "breakfast",
+        "street_food"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 178,
+        "protein_g": 7.0,
+        "carbs_g": 23.6,
+        "fat_g": 6.0
+      },
+      "portion_hints": [
+        {
+          "name": "2???+1???",
+          "grams": 360,
+          "scene": "breakfast"
+        },
+        {
+          "name": "3???+1???",
+          "grams": 450,
+          "scene": "breakfast"
+        }
+      ],
+      "cooking_notes": "???????????????????????",
+      "source_ids": [
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "jianbing_soymilk_combo",
+      "canonical_name": "煎饼果子豆浆早餐",
+      "aliases": [
+        "煎饼果子配豆浆",
+        "煎饼加豆浆",
+        "早餐煎饼豆浆"
+      ],
+      "category": "snack",
+      "scene_tags": [
+        "breakfast",
+        "street_food"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 189,
+        "protein_g": 7.5,
+        "carbs_g": 23.0,
+        "fat_g": 7.5
+      },
+      "portion_hints": [
+        {
+          "name": "1???+1???",
+          "grams": 380,
+          "scene": "breakfast"
+        },
+        {
+          "name": "???",
+          "grams": 420,
+          "scene": "breakfast"
+        }
+      ],
+      "cooking_notes": "??????????????????????",
+      "source_ids": [
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "teaegg_congee_combo",
+      "canonical_name": "茶叶蛋白粥早餐",
+      "aliases": [
+        "茶叶蛋配白粥",
+        "一碗粥一个茶叶蛋",
+        "白粥茶叶蛋组合"
+      ],
+      "category": "snack",
+      "scene_tags": [
+        "breakfast",
+        "convenience_store"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 124,
+        "protein_g": 5.3,
+        "carbs_g": 13.4,
+        "fat_g": 5.2
+      },
+      "portion_hints": [
+        {
+          "name": "1???+1????",
+          "grams": 420,
+          "scene": "breakfast"
+        },
+        {
+          "name": "1???+2????",
+          "grams": 470,
+          "scene": "breakfast"
+        }
+      ],
+      "cooking_notes": "????????????????????",
+      "source_ids": [
+        "SRC_20180101_cnfct6",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "oat_latte",
+      "canonical_name": "燕麦拿铁",
+      "aliases": [
+        "燕麦奶拿铁",
+        "燕麦奶咖啡",
+        "一杯燕麦拿铁"
+      ],
+      "category": "drink",
+      "scene_tags": [
+        "branded_drink",
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 52,
+        "protein_g": 1.6,
+        "carbs_g": 6.2,
+        "fat_g": 2.3
+      },
+      "portion_hints": [
+        {
+          "name": "??",
+          "grams": 350,
+          "scene": "branded_drink"
+        },
+        {
+          "name": "??",
+          "grams": 420,
+          "scene": "branded_drink"
+        }
+      ],
+      "cooking_notes": "??????????????????????",
+      "source_ids": [
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "zero_sugar_cola",
+      "canonical_name": "零度可乐",
+      "aliases": [
+        "无糖可乐",
+        "可口可乐零度",
+        "一罐零度可乐"
+      ],
+      "category": "drink",
+      "scene_tags": [
+        "convenience_store",
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 0,
+        "protein_g": 0.0,
+        "carbs_g": 0.0,
+        "fat_g": 0.0
+      },
+      "portion_hints": [
+        {
+          "name": "???",
+          "grams": 330,
+          "scene": "convenience_store"
+        },
+        {
+          "name": "??",
+          "grams": 500,
+          "scene": "takeout"
+        }
+      ],
+      "cooking_notes": "????????????????????",
+      "source_ids": [
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "sugar_free_oolong_tea",
+      "canonical_name": "无糖乌龙茶",
+      "aliases": [
+        "无糖茶",
+        "乌龙茶无糖",
+        "瓶装无糖乌龙茶"
+      ],
+      "category": "drink",
+      "scene_tags": [
+        "convenience_store",
+        "branded_drink"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 1,
+        "protein_g": 0.0,
+        "carbs_g": 0.1,
+        "fat_g": 0.0
+      },
+      "portion_hints": [
+        {
+          "name": "??",
+          "grams": 500,
+          "scene": "convenience_store"
+        },
+        {
+          "name": "??",
+          "grams": 450,
+          "scene": "branded_drink"
+        }
+      ],
+      "cooking_notes": "????????????????",
+      "source_ids": [
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "honey_lemon_tea",
+      "canonical_name": "蜂蜜柠檬茶",
+      "aliases": [
+        "蜂蜜柠檬水",
+        "蜂蜜冷泡柠檬茶",
+        "一杯蜂蜜柠檬茶"
+      ],
+      "category": "drink",
+      "scene_tags": [
+        "branded_drink",
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 42,
+        "protein_g": 0.1,
+        "carbs_g": 10.2,
+        "fat_g": 0.1
+      },
+      "portion_hints": [
+        {
+          "name": "??",
+          "grams": 500,
+          "scene": "branded_drink"
+        },
+        {
+          "name": "???",
+          "grams": 650,
+          "scene": "branded_drink"
+        }
+      ],
+      "cooking_notes": "????????????????????????",
+      "source_ids": [
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
+    },
+    {
+      "food_id": "jasmine_milk_tea",
+      "canonical_name": "茉莉奶绿",
+      "aliases": [
+        "茉莉奶茶",
+        "奶绿",
+        "茉莉绿茶拿铁"
+      ],
+      "category": "drink",
+      "scene_tags": [
+        "branded_drink",
+        "takeout"
+      ],
+      "region_tags": [
+        "nationwide"
+      ],
+      "nutrition_per_100g": {
+        "kcal": 69,
+        "protein_g": 0.9,
+        "carbs_g": 12.1,
+        "fat_g": 1.8
+      },
+      "portion_hints": [
+        {
+          "name": "??",
+          "grams": 500,
+          "scene": "branded_drink"
+        },
+        {
+          "name": "??",
+          "grams": 620,
+          "scene": "branded_drink"
+        }
+      ],
+      "cooking_notes": "??????????????????????????",
+      "source_ids": [
+        "SRC_20260323_foodpilot_curated_portions_q1",
+        "SRC_20260404_foodpilot_task2_curated"
+      ],
+      "updated_at": "2026-04-04"
     }
   ],
   "change_summary": [
@@ -2210,6 +3461,12 @@
       "updated_at": "2026-03-30",
       "summary": "新增 43 条高频与次高频中文食物条目，覆盖地方菜、外卖常见菜和饮品变体，并补齐结构化来源追溯。",
       "added_food_count": 2
+    },
+    {
+      "version": "2026-04-04",
+      "updated_at": "2026-04-04",
+      "summary": "??2??????????ID?????????/??/??/????20????portion_hints.scene????????",
+      "added_food_count": 17
     }
   ]
 }
