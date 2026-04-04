@@ -1,6 +1,6 @@
 import json
 from typing import Any
-from urllib import error, request
+from urllib import error
 
 from pydantic import ValidationError
 
@@ -11,8 +11,10 @@ from backend.schemas.profile import ProfileOut
 from backend.schemas.recommendation import GuidanceReply
 from backend.services.food_knowledge import retrieve_food_knowledge
 from backend.services.profile_service import get_profile
+from backend.services.prompt_layers import build_layered_system_prompt
 from backend.services.recommendation_contract import (
-    GUIDANCE_RESPONSE_INSTRUCTIONS,
+    GUIDANCE_MODE_RULES,
+    GUIDANCE_OUTPUT_CONTRACT,
     GUIDANCE_RESPONSE_SCHEMA,
 )
 
@@ -225,24 +227,23 @@ def _build_guidance_system_instruction(
     food_knowledge_context: str | None = None,
 ) -> str:
     """构建推荐/文本回复的系统指令。"""
-    instructions = GUIDANCE_RESPONSE_INSTRUCTIONS.get(
+    mode_rules = GUIDANCE_MODE_RULES.get(
         response_mode,
-        GUIDANCE_RESPONSE_INSTRUCTIONS["meal_recommendation"],
+        GUIDANCE_MODE_RULES["meal_recommendation"],
     )
-    parts = [DEFAULT_RECOMMENDATION_SYSTEM_PROMPT, instructions]
-    if profile_context:
-        parts.append(profile_context)
-    if food_knowledge_context:
-        parts.extend(
-            [
-                (
-                    "You are given a retrieved Chinese food knowledge context. "
-                    "Use it as factual prior when discussing Chinese ingredients and dishes."
-                ),
-                food_knowledge_context,
-            ]
-        )
-    return "\n\n".join(parts)
+    system_rules = "\n\n".join(
+        [
+            DEFAULT_RECOMMENDATION_SYSTEM_PROMPT,
+            mode_rules,
+        ]
+    )
+    return build_layered_system_prompt(
+        route_name=response_mode,
+        system_rules=system_rules,
+        profile_context=profile_context,
+        retrieved_knowledge_context=food_knowledge_context,
+        output_contract=GUIDANCE_OUTPUT_CONTRACT,
+    )
 
 
 def _parse_guidance_payload(

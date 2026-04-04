@@ -9,7 +9,8 @@ from backend.schemas.knowledge import KnowledgeReference
 from backend.schemas.profile import ProfileOut
 from backend.services.ai_client import call_ai
 from backend.services.estimate_contract import (
-    ESTIMATE_RESPONSE_INSTRUCTION,
+    ESTIMATE_CAPABILITY_RULES,
+    ESTIMATE_OUTPUT_CONTRACT,
     ESTIMATE_RESPONSE_SCHEMA,
 )
 from backend.services.estimate_parser import parse_estimate_payload
@@ -17,6 +18,7 @@ from backend.services.food_knowledge import (
     build_single_dish_ingredient_breakdown,
     retrieve_food_knowledge,
 )
+from backend.services.prompt_layers import build_layered_system_prompt
 from backend.services.profile_service import get_profile
 
 
@@ -223,43 +225,30 @@ def _build_estimate_system_instruction(
     food_knowledge_context: str | None = None,
     force_min_items: int | None = None,
 ) -> str:
-    parts = [system_prompt.strip()]
-
-    if profile_context:
-        parts.extend(
-            [
-                "Use the following user profile context when personalizing assumptions and the final suggestion.",
-                profile_context,
-                (
-                    "When profile context is available, keep the calorie estimate grounded in the described meal, "
-                    "but make the suggestion align with the user's goal, calorie target, diet style, and allergies."
-                ),
-                "Do not recommend foods that conflict with listed allergies or avoidances.",
-            ]
-        )
-
-    if food_knowledge_context:
-        parts.extend(
-            [
-                (
-                    "You are given a retrieved Chinese food knowledge context. "
-                    "Use it as factual prior for dish/ingredient nutrition and portion assumptions."
-                ),
-                food_knowledge_context,
-            ]
-        )
-
+    route_rules: list[str] = [
+        system_prompt.strip(),
+        ESTIMATE_CAPABILITY_RULES,
+        (
+            "When PROFILE_CONTEXT is available, personalize assumptions and final suggestion "
+            "while keeping nutrition estimate grounded in the described meal."
+        ),
+        "Do not recommend foods that conflict with listed allergies or avoidances.",
+    ]
     if force_min_items and force_min_items > 1:
-        parts.append(
+        route_rules.append(
             (
                 "Important formatting rule for this request: the user likely mentioned multiple foods. "
                 f"Return at least {force_min_items} distinct items in `items`, one major food per item. "
                 "Do not merge multiple foods into a single item row."
             )
         )
-
-    parts.append(ESTIMATE_RESPONSE_INSTRUCTION)
-    return "\n\n".join(parts)
+    return build_layered_system_prompt(
+        route_name="estimate",
+        system_rules="\n\n".join(route_rules),
+        profile_context=profile_context,
+        retrieved_knowledge_context=food_knowledge_context,
+        output_contract=ESTIMATE_OUTPUT_CONTRACT,
+    )
 
 
 def _needs_multi_food_retry(result: EstimateResult, inferred_multi_food_count: int | None) -> bool:

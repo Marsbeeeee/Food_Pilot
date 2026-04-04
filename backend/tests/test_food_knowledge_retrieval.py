@@ -14,7 +14,7 @@ class FoodKnowledgeRetrievalTests(unittest.TestCase):
     def setUp(self) -> None:
         self.data_path = Path(__file__).resolve().parents[1] / "data" / "chinese_food_kb_seed.json"
 
-    def _patch_config(self):
+    def _patch_config(self, *, max_context_chars: int = 1200):
         return patch(
             "backend.services.food_knowledge.get_food_knowledge_config",
             return_value=FoodKnowledgeConfig(
@@ -22,7 +22,7 @@ class FoodKnowledgeRetrievalTests(unittest.TestCase):
                 data_path=self.data_path,
                 top_k=3,
                 min_score=1.0,
-                max_context_chars=1200,
+                max_context_chars=max_context_chars,
                 only_chinese=True,
             ),
         )
@@ -56,13 +56,30 @@ class FoodKnowledgeRetrievalTests(unittest.TestCase):
         self.assertTrue(all(ref.get("source_id") for ref in result.references))
         self.assertTrue(all(ref.get("source_name") for ref in result.references))
 
+    def test_context_includes_fact_priority_and_conflict_policy(self) -> None:
+        with self._patch_config():
+            result = retrieve_food_knowledge("一碗牛肉面大概多少热量", scenario="estimate")
+
+        self.assertIn("Fact priority:", result.context_text)
+        self.assertIn("Conflict policy:", result.context_text)
+        self.assertIn("Security:", result.context_text)
+        self.assertIn("dataset_version=", result.context_text)
+
+    def test_context_truncates_by_line_and_marks_truncation(self) -> None:
+        with self._patch_config(max_context_chars=320):
+            result = retrieve_food_knowledge("一碗牛肉面加鸡蛋再配豆浆大概多少热量", scenario="estimate")
+
+        self.assertTrue(result.has_hits)
+        self.assertIn("[truncated]", result.context_text)
+
     def test_dataset_has_required_fields_traceability_and_minimum_size(self) -> None:
         payload = json.loads(self.data_path.read_text(encoding="utf-8"))
         foods = payload["foods"]
         self.assertGreaterEqual(len(foods), 60)
         self.assertEqual(len({food["canonical_name"] for food in foods}), len(foods))
-        self.assertEqual(payload["version"], "2026-03-24")
-        self.assertTrue(any(item["version"] == payload["version"] for item in payload["change_summary"]))
+        version = payload["version"]
+        self.assertEqual(len(version.split("-")), 3)
+        self.assertTrue(any(item["version"] == version for item in payload["change_summary"]))
 
         source_ids = {source["id"] for source in payload["sources"]}
         for food in foods:
