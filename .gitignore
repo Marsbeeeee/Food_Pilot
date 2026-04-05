@@ -20,3 +20,6 @@ backend/database/.tmp_test_dbs/
 *.log
 .cursor/*.log
 backend/generated_assets/
+
+# Keep product and design docs local only.
+docs/
