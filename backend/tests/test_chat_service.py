@@ -406,7 +406,7 @@ class ChatServiceTests(unittest.TestCase):
         payload = json.loads(exchange["assistant_message"]["payload_json"])
         self.assertIn("decision_card", payload)
         self.assertFalse(payload["decision_card"]["needsClarification"])
-        self.assertTrue(payload["decision_card"]["analysisEligible"])
+        self.assertFalse(payload["decision_card"]["analysisEligible"])
         self.assertTrue(payload["decision_card"]["saveEligible"])
 
     def test_send_message_in_session_persists_meal_recommendation_message(self) -> None:

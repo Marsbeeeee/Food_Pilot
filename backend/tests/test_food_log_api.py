@@ -347,7 +347,7 @@ class FoodLogApiTests(unittest.TestCase):
                     "needsClarification": False,
                     "saveContainerKey": "estimate_api:霸王茶姬:伯牙绝弦:310 kcal",
                     "containerType": "estimate_api",
-                    "analysisEligible": False,
+                    "analysisEligible": True,
                     "saveEligible": True,
                 },
             }
@@ -365,7 +365,7 @@ class FoodLogApiTests(unittest.TestCase):
         self.assertIn("decisionCard", saved_payload)
         self.assertEqual(saved_payload["decisionCard"]["normalizedProduct"]["brandName"], "霸王茶姬")
         self.assertEqual(saved_payload["decisionCard"]["normalizedProduct"]["categoryName"], "现制茶饮")
-        self.assertFalse(saved_payload["decisionCard"]["analysisEligible"])
+        self.assertTrue(saved_payload["decisionCard"]["analysisEligible"])
         self.assertTrue(saved_payload["decisionCard"]["saveEligible"])
         self.assertEqual(
             fetched_payload["decisionCard"]["saveContainerKey"],
@@ -416,7 +416,7 @@ class FoodLogApiTests(unittest.TestCase):
                         "needsClarification": False,
                         "saveContainerKey": "estimate_api:鸡胸肉沙拉:240 kcal",
                         "containerType": "estimate_api",
-                        "analysisEligible": True,
+                        "analysisEligible": False,
                         "saveEligible": True,
                     },
                 },
@@ -436,7 +436,7 @@ class FoodLogApiTests(unittest.TestCase):
             payload["foodLog"]["decisionCard"]["normalizedProduct"]["categoryName"],
             "轻食沙拉",
         )
-        self.assertTrue(payload["foodLog"]["decisionCard"]["analysisEligible"])
+        self.assertFalse(payload["foodLog"]["decisionCard"]["analysisEligible"])
 
     def test_get_food_log_entry_reuses_approved_standard_dish_image(self) -> None:
         created = create_food_log(

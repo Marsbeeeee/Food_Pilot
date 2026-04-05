@@ -50,6 +50,40 @@ class EstimateTests(unittest.TestCase):
         self.assertIsNotNone(response.data.decision_card)
         self.assertEqual(response.data.decision_card.container_type, "estimate_api")
         self.assertEqual(response.data.decision_card.input_summary, "chicken salad")
+        self.assertFalse(response.data.decision_card.analysis_eligible)
+        self.assertTrue(response.data.decision_card.save_eligible)
+
+    def test_branded_milk_tea_response_is_analysis_eligible(self) -> None:
+        request_model = EstimateRequest(
+            query="霸王茶姬 伯牙绝弦 大杯 三分糖",
+            clientRequestId="estimate-milk-tea",
+        )
+        estimate_result = EstimateResult(
+            title="霸王茶姬 伯牙绝弦",
+            description="标准糖度现制茶饮。",
+            confidence="High",
+            items=[
+                {
+                    "name": "奶茶",
+                    "portion": "1 杯",
+                    "energy": "310 kcal",
+                }
+            ],
+            total_calories="310 kcal",
+            suggestion="可根据目标调整糖度。",
+        )
+
+        with patch(
+            "backend.services.estimate_service.estimate_meal",
+            return_value=estimate_result,
+        ):
+            status_code, response = create_estimate_response(request_model)
+
+        self.assertEqual(status_code, 200)
+        self.assertTrue(response.success)
+        self.assertIsNotNone(response.data)
+        self.assertIsNotNone(response.data.decision_card)
+        self.assertTrue(response.data.decision_card.analysis_eligible)
         self.assertTrue(response.data.decision_card.save_eligible)
 
     def test_validation_error_response_has_unified_structure(self) -> None:

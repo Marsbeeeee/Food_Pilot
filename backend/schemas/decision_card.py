@@ -5,6 +5,7 @@ import json
 from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from backend.services.analysis_eligibility import resolve_analysis_eligibility
 
 
 DecisionConfidenceLevel = Literal["high", "medium", "low", "unknown"]
@@ -171,7 +172,12 @@ def build_decision_card_from_estimate(
         )
 
     if analysis_eligible is None:
-        analysis_eligible = has_nutrition_estimate and not needs_clarification
+        analysis_eligible = resolve_analysis_eligibility(
+            input_summary=normalized_input,
+            title=normalized_title,
+            has_nutrition_estimate=has_nutrition_estimate,
+            needs_clarification=needs_clarification,
+        )
 
     recommendation_level = _recommendation_level_from_confidence(
         confidence_level,
