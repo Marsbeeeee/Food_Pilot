@@ -82,6 +82,9 @@ class ChatServiceOutputContractTests(unittest.TestCase):
 
         payload = json.loads(stored_message["payload_json"])
         self.assertIn("estimates", payload)
+        self.assertIn("decision_card", payload)
+        self.assertEqual(payload["decision_card"]["containerType"], "chat_message")
+        self.assertTrue(payload["decision_card"]["analysisEligible"])
         self.assertEqual(payload["suggestion"], "Use less sauce to reduce calories.")
         self.assertEqual(len(payload["estimates"]), 2)
         self.assertEqual(

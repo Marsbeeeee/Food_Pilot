@@ -1,6 +1,7 @@
 from typing import Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from backend.schemas.decision_card import DecisionCard
 from backend.schemas.knowledge import KnowledgeReference
 
 
@@ -113,6 +114,11 @@ class EstimateResult(BaseModel):
         default=None,
         validation_alias=AliasChoices("knowledge_refs", "knowledgeRefs"),
         serialization_alias="knowledge_refs",
+    )
+    decision_card: DecisionCard | None = Field(
+        default=None,
+        validation_alias=AliasChoices("decision_card", "decisionCard"),
+        serialization_alias="decisionCard",
     )
 
 

@@ -39,6 +39,10 @@ class EstimateServiceProfileTests(unittest.TestCase):
         self.assertEqual(response.client_request_id, "estimate-789")
         self.assertIsNone(response.food_log_id)
         self.assertEqual(response.save_status, "not_saved")
+        self.assertIsNotNone(response.data)
+        self.assertIsNotNone(response.data.decision_card)
+        self.assertEqual(response.data.decision_card.container_type, "estimate_api")
+        self.assertEqual(response.data.decision_card.input_summary, "chicken salad")
         estimate_meal_mock.assert_called_once_with("chicken salad", 12, 34)
 
 

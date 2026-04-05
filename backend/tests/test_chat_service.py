@@ -387,6 +387,11 @@ class ChatServiceTests(unittest.TestCase):
         self.assertEqual(exchange["user_message"]["role"], "user")
         self.assertEqual(exchange["assistant_message"]["message_type"], "estimate_result")
         self.assertEqual(exchange["assistant_message"]["result_total"], "240 kcal")
+        payload = json.loads(exchange["assistant_message"]["payload_json"])
+        self.assertIn("decision_card", payload)
+        self.assertFalse(payload["decision_card"]["needsClarification"])
+        self.assertTrue(payload["decision_card"]["analysisEligible"])
+        self.assertTrue(payload["decision_card"]["saveEligible"])
 
     def test_send_message_in_session_persists_meal_recommendation_message(self) -> None:
         session = create_empty_session(self.user_id)
@@ -503,6 +508,11 @@ class ChatServiceTests(unittest.TestCase):
         self.assertIn("推荐", exchange["assistant_message"]["content"])
         self.assertIn("估算", exchange["assistant_message"]["content"])
         self.assertEqual(exchange["assistant_message"]["content"], CLARIFICATION_MESSAGE)
+        payload = json.loads(exchange["assistant_message"]["payload_json"])
+        self.assertIn("decision_card", payload)
+        self.assertTrue(payload["decision_card"]["needsClarification"])
+        self.assertFalse(payload["decision_card"]["analysisEligible"])
+        self.assertFalse(payload["decision_card"]["saveEligible"])
 
     def test_send_message_in_session_returns_clarification_for_ambiguous_standard_dish_estimate(self) -> None:
         with patch("backend.services.chat_service.estimate_meal") as mocked_estimate:
@@ -515,6 +525,10 @@ class ChatServiceTests(unittest.TestCase):
         self.assertIsNotNone(exchange)
         self.assertEqual(exchange["assistant_message"]["message_type"], "text")
         self.assertEqual(exchange["assistant_message"]["content"], CLARIFICATION_MESSAGE)
+        payload = json.loads(exchange["assistant_message"]["payload_json"])
+        self.assertIn("decision_card", payload)
+        self.assertTrue(payload["decision_card"]["needsClarification"])
+        self.assertFalse(payload["decision_card"]["analysisEligible"])
         mocked_estimate.assert_not_called()
 
     def test_send_message_in_session_persists_text_reply_for_explanatory_follow_up(self) -> None:

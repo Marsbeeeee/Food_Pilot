@@ -6,6 +6,7 @@ from backend.schemas.estimate import (
     EstimateRequest,
     EstimateResponse,
 )
+from backend.schemas.decision_card import build_decision_card_from_estimate
 from backend.services.estimate import EstimateServiceError, estimate_meal
 
 
@@ -44,6 +45,18 @@ def create_estimate_response(
 
     # `/estimate` returns the analysis result only. Persisting to Food Log must be
     # triggered separately by an explicit user save action.
+    decision_card = build_decision_card_from_estimate(
+        input_summary=request_model.query,
+        title=result.title,
+        confidence=result.confidence,
+        description=result.description,
+        items=result.items,
+        total_calories=result.total_calories,
+        suggestion=result.suggestion,
+        container_type="estimate_api",
+    )
+    result = result.model_copy(update={"decision_card": decision_card})
+
     return 200, EstimateResponse(
         success=True,
         data=result,

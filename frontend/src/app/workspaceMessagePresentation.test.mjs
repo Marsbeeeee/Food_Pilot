@@ -58,5 +58,47 @@ test('buildWorkspaceMessagePresentation keeps text messages as plain bubbles', (
   assert.deepEqual(presentation, {
     variant: 'text',
     content: 'Grilling usually uses less oil than deep frying.',
+    decisionCard: null,
   });
+});
+
+test('buildWorkspaceMessagePresentation can render estimate from decision card only', () => {
+  const presentation = buildWorkspaceMessagePresentation({
+    messageType: 'meal_estimate',
+    payload: {
+      decisionCard: {
+        inputSummary: '鸡胸肉沙拉',
+        normalizedProduct: {
+          productName: '鸡胸肉沙拉',
+          productScope: 'single_item',
+          itemRole: 'single_item',
+        },
+        nutritionEstimate: {
+          items: [{ name: '鸡胸肉', portion: '150 g', energy: '240 kcal' }],
+          totalCalories: '240 kcal',
+        },
+        confidenceLevel: 'low',
+        recommendationLevel: 'needs_review',
+        riskTags: ['needs_clarification'],
+        adaptationNote: '信息不足',
+        adjustments: ['补充份量信息'],
+        alternatives: [],
+        needsClarification: true,
+        saveContainerKey: 'chat_message:demo',
+        containerType: 'chat_message',
+        analysisEligible: false,
+        saveEligible: false,
+      },
+    },
+  });
+
+  assert.equal(presentation.variant, 'meal_estimate');
+  assert.equal(presentation.title, '鸡胸肉沙拉');
+  assert.equal(presentation.total, '240 kcal');
+  assert.equal(presentation.items.length, 1);
+  assert.equal(presentation.confidence, 'low');
+  assert.equal(presentation.needsClarification, true);
+  assert.equal(presentation.analysisEligible, false);
+  assert.equal(presentation.saveEligible, false);
+  assert.equal(presentation.suggestion, '补充份量信息');
 });

@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 
 from backend.config.auth import get_admin_emails
 from backend.database.connection import get_db_connection
+from backend.schemas.decision_card import build_decision_card_from_estimate
 from backend.text import normalize_food_log_query
 
 
@@ -1400,6 +1401,17 @@ def _resolve_payload_json(
             items = _parse_json_list(result_payload["result_items_json"])
             if items is not None:
                 payload["items"] = items
+            decision_card = build_decision_card_from_estimate(
+                input_summary=result_payload["result_title"] or "",
+                title=result_payload["result_title"] or "",
+                confidence=result_payload["result_confidence"],
+                description=result_payload["result_description"],
+                items=items if items is not None else [],
+                total_calories=result_payload["result_total"],
+                suggestion=_coalesce_row_value(row_data, message_columns, "content"),
+                container_type="chat_message",
+            )
+            payload["decision_card"] = decision_card.model_dump(by_alias=True)
         elif message_type == "estimate_result":
             return None
 

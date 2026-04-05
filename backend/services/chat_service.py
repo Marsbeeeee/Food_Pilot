@@ -3,6 +3,10 @@
 import re
 
 from backend.database.connection import get_db_connection
+from backend.schemas.decision_card import (
+    build_clarification_decision_card,
+    build_decision_card_from_estimate,
+)
 from backend.repositories.chat_session_repository import (
     create_session as create_session_record,
     delete_session as delete_session_record,
@@ -571,11 +575,17 @@ def build_response_by_type(
     message_type: str,
 ) -> dict[str, object]:
     if message_type == CLARIFICATION_NEEDED:
+        clarification_decision_card = build_clarification_decision_card(
+            input_summary=content,
+            container_type="chat_message",
+            reason="missing_key_fields",
+        )
         return _create_text_message_with_conn(
             conn,
             user_id,
             session_id,
             content=CLARIFICATION_MESSAGE,
+            decision_card=clarification_decision_card.model_dump(by_alias=True),
         )
     if message_type == MEAL_ESTIMATE_MESSAGE_TYPE:
         return _build_meal_estimate_response_with_conn(
@@ -619,6 +629,7 @@ def _build_meal_estimate_response_with_conn(
         conn,
         user_id,
         session_id,
+        query=content,
         estimate=estimate,
         estimates=estimates,
     )
@@ -709,6 +720,7 @@ def _create_estimate_result_message_with_conn(
     user_id: int,
     session_id: int,
     *,
+    query: str,
     estimate,
     estimates: list | None = None,
 ) -> dict[str, object]:
@@ -717,38 +729,38 @@ def _create_estimate_result_message_with_conn(
     # When multiple foods: store estimates array in payload for per-item display;
     # keep result_* as combined for Food Log save compatibility.
     estimates_list = estimates if estimates is not None else [estimate]
-    payload_json: str | None = None
     knowledge_refs = getattr(estimate, "knowledge_refs", None)
+    decision_card = build_decision_card_from_estimate(
+        input_summary=query,
+        title=estimate.title,
+        confidence=estimate.confidence,
+        description=estimate.description,
+        items=estimate.items,
+        total_calories=estimate.total_calories,
+        suggestion=estimate.suggestion,
+        container_type="chat_message",
+    )
+    payload_obj: dict[str, object] = {
+        "decision_card": decision_card.model_dump(by_alias=True),
+        "suggestion": estimate.suggestion,
+    }
     if len(estimates_list) > 1:
-        payload_obj = {
-            "estimates": [
-                {
-                    "title": e.title,
-                    "confidence": e.confidence,
-                    "description": e.description,
-                    "items": [item.model_dump() for item in e.items],
-                    "total": e.total_calories,
-                }
-                for e in estimates_list
-            ],
-            "suggestion": estimate.suggestion,
-        }
-        if knowledge_refs:
-            payload_obj["knowledge_refs"] = [
-                ref.model_dump() if hasattr(ref, "model_dump") else ref
-                for ref in knowledge_refs
-            ]
-        payload_json = json.dumps(payload_obj, ensure_ascii=False)
-    elif knowledge_refs:
-        payload_json = json.dumps(
+        payload_obj["estimates"] = [
             {
-                "knowledge_refs": [
-                    ref.model_dump() if hasattr(ref, "model_dump") else ref
-                    for ref in knowledge_refs
-                ]
-            },
-            ensure_ascii=False,
-        )
+                "title": e.title,
+                "confidence": e.confidence,
+                "description": e.description,
+                "items": [item.model_dump() for item in e.items],
+                "total": e.total_calories,
+            }
+            for e in estimates_list
+        ]
+    if knowledge_refs:
+        payload_obj["knowledge_refs"] = [
+            ref.model_dump() if hasattr(ref, "model_dump") else ref
+            for ref in knowledge_refs
+        ]
+    payload_json = json.dumps(payload_obj, ensure_ascii=False)
 
     assistant_message = create_message_record(
         conn,
@@ -810,8 +822,11 @@ def _create_text_message_with_conn(
     *,
     content: str,
     knowledge_refs: list | None = None,
+    decision_card: dict[str, object] | None = None,
 ) -> dict[str, object]:
     payload_obj: dict[str, object] = {"text": content}
+    if decision_card:
+        payload_obj["decision_card"] = decision_card
     if knowledge_refs:
         payload_obj["knowledge_refs"] = [
             ref.model_dump() if hasattr(ref, "model_dump") else ref

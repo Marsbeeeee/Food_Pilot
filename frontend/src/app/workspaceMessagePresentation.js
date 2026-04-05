@@ -20,15 +20,26 @@ export function buildWorkspaceMessagePresentation(message) {
   const variant = message?.messageType ?? 'text';
 
   if (variant === 'meal_estimate') {
+    const decisionCard = message?.payload?.decisionCard ?? message?.decisionCard ?? null;
+    const normalizedProduct = decisionCard?.normalizedProduct ?? null;
+    const nutritionEstimate = decisionCard?.nutritionEstimate ?? null;
+    const cardSuggestion = Array.isArray(decisionCard?.adjustments)
+      ? decisionCard.adjustments[0]
+      : null;
+
     return {
       variant,
-      title: message.title,
-      confidence: message.confidence,
-      description: message.description,
-      items: message.items ?? [],
-      total: message.total,
+      title: message.title ?? normalizedProduct?.productName,
+      confidence: message.confidence ?? decisionCard?.confidenceLevel,
+      description: message.description ?? decisionCard?.adaptationNote,
+      items: message.items ?? nutritionEstimate?.items ?? [],
+      total: message.total ?? nutritionEstimate?.totalCalories,
       estimates: message.estimates ?? null,
-      suggestion: message.payload?.suggestion ?? null,
+      suggestion: message.payload?.suggestion ?? cardSuggestion ?? null,
+      decisionCard,
+      needsClarification: Boolean(decisionCard?.needsClarification),
+      analysisEligible: decisionCard?.analysisEligible ?? null,
+      saveEligible: decisionCard?.saveEligible ?? null,
       ...ESTIMATE_COPY,
     };
   }
@@ -46,5 +57,6 @@ export function buildWorkspaceMessagePresentation(message) {
   return {
     variant: 'text',
     content: message?.content ?? '',
+    decisionCard: message?.payload?.decisionCard ?? message?.decisionCard ?? null,
   };
 }

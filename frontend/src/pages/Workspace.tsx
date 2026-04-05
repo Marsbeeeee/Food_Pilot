@@ -341,6 +341,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       return;
     }
 
+    const decisionCard = message.payload?.decisionCard ?? message.decisionCard;
+    const isSaveEligibleByContract = decisionCard ? decisionCard.saveEligible : true;
+    if (!isSaveEligibleByContract) {
+      return;
+    }
+
     const saveKey = estimateBlock
       ? `${message.id}::${estimateBlock.title}`
       : `${message.id}::${message.title ?? ''}`;
@@ -366,7 +372,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     });
 
     try {
-      const idempotencyKey = `${message.id}::${title}`;
+      const baseContainerKey = decisionCard?.saveContainerKey;
+      const idempotencyKey = baseContainerKey
+        ? `${baseContainerKey}::${title}`
+        : `${message.id}::${title}`;
       const savedEntry = await saveFoodLogEntry({
         sourceType: 'chat_message',
         mealDescription: descForSave,
@@ -567,6 +576,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 const messagePresentation = buildWorkspaceMessagePresentation(message);
                 const isMealEstimate = messagePresentation.variant === 'meal_estimate';
                 const isMealRecommendation = messagePresentation.variant === 'meal_recommendation';
+                const decisionCard = messagePresentation.decisionCard ?? null;
+                const isSaveEligibleByContract = decisionCard ? decisionCard.saveEligible : true;
                 const mealDescription = isMealEstimate
                   ? resolveMealDescription(activeSession.messages, index, message)
                   : null;
@@ -735,9 +746,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                         <button
                                           type="button"
                                           onClick={() => void handleSaveFoodLogEntry(activeSession.id, message, mealDescription ?? '', est)}
-                                          disabled={estIsSaving}
+                                          disabled={estIsSaving || !isSaveEligibleByContract}
                                           className={`inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-bold transition-all ${
-                                            estIsSaving
+                                            estIsSaving || !isSaveEligibleByContract
                                               ? 'cursor-wait border border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/50'
                                               : estSavePresentation.state === 'failed'
                                                 ? 'border border-red-200 bg-red-50 text-red-500 hover:bg-red-100'
@@ -850,9 +861,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => mealDescription && void handleSaveFoodLogEntry(activeSession.id, message, mealDescription, undefined)}
-                                    disabled={!mealDescription || isSavingToFoodLog}
+                                    disabled={!mealDescription || isSavingToFoodLog || !isSaveEligibleByContract}
                                     className={`inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-bold transition-all ${
-                                      isSavingToFoodLog
+                                      isSavingToFoodLog || !isSaveEligibleByContract
                                         ? 'cursor-wait border border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E]/50'
                                         : saveState === 'failed'
                                           ? 'border border-red-200 bg-red-50 text-red-500 hover:bg-red-100'

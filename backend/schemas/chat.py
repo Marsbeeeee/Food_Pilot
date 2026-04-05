@@ -3,6 +3,10 @@ from typing import Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from backend.schemas.decision_card import (
+    DecisionCard,
+    build_decision_card_from_estimate,
+)
 from backend.schemas.estimate import EstimateItem
 from backend.schemas.knowledge import KnowledgeReference
 
@@ -84,6 +88,11 @@ class ChatMessagePayload(BaseModel):
     estimates: list[EstimateBlockPayload] | None = None
     suggestion: str | None = None
     knowledge_refs: list[KnowledgeReference] | None = None
+    decision_card: DecisionCard | None = Field(
+        default=None,
+        validation_alias=AliasChoices("decision_card", "decisionCard"),
+        serialization_alias="decisionCard",
+    )
 
 
 class ChatMessageOut(BaseModel):
@@ -238,6 +247,9 @@ def _build_payload_from_legacy_fields(
         "total": _get_first_present(data, "result_total", "resultTotal"),
     }
     normalized_payload = {key: value for key, value in payload.items() if value is not None}
+    decision_card = _build_decision_card_from_legacy_fields(data, normalized_payload)
+    if decision_card is not None:
+        normalized_payload["decision_card"] = decision_card
     return normalized_payload or None
 
 
@@ -246,3 +258,30 @@ def _get_first_present(data: dict[str, object], *keys: str) -> object | None:
         if key in data:
             return data[key]
     return None
+
+
+def _build_decision_card_from_legacy_fields(
+    data: dict[str, object],
+    normalized_payload: dict[str, object],
+) -> dict[str, object] | None:
+    title = normalized_payload.get("title")
+    if not isinstance(title, str) or not title.strip():
+        return None
+
+    confidence = normalized_payload.get("confidence")
+    description = normalized_payload.get("description")
+    total = normalized_payload.get("total")
+    items = normalized_payload.get("items")
+    content = _get_first_present(data, "content")
+
+    decision_card = build_decision_card_from_estimate(
+        input_summary=content if isinstance(content, str) else title,
+        title=title,
+        confidence=confidence if isinstance(confidence, str) else None,
+        description=description if isinstance(description, str) else None,
+        items=items if isinstance(items, list) else [],
+        total_calories=total if isinstance(total, str) else None,
+        suggestion=content if isinstance(content, str) else None,
+        container_type="chat_message",
+    )
+    return decision_card.model_dump(by_alias=True)

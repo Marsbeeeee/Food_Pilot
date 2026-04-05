@@ -1,6 +1,8 @@
 import json
 import sqlite3
 
+from backend.schemas.decision_card import build_decision_card_from_estimate
+
 
 def create_message(
     conn: sqlite3.Connection,
@@ -260,6 +262,17 @@ def _build_payload_json(
     items = _parse_json_list(str(result_items_json).strip())
     if items is not None:
         payload["items"] = items
+    decision_card = build_decision_card_from_estimate(
+        input_summary=str(result_title).strip(),
+        title=str(result_title).strip(),
+        confidence=str(result_confidence).strip(),
+        description=str(result_description).strip(),
+        items=items if items is not None else [],
+        total_calories=str(result_total).strip(),
+        suggestion=str(content).strip() if _has_text(content) else None,
+        container_type="chat_message",
+    )
+    payload["decision_card"] = decision_card.model_dump(by_alias=True)
 
     return json.dumps(payload, ensure_ascii=False)
 

@@ -35,6 +35,39 @@ export interface IngredientResult {
   fat?: string;
 }
 
+export interface DecisionCardNormalizedProduct {
+  categoryId?: string;
+  categoryName?: string;
+  brandId?: string;
+  brandName?: string;
+  productId?: string;
+  productName: string;
+  productScope: string;
+  itemRole: string;
+}
+
+export interface DecisionCardNutritionEstimate {
+  items: IngredientResult[];
+  totalCalories: string;
+}
+
+export interface DecisionCard {
+  inputSummary: string;
+  normalizedProduct: DecisionCardNormalizedProduct;
+  nutritionEstimate: DecisionCardNutritionEstimate;
+  confidenceLevel: 'high' | 'medium' | 'low' | 'unknown';
+  recommendationLevel: string;
+  riskTags: string[];
+  adaptationNote?: string;
+  adjustments: string[];
+  alternatives: string[];
+  needsClarification: boolean;
+  saveContainerKey: string;
+  containerType: string;
+  analysisEligible: boolean;
+  saveEligible: boolean;
+}
+
 export interface EstimateResult {
   title: string;
   description: string;
@@ -42,6 +75,7 @@ export interface EstimateResult {
   items: IngredientResult[];
   total_calories: string;
   suggestion: string;
+  decisionCard?: DecisionCard;
 }
 
 export type EstimateSaveStatus = 'saved' | 'not_saved';
@@ -126,6 +160,7 @@ export interface ChatMessagePayload {
   /** When multiple foods: each food as a separate estimate block */
   estimates?: EstimateBlock[];
   suggestion?: string;
+  decisionCard?: DecisionCard;
 }
 
 export interface Message {
@@ -134,6 +169,7 @@ export interface Message {
   messageType: ChatMessageType;
   content?: string;
   payload?: ChatMessagePayload | null;
+  decisionCard?: DecisionCard;
   time: string;
   createdAt?: string;
   isResult?: boolean;

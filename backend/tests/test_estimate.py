@@ -47,6 +47,10 @@ class EstimateTests(unittest.TestCase):
         self.assertEqual(response.data.title, "Chicken Salad")
         self.assertEqual(response.data.total_calories, "240 kcal")
         self.assertEqual(response.data.items[0].name, "Chicken breast")
+        self.assertIsNotNone(response.data.decision_card)
+        self.assertEqual(response.data.decision_card.container_type, "estimate_api")
+        self.assertEqual(response.data.decision_card.input_summary, "chicken salad")
+        self.assertTrue(response.data.decision_card.save_eligible)
 
     def test_validation_error_response_has_unified_structure(self) -> None:
         with self.assertRaises(Exception) as context:

@@ -3,6 +3,7 @@ import {
   ChatMessagePayload,
   ChatMessageType,
   ChatSession,
+  DecisionCard,
   IngredientResult,
   Message,
 } from '../types/types';
@@ -188,16 +189,31 @@ function mapMessage(message: ChatMessageResponse): Message {
     messageType,
     content: message.content ?? payload?.text ?? undefined,
     payload,
+    decisionCard: payload?.decisionCard,
     time: Number.isNaN(createdDate.getTime())
       ? '--:--'
       : createdDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
     createdAt,
     isResult: messageType === 'meal_estimate',
-    title: payload?.title ?? message.resultTitle ?? undefined,
-    confidence: payload?.confidence ?? message.resultConfidence ?? undefined,
-    description: payload?.description ?? message.resultDescription ?? undefined,
-    items: payload?.items ? payload.items.map((item) => ({ ...item })) : undefined,
-    total: payload?.total ?? message.resultTotal ?? undefined,
+    title: payload?.title
+      ?? message.resultTitle
+      ?? payload?.decisionCard?.normalizedProduct?.productName
+      ?? undefined,
+    confidence: payload?.confidence
+      ?? message.resultConfidence
+      ?? payload?.decisionCard?.confidenceLevel
+      ?? undefined,
+    description: payload?.description
+      ?? message.resultDescription
+      ?? payload?.decisionCard?.adaptationNote
+      ?? undefined,
+    items: payload?.items
+      ? payload.items.map((item) => ({ ...item }))
+      : payload?.decisionCard?.nutritionEstimate?.items?.map((item) => ({ ...item })),
+    total: payload?.total
+      ?? message.resultTotal
+      ?? payload?.decisionCard?.nutritionEstimate?.totalCalories
+      ?? undefined,
     estimates: payload?.estimates,
   };
 }
@@ -258,8 +274,79 @@ function normalizePayload(
   if (message.payload?.suggestion) {
     payload.suggestion = message.payload.suggestion;
   }
+  if (message.payload?.decisionCard) {
+    payload.decisionCard = message.payload.decisionCard;
+  } else {
+    const fallbackDecisionCard = buildFallbackDecisionCard(message, payload, messageType);
+    if (fallbackDecisionCard) {
+      payload.decisionCard = fallbackDecisionCard;
+    }
+  }
 
   return Object.keys(payload).length > 0 ? payload : null;
+}
+
+function buildFallbackDecisionCard(
+  message: ChatMessageResponse,
+  payload: ChatMessagePayload,
+  messageType: ChatMessageType,
+): DecisionCard | null {
+  if (messageType !== 'meal_estimate') {
+    return null;
+  }
+
+  const title = payload.title ?? message.resultTitle;
+  const total = payload.total ?? message.resultTotal;
+  const confidence = payload.confidence ?? message.resultConfidence ?? 'unknown';
+  const items = payload.items ?? message.resultItems ?? [];
+  if (!title || !total || !items.length) {
+    return null;
+  }
+
+  const confidenceLevel = normalizeDecisionConfidence(confidence);
+  const needsClarification = confidenceLevel === 'low' || confidenceLevel === 'unknown';
+  const saveContainerKeySeed = `${message.id}:${title}:${total}`;
+  const saveContainerKey = `chat_message:${saveContainerKeySeed}`;
+  const adaptationNote = payload.description ?? message.resultDescription ?? undefined;
+  const suggestion = message.content ?? payload.suggestion ?? '';
+
+  return {
+    inputSummary: title,
+    normalizedProduct: {
+      productName: title,
+      productScope: items.length > 1 ? 'multi_item' : 'single_item',
+      itemRole: items.length > 1 ? 'top_level_item' : 'single_item',
+    },
+    nutritionEstimate: {
+      items: items.map((item) => ({ ...item })),
+      totalCalories: total,
+    },
+    confidenceLevel,
+    recommendationLevel: needsClarification ? 'needs_review' : 'acceptable',
+    riskTags: needsClarification ? ['needs_clarification'] : [],
+    adaptationNote,
+    adjustments: suggestion ? [suggestion] : [],
+    alternatives: [],
+    needsClarification,
+    saveContainerKey,
+    containerType: 'chat_message',
+    analysisEligible: !needsClarification,
+    saveEligible: true,
+  };
+}
+
+function normalizeDecisionConfidence(value: string): DecisionCard['confidenceLevel'] {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === '高' || normalized === 'high') {
+    return 'high';
+  }
+  if (normalized === '中' || normalized === 'medium' || normalized === 'mid') {
+    return 'medium';
+  }
+  if (normalized === '低' || normalized === 'low') {
+    return 'low';
+  }
+  return 'unknown';
 }
 
 function buildMessagePayload(content: string, profileId?: number): Record<string, number | string> {
