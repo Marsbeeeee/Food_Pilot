@@ -143,6 +143,13 @@ CLARIFICATION_MESSAGE = (
     "· 推荐：告诉我你的需求（如「减脂晚餐」「训练后吃什么」），我会给出建议；\n"
     "· 估算：描述你已吃的食物（如「一碗牛肉面」「两个包子一杯豆浆」），我会帮你算热量和营养。"
 )
+PRODUCT_DETAIL_CLARIFICATION_MESSAGE = (
+    "这个描述还不够具体，我暂时不能稳定判断是哪一款商品。\n\n"
+    "请补充更具体的信息，例如：\n"
+    "· 具体品名：如「板烧鸡腿堡」「双层吉士汉堡」\n"
+    "· 规格或选项：如「大杯」「三分糖」「加芝士」\n"
+    "· 套餐构成：如是否带薯条、可乐或其他配餐"
+)
 # 食物描述常见量词，用于区分「模糊提问」与「食物描述」
 FOOD_QUANTITY_PATTERNS = (
     "一碗", "两碗", "一份", "两份", "一杯", "两杯",
@@ -236,6 +243,68 @@ SWAP_DECISION_PHRASES = (
     "可以吗",
     "行吗",
     "好吗",
+)
+BRANDED_GENERIC_PRODUCT_BRANDS = (
+    "麦当劳",
+    "肯德基",
+    "kfc",
+    "汉堡王",
+    "burgerking",
+    "华莱士",
+    "塔斯汀",
+    "德克士",
+    "霸王茶姬",
+    "喜茶",
+    "奈雪",
+    "奈雪的茶",
+    "沪上阿姨",
+    "古茗",
+    "茶百道",
+    "coco",
+    "一点点",
+    "蜜雪冰城",
+    "星巴克",
+    "瑞幸",
+)
+BRANDED_GENERIC_PRODUCT_TERMS = (
+    "汉堡",
+    "牛堡",
+    "鸡堡",
+    "奶茶",
+    "咖啡",
+    "果茶",
+    "饮品",
+    "炸鸡",
+    "薯条",
+)
+BRANDED_GENERIC_DETAIL_HINTS = (
+    "双层",
+    "单层",
+    "吉士",
+    "芝士",
+    "板烧",
+    "麦香鸡",
+    "麦辣",
+    "巨无霸",
+    "伯牙绝弦",
+    "幽兰",
+    "生椰",
+    "拿铁",
+    "美式",
+    "珍珠",
+    "椰云",
+    "冰",
+    "热",
+    "大杯",
+    "中杯",
+    "小杯",
+    "三分糖",
+    "五分糖",
+    "七分糖",
+    "无糖",
+    "少冰",
+    "去冰",
+    "套餐",
 )
 
 
@@ -544,6 +613,9 @@ def resolve_message_type(
     if _is_explanatory_follow_up(normalized_content, has_text_signal=is_text_request):
         return TEXT_MESSAGE_TYPE
 
+    if _needs_branded_generic_product_clarification(normalized_content):
+        return CLARIFICATION_NEEDED
+
     if _needs_standard_dish_estimate_clarification(normalized_content):
         return CLARIFICATION_NEEDED
 
@@ -575,6 +647,7 @@ def build_response_by_type(
     message_type: str,
 ) -> dict[str, object]:
     if message_type == CLARIFICATION_NEEDED:
+        clarification_message = _build_clarification_message(content)
         clarification_decision_card = build_clarification_decision_card(
             input_summary=content,
             container_type="chat_message",
@@ -584,7 +657,7 @@ def build_response_by_type(
             conn,
             user_id,
             session_id,
-            content=CLARIFICATION_MESSAGE,
+            content=clarification_message,
             decision_card=clarification_decision_card.model_dump(by_alias=True),
         )
     if message_type == MEAL_ESTIMATE_MESSAGE_TYPE:
@@ -975,6 +1048,46 @@ def _needs_standard_dish_estimate_clarification(value: str) -> bool:
     if _is_specific_ambiguous_standard_dish_query(value):
         return False
     return _contains_any_phrase(value, AMBIGUOUS_STANDARD_DISH_ESTIMATE_HINTS)
+
+
+def _build_clarification_message(content: str) -> str:
+    if _needs_branded_generic_product_clarification(_normalize_routing_text(content)):
+        return PRODUCT_DETAIL_CLARIFICATION_MESSAGE
+    return CLARIFICATION_MESSAGE
+
+
+def _needs_branded_generic_product_clarification(value: str) -> bool:
+    compact_value = value.replace(" ", "")
+    if not compact_value:
+        return False
+    if any(connector in compact_value for connector in COMPARISON_CONNECTOR_PHRASES):
+        return False
+
+    matched_brand = next(
+        (brand for brand in BRANDED_GENERIC_PRODUCT_BRANDS if brand in compact_value),
+        None,
+    )
+    if matched_brand is None:
+        return False
+
+    matched_generic_term = next(
+        (
+            generic_term
+            for generic_term in BRANDED_GENERIC_PRODUCT_TERMS
+            if generic_term in compact_value
+        ),
+        None,
+    )
+    if matched_generic_term is None:
+        return False
+
+    if any(detail_hint in compact_value for detail_hint in BRANDED_GENERIC_DETAIL_HINTS):
+        return False
+
+    remainder = compact_value.replace(matched_brand, "", 1)
+    remainder = remainder.replace(matched_generic_term, "", 1)
+    remainder = re.sub(r"(热量|卡路里|多少|大概|营养|蛋白质|碳水|脂肪|能量|吗)", "", remainder)
+    return len(remainder) < 2
 
 
 def estimate_meal(query: str, profile_id: int | None, user_id: int):

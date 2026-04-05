@@ -13,6 +13,7 @@ from backend.services.chat_service import (
     DEFAULT_SESSION_TITLE,
     DEFAULT_ASSISTANT_ERROR_MESSAGE,
     DEFAULT_RECOMMENDATION_ERROR_MESSAGE,
+    PRODUCT_DETAIL_CLARIFICATION_MESSAGE,
     append_assistant_message,
     append_user_message,
     create_empty_session,
@@ -185,6 +186,15 @@ class ChatServiceTests(unittest.TestCase):
     def test_resolve_message_type_returns_clarification_for_ambiguous_standard_dish_with_calorie_hint(self) -> None:
         resolved = resolve_message_type(
             "套餐卡路里多少？",
+            profile_id=12,
+            user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "_clarification")
+
+    def test_resolve_message_type_returns_clarification_for_branded_generic_product(self) -> None:
+        resolved = resolve_message_type(
+            "麦当劳汉堡",
             profile_id=12,
             user_id=self.user_id,
         )
@@ -529,6 +539,23 @@ class ChatServiceTests(unittest.TestCase):
         self.assertIn("decision_card", payload)
         self.assertTrue(payload["decision_card"]["needsClarification"])
         self.assertFalse(payload["decision_card"]["analysisEligible"])
+        mocked_estimate.assert_not_called()
+
+    def test_send_message_in_session_returns_product_detail_clarification_for_branded_generic_product(self) -> None:
+        with patch("backend.services.chat_service.estimate_meal") as mocked_estimate:
+            exchange = create_session_and_reply(
+                self.user_id,
+                "麦当劳汉堡",
+                profile_id=12,
+            )
+
+        self.assertIsNotNone(exchange)
+        self.assertEqual(exchange["assistant_message"]["message_type"], "text")
+        self.assertEqual(exchange["assistant_message"]["content"], PRODUCT_DETAIL_CLARIFICATION_MESSAGE)
+        payload = json.loads(exchange["assistant_message"]["payload_json"])
+        self.assertIn("decision_card", payload)
+        self.assertTrue(payload["decision_card"]["needsClarification"])
+        self.assertFalse(payload["decision_card"]["saveEligible"])
         mocked_estimate.assert_not_called()
 
     def test_send_message_in_session_persists_text_reply_for_explanatory_follow_up(self) -> None:

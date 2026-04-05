@@ -31,6 +31,7 @@ class ChatIntentRoutingRegressionTests(unittest.TestCase):
             ("汉堡和鸡肉沙拉哪个更适合我今天晚饭？热量大概多少？", "meal_estimate"),
             ("汉堡和沙拉哪个好，卡路里分别是多少？", "meal_estimate"),
             ("板烧鸡腿堡套餐大概多少热量？", "meal_estimate"),
+            ("麦当劳汉堡", "_clarification"),
             ("套餐卡路里多少？", "_clarification"),
             ("炒面热量多少？", "_clarification"),
             ("  帮我推荐一下   今天晚饭吃什么  ", "meal_recommendation"),
