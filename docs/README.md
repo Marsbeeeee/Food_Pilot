@@ -215,6 +215,24 @@ Current files should gradually move into this structure:
 
 ---
 
+## Current Migration Status
+
+The first implementation batch now exists:
+
+- `product/`: product positioning, journeys, roadmap
+- `system/`: system overview, core objects, contracts, state machine, lifecycle
+- `modules/`: current implemented modules plus planned stable modules
+- `rules/`: decision card, container model, confidence, image, test baseline
+- `delivery/`: current roadmap and task docs
+
+During transition:
+
+1. `docs/PRODUCT_SPEC.md` remains the large transition source.
+2. Existing topical docs remain readable and should be gradually absorbed into the new layered docs.
+3. New information should prefer the new structure instead of being appended to the large spec.
+
+---
+
 ## Suggested Migration Order
 
 1. Add glossary and this navigation file.

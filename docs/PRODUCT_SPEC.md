@@ -1,5 +1,7 @@
 ﻿# Food Pilot 产品规格说明
 
+> 迁移说明：自 `2026-04-05` 起，新的文档主结构已开始拆分到 `docs/product/`、`docs/system/`、`docs/modules/`、`docs/rules/`、`docs/delivery/`。本文件当前仍保留为过渡期总源文档，但新增内容应优先写入新结构，对应导航见 `docs/README.md`。
+
 ## 文档信息
 
 - 文档状态：已融合目标产品方向与当前仓库实现
