@@ -8,6 +8,7 @@ from backend.text import normalize_food_log_query
 
 ACTIVE_FOOD_LOG_STATUS = "active"
 DELETED_FOOD_LOG_STATUS = "deleted"
+UNSET = object()
 
 FOOD_LOG_SELECT_COLUMNS = """
     fl.id,
@@ -29,6 +30,7 @@ FOOD_LOG_SELECT_COLUMNS = """
     fl.is_manual,
     fl.idempotency_key,
     fl.assistant_suggestion,
+    fl.decision_card_json,
     fl.image,
     fl.image_source,
     fl.image_license,
@@ -73,6 +75,7 @@ def create_food_log(
     standard_dish_id: int | None = None,
     result_confidence: str | None = None,
     assistant_suggestion: str | None = None,
+    decision_card_json: str | None | object = UNSET,
     meal_occurred_at: str | None = None,
     logged_at: str | None = None,
     created_at: str | None = None,
@@ -123,6 +126,7 @@ def create_food_log(
                 standard_dish_id=standard_dish_id,
                 result_confidence=result_confidence,
                 assistant_suggestion=assistant_suggestion,
+                decision_card_json=decision_card_json,
                 meal_occurred_at=meal_occurred_at,
                 logged_at=logged_at,
                 status=ACTIVE_FOOD_LOG_STATUS,
@@ -162,6 +166,7 @@ def create_food_log(
             is_manual,
             idempotency_key,
             assistant_suggestion,
+            decision_card_json,
             image,
             image_source,
             image_license,
@@ -170,7 +175,7 @@ def create_food_log(
             deleted_at
         ) VALUES (
             ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), COALESCE(?, CURRENT_TIMESTAMP), ?,
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), COALESCE(?, CURRENT_TIMESTAMP), ?
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), COALESCE(?, CURRENT_TIMESTAMP), ?
         )
         """,
         (
@@ -192,6 +197,7 @@ def create_food_log(
             int(resolved_is_manual),
             resolved_idempotency_key,
             assistant_suggestion,
+            None if decision_card_json is UNSET else decision_card_json,
             image,
             image_source,
             image_license,
@@ -229,6 +235,7 @@ def save_food_log(
     standard_dish_id: int | None = None,
     result_confidence: str | None = None,
     assistant_suggestion: str | None = None,
+    decision_card_json: str | None | object = UNSET,
     meal_occurred_at: str | None = None,
     logged_at: str | None = None,
     created_at: str | None = None,
@@ -256,6 +263,7 @@ def save_food_log(
             standard_dish_id=standard_dish_id,
             result_confidence=result_confidence,
             assistant_suggestion=assistant_suggestion,
+            decision_card_json=decision_card_json,
             meal_occurred_at=meal_occurred_at,
             logged_at=logged_at,
             status=status,
@@ -281,6 +289,7 @@ def save_food_log(
         standard_dish_id=standard_dish_id,
         result_confidence=result_confidence,
         assistant_suggestion=assistant_suggestion,
+        decision_card_json=decision_card_json,
         meal_occurred_at=meal_occurred_at,
         logged_at=logged_at,
         created_at=created_at,
@@ -310,6 +319,7 @@ def update_food_log(
     standard_dish_id: int | None = None,
     result_confidence: str | None = None,
     assistant_suggestion: str | None = None,
+    decision_card_json: str | None | object = UNSET,
     meal_occurred_at: str | None = None,
     logged_at: str | None = None,
     status: str = ACTIVE_FOOD_LOG_STATUS,
@@ -350,6 +360,11 @@ def update_food_log(
         existing["assistant_suggestion"]
         if assistant_suggestion is None
         else assistant_suggestion
+    )
+    resolved_decision_card_json = (
+        existing["decision_card_json"]
+        if decision_card_json is UNSET
+        else decision_card_json
     )
     resolved_logged_at = (
         existing["logged_at"]
@@ -410,6 +425,7 @@ def update_food_log(
             is_manual = ?,
             idempotency_key = ?,
             assistant_suggestion = ?,
+            decision_card_json = ?,
             image = ?,
             image_source = ?,
             image_license = ?,
@@ -434,6 +450,7 @@ def update_food_log(
             int(resolved_is_manual),
             resolved_idempotency_key,
             resolved_assistant_suggestion,
+            resolved_decision_card_json,
             image,
             image_source,
             image_license,

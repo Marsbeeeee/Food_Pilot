@@ -1,3 +1,4 @@
+import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -64,27 +65,36 @@ def save_food_log_entry(
     request: FoodLogSaveRequest,
     current_user: UserOut = Depends(get_current_user),
 ) -> FoodLogEntryOut:
+    save_kwargs = {
+        "meal_description": request.meal_description,
+        "result_title": request.result_title,
+        "result_description": request.result_description,
+        "total_calories": request.total_calories,
+        "ingredients": [item.model_dump() for item in request.ingredients],
+        "food_log_id": request.food_log_id,
+        "session_id": request.session_id,
+        "source_message_id": request.source_message_id,
+        "result_confidence": request.result_confidence,
+        "assistant_suggestion": request.assistant_suggestion,
+        "meal_occurred_at": request.meal_occurred_at,
+        "status": request.status or "active",
+        "idempotency_key": request.idempotency_key,
+        "is_manual": request.is_manual,
+        "image": request.image,
+        "image_source": request.image_source,
+        "image_license": request.image_license,
+    }
+    if request.decision_card is not None:
+        save_kwargs["decision_card_json"] = json.dumps(
+            request.decision_card.model_dump(by_alias=True),
+            ensure_ascii=False,
+        )
+
     try:
         entry = save_food_log(
             current_user.id,
             request.source_type,
-            meal_description=request.meal_description,
-            result_title=request.result_title,
-            result_description=request.result_description,
-            total_calories=request.total_calories,
-            ingredients=[item.model_dump() for item in request.ingredients],
-            food_log_id=request.food_log_id,
-            session_id=request.session_id,
-            source_message_id=request.source_message_id,
-            result_confidence=request.result_confidence,
-            assistant_suggestion=request.assistant_suggestion,
-            meal_occurred_at=request.meal_occurred_at,
-            status=request.status or "active",
-            idempotency_key=request.idempotency_key,
-            is_manual=request.is_manual,
-            image=request.image,
-            image_source=request.image_source,
-            image_license=request.image_license,
+            **save_kwargs,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -137,17 +147,26 @@ def save_food_log_from_estimate_entry(
     request: FoodLogFromEstimateRequest,
     current_user: UserOut = Depends(get_current_user),
 ) -> FoodLogFromEstimateResponse:
+    create_kwargs = {
+        "source_type": "estimate_api",
+        "meal_occurred_at": request.meal_occurred_at,
+        "idempotency_key": build_estimate_api_idempotency_key(request.client_request_id),
+        "image": request.image,
+        "image_source": request.image_source,
+        "image_license": request.image_license,
+    }
+    if request.estimate.decision_card is not None:
+        create_kwargs["decision_card_json"] = json.dumps(
+            request.estimate.decision_card.model_dump(by_alias=True),
+            ensure_ascii=False,
+        )
+
     try:
         entry = create_food_log_from_estimate(
             current_user.id,
             request.meal_description,
             request.estimate,
-            source_type="estimate_api",
-            meal_occurred_at=request.meal_occurred_at,
-            idempotency_key=build_estimate_api_idempotency_key(request.client_request_id),
-            image=request.image,
-            image_source=request.image_source,
-            image_license=request.image_license,
+            **create_kwargs,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

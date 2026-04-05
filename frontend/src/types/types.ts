@@ -215,6 +215,7 @@ export interface FoodLogEntry {
   fat?: string;
   sessionId?: string;
   sourceMessageId?: string;
+  decisionCard?: DecisionCard;
 }
 
 export interface FoodLogListParams {
@@ -249,6 +250,7 @@ export interface FoodLogSaveInput {
   image?: string;
   imageSource?: string;
   imageLicense?: string;
+  decisionCard?: DecisionCard;
 }
 
 export interface FoodLogFromEstimateInput {
@@ -259,6 +261,7 @@ export interface FoodLogFromEstimateInput {
   image?: string;
   imageSource?: string;
   imageLicense?: string;
+  decisionCard?: DecisionCard;
 }
 
 export interface FoodLogFromEstimateResponse {

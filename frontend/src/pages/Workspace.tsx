@@ -354,6 +354,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     const description = estimateBlock?.description ?? message.description;
     const total = estimateBlock?.total ?? message.total;
     const items = estimateBlock?.items ?? message.items;
+    const decisionCardForSave = estimateBlock ? undefined : decisionCard;
     const descForSave = estimateBlock
       ? (estimateBlock.items[0]?.portion ? `${estimateBlock.title}（${estimateBlock.items[0].portion}）` : estimateBlock.title)
       : mealDescription;
@@ -388,6 +389,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         sourceMessageId: Number(message.id),
         assistantSuggestion: message.content,
         idempotencyKey,
+        decisionCard: decisionCardForSave,
       });
       setSavedFoodLogMessageIds((current) => ({
         ...current,
@@ -576,6 +578,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 const messagePresentation = buildWorkspaceMessagePresentation(message);
                 const isMealEstimate = messagePresentation.variant === 'meal_estimate';
                 const isMealRecommendation = messagePresentation.variant === 'meal_recommendation';
+                const isClarification = messagePresentation.variant === 'clarification';
                 const decisionCard = messagePresentation.decisionCard ?? null;
                 const isSaveEligibleByContract = decisionCard ? decisionCard.saveEligible : true;
                 const mealDescription = isMealEstimate
@@ -887,6 +890,74 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             <p className="w-full text-[14px] leading-relaxed text-[#4A453E]/70">{messagePresentation.suggestion ?? message.content}</p>
                           </div>
                           ) : null}
+                        </div>
+                      ) : isClarification ? (
+                        <div className="w-full overflow-hidden rounded-[28px] border border-[#F5C16C]/35 bg-[#FFF8EA] shadow-sm">
+                          <div className="border-b border-[#F5C16C]/20 px-9 py-7">
+                            <div className="mb-3 flex items-center justify-between gap-4">
+                              <div>
+                                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#B5791A]">
+                                  {messagePresentation.eyebrow}
+                                </p>
+                                <h3 className="font-serif-brand text-2xl font-bold text-[#4A453E]">
+                                  {messagePresentation.title}
+                                </h3>
+                              </div>
+                              <span className="rounded-full border border-[#F5C16C]/30 bg-white/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#B5791A]">
+                                {messagePresentation.badgeLabel}
+                              </span>
+                            </div>
+                            {messagePresentation.inputSummary && (
+                              <p className="text-[13px] font-semibold text-[#4A453E]/55">
+                                输入摘要：{messagePresentation.inputSummary}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-4 px-9 py-7">
+                            {messagePresentation.description && (
+                              <p className="text-[15px] leading-relaxed text-[#4A453E]/75">
+                                {messagePresentation.description}
+                              </p>
+                            )}
+                            {messagePresentation.content && (
+                              <div className="rounded-[20px] border border-[#4A453E]/5 bg-white/80 px-5 py-4">
+                                <p className="text-[15px] leading-relaxed text-[#4A453E]/75">
+                                  {messagePresentation.content}
+                                </p>
+                              </div>
+                            )}
+                            {messagePresentation.riskTags?.length ? (
+                              <div>
+                                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
+                                  {messagePresentation.riskLabel}
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {messagePresentation.riskTags.map((tag: string) => (
+                                    <span
+                                      key={tag}
+                                      className="rounded-full border border-[#F5C16C]/30 bg-[#FFF3D6] px-3 py-1 text-[11px] font-semibold text-[#8C6517]"
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+                            {messagePresentation.adjustments?.length ? (
+                              <div>
+                                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
+                                  {messagePresentation.actionLabel}
+                                </p>
+                                <div className="space-y-2">
+                                  {messagePresentation.adjustments.map((item: string, itemIndex: number) => (
+                                    <p key={`${itemIndex}-${item}`} className="text-[14px] leading-relaxed text-[#4A453E]/70">
+                                      {item}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       ) : isMealRecommendation ? (
                         <div className="w-full overflow-hidden rounded-[28px] border border-[#4A453E]/5 bg-white shadow-sm">

@@ -12,6 +12,7 @@ from pydantic import (
     model_validator,
 )
 
+from backend.schemas.decision_card import DecisionCard
 from backend.schemas.estimate import EstimateItem, EstimateResult
 
 
@@ -51,6 +52,11 @@ class FoodLogEntryOut(BaseModel):
         default=None,
         validation_alias=AliasChoices("image_license", "imageLicense"),
         serialization_alias="imageLicense",
+    )
+    decision_card: DecisionCard | None = Field(
+        default=None,
+        validation_alias=AliasChoices("decision_card", "decisionCard"),
+        serialization_alias="decisionCard",
     )
     standard_dish_id: str | None = Field(
         default=None,
@@ -96,6 +102,11 @@ class FoodLogEntryOut(BaseModel):
         default=None,
         validation_alias=AliasChoices("source_message_id", "sourceMessageId"),
         serialization_alias="sourceMessageId",
+    )
+    decision_card: DecisionCard | None = Field(
+        default=None,
+        validation_alias=AliasChoices("decision_card", "decisionCard"),
+        serialization_alias="decisionCard",
     )
 
 
@@ -249,6 +260,11 @@ class FoodLogSaveRequest(BaseModel):
         default=None,
         validation_alias=AliasChoices("image_license", "imageLicense"),
         serialization_alias="imageLicense",
+    )
+    decision_card: DecisionCard | None = Field(
+        default=None,
+        validation_alias=AliasChoices("decision_card", "decisionCard"),
+        serialization_alias="decisionCard",
     )
 
     @field_validator(
@@ -527,6 +543,7 @@ def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
                 if entry.get("source_message_id") is not None
                 else None
             ),
+            "decision_card": _deserialize_food_log_decision_card(entry.get("decision_card_json")),
         }
     )
 
@@ -543,6 +560,19 @@ def serialize_food_log_from_estimate_response(
         save_status="saved",
         food_log=food_log,
     )
+
+
+def _deserialize_food_log_decision_card(value: object) -> dict[str, object] | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+
+    try:
+        payload = json.loads(value)
+        decision_card = DecisionCard.model_validate(payload)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return None
+
+    return decision_card.model_dump(by_alias=True)
 
 
 def parse_food_log_items(value: object) -> list[EstimateItem]:

@@ -100,6 +100,26 @@ function areEqualNumberArrays(a: readonly number[], b: readonly number[]): boole
   return a.every((value, index) => value === b[index]);
 }
 
+function getFoodLogDecisionCard(entry: FoodLogEntry) {
+  return entry.decisionCard ?? null;
+}
+
+function canAddFoodLogToAnalysis(entry: FoodLogEntry): boolean {
+  const decisionCard = getFoodLogDecisionCard(entry);
+  return decisionCard ? decisionCard.analysisEligible : true;
+}
+
+function getAnalysisRestrictionMessage(entry: FoodLogEntry): string {
+  const decisionCard = getFoodLogDecisionCard(entry);
+  if (!decisionCard || decisionCard.analysisEligible) {
+    return '';
+  }
+  if (decisionCard.needsClarification) {
+    return '这条记录当前还需要补充商品信息，暂时不能加入分析。';
+  }
+  return '这条记录当前允许保存，但还不满足加入分析条件。';
+}
+
 export const Explorer: React.FC<ExplorerProps> = ({
   logEntries,
   onNavigateToSession,
@@ -437,6 +457,14 @@ export const Explorer: React.FC<ExplorerProps> = ({
   };
 
   const handleAddToAnalysis = (entry: FoodLogEntry) => {
+    if (!canAddFoodLogToAnalysis(entry)) {
+      const message = getAnalysisRestrictionMessage(entry);
+      if (message && typeof window !== 'undefined') {
+        window.alert(message);
+      }
+      return;
+    }
+
     setAnalysisBasket((current) => ([
       ...current,
       {
@@ -540,6 +568,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                 {filteredEntries.map((entry, index) => {
                   const isActive = selectedEntry?.id === entry.id;
                   const savedMoment = formatSavedMoment(entry.savedAt);
+                  const canAddToAnalysis = canAddFoodLogToAnalysis(entry);
 
                   return (
                     <div
@@ -596,7 +625,12 @@ export const Explorer: React.FC<ExplorerProps> = ({
                             event.stopPropagation();
                             handleAddToAnalysis(entry);
                           }}
-                          className="flex size-10 items-center justify-center rounded-full bg-[#FFF2EC] text-[#FF8A65] transition-all hover:scale-[1.03] hover:bg-[#FF8A65] hover:text-white"
+                          disabled={!canAddToAnalysis}
+                          className={`flex size-10 items-center justify-center rounded-full transition-all ${
+                            canAddToAnalysis
+                              ? 'bg-[#FFF2EC] text-[#FF8A65] hover:scale-[1.03] hover:bg-[#FF8A65] hover:text-white'
+                              : 'cursor-not-allowed bg-[#4A453E]/8 text-[#4A453E]/25'
+                          }`}
                           title="添加到今日分析"
                         >
                           <span className="material-symbols-outlined text-[20px]">add</span>

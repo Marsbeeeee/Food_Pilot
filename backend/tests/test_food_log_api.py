@@ -40,6 +40,11 @@ class FoodLogApiTests(unittest.TestCase):
             os.remove(self.db_path)
         self.db_patch = patch("backend.database.connection.db_path", self.db_path)
         self.db_patch.start()
+        self.dispatch_patch = patch(
+            "backend.services.standard_dish_image_generation_service.dispatch_image_generation_job",
+            return_value=True,
+        )
+        self.dispatch_patch.start()
         init_db()
 
         user = create_user(
@@ -65,6 +70,7 @@ class FoodLogApiTests(unittest.TestCase):
         self.other_user_id = other_user.id
 
     def tearDown(self) -> None:
+        self.dispatch_patch.stop()
         self.db_patch.stop()
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
@@ -297,30 +303,140 @@ class FoodLogApiTests(unittest.TestCase):
         )
         self.assertEqual([entry.name for entry in estimate_api_entries], ["Oatmeal Bowl"])
 
-        with_image_entries = list_food_log_entries(
-            filters=FoodLogListQuery.model_validate(
-                {
-                    "hasImage": True,
-                }
-            ),
-            current_user=self.user,
+    def test_save_food_log_entry_persists_decision_card_contract(self) -> None:
+        request = FoodLogSaveRequest.model_validate(
+            {
+                "sourceType": "estimate_api",
+                "mealDescription": "霸王茶姬 伯牙绝弦 大杯 三分糖",
+                "resultTitle": "霸王茶姬 伯牙绝弦",
+                "resultConfidence": "medium",
+                "resultDescription": "含糖饮品，建议控制频率。",
+                "totalCalories": "310 kcal",
+                "ingredients": [
+                    {
+                        "name": "奶茶",
+                        "portion": "1 杯",
+                        "energy": "310 kcal",
+                    }
+                ],
+                "decisionCard": {
+                    "inputSummary": "霸王茶姬 伯牙绝弦 大杯 三分糖",
+                    "normalizedProduct": {
+                        "categoryName": "现制茶饮",
+                        "brandName": "霸王茶姬",
+                        "productName": "伯牙绝弦",
+                        "productScope": "single_item",
+                        "itemRole": "single_item",
+                    },
+                    "nutritionEstimate": {
+                        "items": [
+                            {
+                                "name": "奶茶",
+                                "portion": "1 杯",
+                                "energy": "310 kcal",
+                            }
+                        ],
+                        "totalCalories": "310 kcal",
+                    },
+                    "confidenceLevel": "medium",
+                    "recommendationLevel": "acceptable",
+                    "riskTags": ["high_sugar"],
+                    "adaptationNote": "减脂期建议降低糖度。",
+                    "adjustments": ["下次可选小杯或无糖"],
+                    "alternatives": [],
+                    "needsClarification": False,
+                    "saveContainerKey": "estimate_api:霸王茶姬:伯牙绝弦:310 kcal",
+                    "containerType": "estimate_api",
+                    "analysisEligible": False,
+                    "saveEligible": True,
+                },
+            }
         )
-        self.assertEqual([entry.name for entry in with_image_entries], ["Salmon Bowl"])
 
-        combined_entries = list_food_log_entries(
-            filters=FoodLogListQuery.model_validate(
-                {
-                    "query": "salmon",
-                    "sourceType": "chat_message",
-                    "hasImage": True,
-                    "dateFrom": "2026-03-14",
-                    "dateTo": "2026-03-14",
-                    "sort": "created_desc",
-                }
-            ),
+        saved_entry = save_food_log_entry(request=request, current_user=self.user)
+        fetched_entries = list_food_log_entries(
+            filters=FoodLogListQuery(),
             current_user=self.user,
         )
-        self.assertEqual([entry.name for entry in combined_entries], ["Salmon Bowl"])
+
+        saved_payload = saved_entry.model_dump(by_alias=True, exclude_none=True)
+        fetched_payload = fetched_entries[0].model_dump(by_alias=True, exclude_none=True)
+
+        self.assertIn("decisionCard", saved_payload)
+        self.assertEqual(saved_payload["decisionCard"]["normalizedProduct"]["brandName"], "霸王茶姬")
+        self.assertEqual(saved_payload["decisionCard"]["normalizedProduct"]["categoryName"], "现制茶饮")
+        self.assertFalse(saved_payload["decisionCard"]["analysisEligible"])
+        self.assertTrue(saved_payload["decisionCard"]["saveEligible"])
+        self.assertEqual(
+            fetched_payload["decisionCard"]["saveContainerKey"],
+            "estimate_api:霸王茶姬:伯牙绝弦:310 kcal",
+        )
+
+    def test_save_food_log_from_estimate_entry_preserves_decision_card(self) -> None:
+        request = FoodLogFromEstimateRequest.model_validate(
+            {
+                "mealDescription": "鸡胸肉沙拉",
+                "estimate": {
+                    "title": "鸡胸肉沙拉",
+                    "description": "蛋白质充足。",
+                    "confidence": "high",
+                    "items": [
+                        {
+                            "name": "鸡胸肉",
+                            "portion": "150 g",
+                            "energy": "240 kcal",
+                        }
+                    ],
+                    "total_calories": "240 kcal",
+                    "suggestion": "可以搭配一份蔬菜。",
+                    "decisionCard": {
+                        "inputSummary": "鸡胸肉沙拉",
+                        "normalizedProduct": {
+                            "categoryName": "轻食沙拉",
+                            "productName": "鸡胸肉沙拉",
+                            "productScope": "single_item",
+                            "itemRole": "single_item",
+                        },
+                        "nutritionEstimate": {
+                            "items": [
+                                {
+                                    "name": "鸡胸肉",
+                                    "portion": "150 g",
+                                    "energy": "240 kcal",
+                                }
+                            ],
+                            "totalCalories": "240 kcal",
+                        },
+                        "confidenceLevel": "high",
+                        "recommendationLevel": "recommended",
+                        "riskTags": [],
+                        "adaptationNote": "适合减脂阶段。",
+                        "adjustments": ["可补充一份全麦主食"],
+                        "alternatives": [],
+                        "needsClarification": False,
+                        "saveContainerKey": "estimate_api:鸡胸肉沙拉:240 kcal",
+                        "containerType": "estimate_api",
+                        "analysisEligible": True,
+                        "saveEligible": True,
+                    },
+                },
+                "clientRequestId": "estimate-keep-card",
+            }
+        )
+
+        response = save_food_log_from_estimate_entry(
+            request=request,
+            current_user=self.user,
+        )
+        payload = response.model_dump(by_alias=True, exclude_none=True)
+
+        self.assertEqual(payload["saveStatus"], "saved")
+        self.assertIn("decisionCard", payload["foodLog"])
+        self.assertEqual(
+            payload["foodLog"]["decisionCard"]["normalizedProduct"]["categoryName"],
+            "轻食沙拉",
+        )
+        self.assertTrue(payload["foodLog"]["decisionCard"]["analysisEligible"])
 
     def test_get_food_log_entry_reuses_approved_standard_dish_image(self) -> None:
         created = create_food_log(

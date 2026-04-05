@@ -60,6 +60,11 @@ class FoodLogIntegrationTests(unittest.TestCase):
 
         self.db_patch = patch("backend.database.connection.db_path", self.db_path)
         self.db_patch.start()
+        self.dispatch_patch = patch(
+            "backend.services.standard_dish_image_generation_service.dispatch_image_generation_job",
+            return_value=True,
+        )
+        self.dispatch_patch.start()
         init_db()
 
         self.user = create_user(
@@ -82,6 +87,7 @@ class FoodLogIntegrationTests(unittest.TestCase):
         )
 
     def tearDown(self) -> None:
+        self.dispatch_patch.stop()
         self.db_patch.stop()
         if os.path.exists(self.db_path):
             os.remove(self.db_path)

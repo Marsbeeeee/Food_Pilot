@@ -1,9 +1,11 @@
+import json
 import re
 import sqlite3
 from datetime import date
 
 from backend.database.connection import get_db_connection
 from backend.repositories.food_log_repository import (
+    UNSET as FOOD_LOG_REPO_UNSET,
     create_food_log as create_food_log_record,
     delete_food_log as delete_food_log_record,
     get_food_log_by_id as get_food_log_by_id_record,
@@ -61,6 +63,7 @@ IMAGE_LICENSE_ALIASES = {
     "copyright": "licensed",
     "publicdomain": "public_domain",
 }
+UNSET = FOOD_LOG_REPO_UNSET
 MEDIUM_OR_HIGH_CONFIDENCE_TOKENS = {
     "high",
     "medium",
@@ -135,6 +138,7 @@ def create_food_log(
     source_message_id: int | None = None,
     result_confidence: str | None = None,
     assistant_suggestion: str | None = None,
+    decision_card_json: str | None | object = UNSET,
     meal_occurred_at: str | None = None,
     logged_at: str | None = None,
     created_at: str | None = None,
@@ -188,6 +192,7 @@ def create_food_log(
             standard_dish_id=standard_dish_id,
             result_confidence=result_confidence,
             assistant_suggestion=assistant_suggestion,
+            decision_card_json=decision_card_json,
             meal_occurred_at=meal_occurred_at,
             logged_at=logged_at,
             created_at=created_at,
@@ -225,6 +230,7 @@ def save_food_log(
     source_message_id: int | None = None,
     result_confidence: str | None = None,
     assistant_suggestion: str | None = None,
+    decision_card_json: str | None | object = UNSET,
     meal_occurred_at: str | None = None,
     logged_at: str | None = None,
     created_at: str | None = None,
@@ -292,6 +298,7 @@ def save_food_log(
             standard_dish_id=standard_dish_id,
             result_confidence=result_confidence,
             assistant_suggestion=assistant_suggestion,
+            decision_card_json=decision_card_json,
             meal_occurred_at=meal_occurred_at,
             logged_at=logged_at,
             created_at=created_at,
@@ -331,6 +338,7 @@ def create_food_log_from_estimate(
     image: str | None = None,
     image_source: str | None = None,
     image_license: str | None = None,
+    decision_card_json: str | None | object = UNSET,
     conn: sqlite3.Connection | None = None,
 ) -> dict[str, object]:
     # Successful chat analysis and `/estimate` responses must not create Food Log
@@ -350,6 +358,11 @@ def create_food_log_from_estimate(
             source_message_id=source_message_id,
             result_confidence=getattr(estimate, "confidence", None),
             assistant_suggestion=getattr(estimate, "suggestion", None),
+            decision_card_json=(
+                _serialize_decision_card_for_write(getattr(estimate, "decision_card", None))
+                if decision_card_json is UNSET
+                else decision_card_json
+            ),
             meal_occurred_at=meal_occurred_at,
             logged_at=logged_at,
             created_at=created_at,
@@ -383,6 +396,20 @@ def build_estimate_api_idempotency_key(client_request_id: str) -> str:
     if normalized.startswith("estimate_api:"):
         return normalized
     return f"estimate_api:{normalized}"
+
+
+def _serialize_decision_card_for_write(value) -> str | None:
+    if value is None or value is UNSET:
+        return None
+    if hasattr(value, "model_dump"):
+        payload = value.model_dump(by_alias=True)
+    elif isinstance(value, dict):
+        payload = dict(value)
+    else:
+        return None
+    if not payload:
+        return None
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def get_food_log_by_id(

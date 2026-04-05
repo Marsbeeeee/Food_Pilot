@@ -409,6 +409,7 @@ def _ensure_food_logs_table(cursor) -> None:
             is_manual INTEGER NOT NULL DEFAULT 0,
             idempotency_key TEXT,
             assistant_suggestion TEXT,
+            decision_card_json TEXT,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             deleted_at TEXT,
@@ -442,6 +443,13 @@ def _ensure_food_logs_table(cursor) -> None:
             """
             ALTER TABLE food_logs
             ADD COLUMN assistant_suggestion TEXT
+            """
+        )
+    if "decision_card_json" not in food_log_columns:
+        cursor.execute(
+            """
+            ALTER TABLE food_logs
+            ADD COLUMN decision_card_json TEXT
             """
         )
     if "normalized_query" not in food_log_columns:

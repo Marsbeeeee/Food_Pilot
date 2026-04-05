@@ -92,13 +92,13 @@ test('buildWorkspaceMessagePresentation can render estimate from decision card o
     },
   });
 
-  assert.equal(presentation.variant, 'meal_estimate');
+  assert.equal(presentation.variant, 'clarification');
   assert.equal(presentation.title, '鸡胸肉沙拉');
-  assert.equal(presentation.total, '240 kcal');
-  assert.equal(presentation.items.length, 1);
+  assert.equal(presentation.inputSummary, '鸡胸肉沙拉');
   assert.equal(presentation.confidence, 'low');
   assert.equal(presentation.needsClarification, true);
   assert.equal(presentation.analysisEligible, false);
   assert.equal(presentation.saveEligible, false);
-  assert.equal(presentation.suggestion, '补充份量信息');
+  assert.deepEqual(presentation.riskTags, ['needs_clarification']);
+  assert.deepEqual(presentation.adjustments, ['补充份量信息']);
 });
