@@ -182,6 +182,74 @@ export interface Message {
   estimates?: EstimateBlock[];
 }
 
+export interface WorkspaceTextPresentation {
+  variant: 'text';
+  content: string;
+  decisionCard: DecisionCard | null;
+}
+
+export interface WorkspaceMealEstimatePresentation {
+  variant: 'meal_estimate';
+  title?: string;
+  confidence?: string;
+  description?: string;
+  items: IngredientResult[];
+  total?: string;
+  estimates: EstimateBlock[] | null;
+  suggestion: string | null;
+  decisionCard: DecisionCard | null;
+  needsClarification: false;
+  analysisEligible: boolean | null;
+  saveEligible: boolean | null;
+  ingredientColumnLabel: string;
+  portionColumnLabel: string;
+  energyColumnLabel: string;
+  proteinColumnLabel: string;
+  carbsColumnLabel: string;
+  fatColumnLabel: string;
+  totalLabel: string;
+}
+
+export interface WorkspaceClarificationPresentation {
+  variant: 'clarification';
+  title: string;
+  content: string;
+  description: string | null;
+  confidence: string;
+  inputSummary: string;
+  recommendationLevel: string;
+  riskTags: string[];
+  adjustments: string[];
+  decisionCard: DecisionCard | null;
+  needsClarification: true;
+  analysisEligible: boolean | null;
+  saveEligible: boolean | null;
+  eyebrow: string;
+  fallbackTitle: string;
+  badgeLabel: string;
+  riskLabel: string;
+  actionLabel: string;
+}
+
+export interface WorkspaceRecommendationPresentation {
+  variant: 'meal_recommendation';
+  title: string;
+  description?: string;
+  content?: string;
+  decisionCard?: DecisionCard | null;
+  eyebrow: string;
+  fallbackTitle: string;
+  badgeLabel: string;
+  reasonLabel: string;
+  contentLabel: string;
+}
+
+export type WorkspaceMessagePresentation =
+  | WorkspaceTextPresentation
+  | WorkspaceMealEstimatePresentation
+  | WorkspaceClarificationPresentation
+  | WorkspaceRecommendationPresentation;
+
 export interface ChatSession {
   id: string;
   title: string;

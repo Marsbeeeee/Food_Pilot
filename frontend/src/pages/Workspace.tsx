@@ -15,7 +15,17 @@ import {
 } from '../api/chat';
 import { FoodLogApiError, saveFoodLogEntry } from '../api/foodLog';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { ChatMessageType, ChatSession, FoodLogEntry, Message } from '../types/types';
+import {
+  ChatMessageType,
+  ChatSession,
+  FoodLogEntry,
+  Message,
+  WorkspaceClarificationPresentation,
+  WorkspaceMealEstimatePresentation,
+  WorkspaceMessagePresentation,
+  WorkspaceRecommendationPresentation,
+  WorkspaceTextPresentation,
+} from '../types/types';
 
 interface WorkspaceProps {
   sessions: ChatSession[];
@@ -575,19 +585,33 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           ) : (
             activeSession.messages.map((message, index) => (
               (() => {
-                const messagePresentation = buildWorkspaceMessagePresentation(message);
-                const isMealEstimate = messagePresentation.variant === 'meal_estimate';
-                const isMealRecommendation = messagePresentation.variant === 'meal_recommendation';
-                const isClarification = messagePresentation.variant === 'clarification';
+                const messagePresentation = (
+                  buildWorkspaceMessagePresentation(message) as WorkspaceMessagePresentation
+                );
+                const estimatePresentation = messagePresentation.variant === 'meal_estimate'
+                  ? messagePresentation as WorkspaceMealEstimatePresentation
+                  : null;
+                const clarificationPresentation = messagePresentation.variant === 'clarification'
+                  ? messagePresentation as WorkspaceClarificationPresentation
+                  : null;
+                const recommendationPresentation = messagePresentation.variant === 'meal_recommendation'
+                  ? messagePresentation as WorkspaceRecommendationPresentation
+                  : null;
+                const textPresentation = messagePresentation.variant === 'text'
+                  ? messagePresentation as WorkspaceTextPresentation
+                  : null;
+                const isMealEstimate = Boolean(estimatePresentation);
+                const isMealRecommendation = Boolean(recommendationPresentation);
+                const isClarification = Boolean(clarificationPresentation);
                 const decisionCard = messagePresentation.decisionCard ?? null;
                 const isSaveEligibleByContract = decisionCard ? decisionCard.saveEligible : true;
                 const mealDescription = isMealEstimate
                   ? resolveMealDescription(activeSession.messages, index, message)
                   : null;
                 const renderedEstimates = (
-                  isMealEstimate
+                  estimatePresentation
                     ? resolveEstimateBlocksForRendering({
-                      estimates: messagePresentation.estimates,
+                      estimates: estimatePresentation.estimates,
                       mealDescription: mealDescription ?? undefined,
                     })
                     : null
@@ -680,12 +704,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                   <table className="w-full text-left">
                                     <thead className="bg-[#F7F3E9]/30 text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/40">
                                       <tr>
-                                        <th className="px-6 py-4">{messagePresentation.ingredientColumnLabel}</th>
-                                        <th className="px-4 py-4">{messagePresentation.portionColumnLabel}</th>
-                                        <th className="px-4 py-4 text-right">{messagePresentation.energyColumnLabel}</th>
-                                        <th className="px-4 py-4 text-right">{messagePresentation.proteinColumnLabel}</th>
-                                        <th className="px-4 py-4 text-right">{messagePresentation.carbsColumnLabel}</th>
-                                        <th className="px-4 py-4 text-right">{messagePresentation.fatColumnLabel}</th>
+                                        <th className="px-6 py-4">{estimatePresentation?.ingredientColumnLabel}</th>
+                                        <th className="px-4 py-4">{estimatePresentation?.portionColumnLabel}</th>
+                                        <th className="px-4 py-4 text-right">{estimatePresentation?.energyColumnLabel}</th>
+                                        <th className="px-4 py-4 text-right">{estimatePresentation?.proteinColumnLabel}</th>
+                                        <th className="px-4 py-4 text-right">{estimatePresentation?.carbsColumnLabel}</th>
+                                        <th className="px-4 py-4 text-right">{estimatePresentation?.fatColumnLabel}</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#4A453E]/5 text-[14px]">
@@ -708,7 +732,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                         const tFat = allItems.reduce((s: number, it: { fat?: string }) => s + extractMacroNum(it.fat), 0);
                                         return (
                                           <tr>
-                                            <td className="px-6 py-6 text-lg text-[#4A453E]" colSpan={2}>{messagePresentation.totalLabel}</td>
+                                            <td className="px-6 py-6 text-lg text-[#4A453E]" colSpan={2}>{estimatePresentation?.totalLabel}</td>
                                             <td className="px-4 py-6 text-right font-serif-brand text-3xl text-[#FF8A65]">{formatEnergyInteger(est.total)}</td>
                                             <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tPro > 0 ? `${fmtNum(tPro)} g` : '—'}</td>
                                             <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tCarb > 0 ? `${fmtNum(tCarb)} g` : '—'}</td>
@@ -773,27 +797,27 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             <div className="overflow-hidden rounded-[32px] border border-[#4A453E]/5 bg-white shadow-sm">
                               <div className="border-b border-[#4A453E]/5 p-9">
                                 <div className="mb-4 flex items-center justify-between">
-                                  <h3 className="font-serif-brand text-2xl font-bold text-[#4A453E]">{messagePresentation.title}</h3>
+                                  <h3 className="font-serif-brand text-2xl font-bold text-[#4A453E]">{estimatePresentation?.title}</h3>
                                   <span className="rounded-full border border-[#81C784]/10 bg-[#81C784]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#81C784]">
-                                    {messagePresentation.confidence}
+                                    {estimatePresentation?.confidence}
                                   </span>
                                 </div>
-                                <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">{messagePresentation.description}</p>
+                                <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">{estimatePresentation?.description}</p>
                               </div>
                               <div className="p-0">
                                 <table className="w-full text-left">
                                   <thead className="bg-[#F7F3E9]/30 text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/40">
                                     <tr>
-                                      <th className="px-6 py-4">{messagePresentation.ingredientColumnLabel}</th>
-                                      <th className="px-4 py-4">{messagePresentation.portionColumnLabel}</th>
-                                      <th className="px-4 py-4 text-right">{messagePresentation.energyColumnLabel}</th>
-                                      <th className="px-4 py-4 text-right">{messagePresentation.proteinColumnLabel}</th>
-                                      <th className="px-4 py-4 text-right">{messagePresentation.carbsColumnLabel}</th>
-                                      <th className="px-4 py-4 text-right">{messagePresentation.fatColumnLabel}</th>
+                                      <th className="px-6 py-4">{estimatePresentation?.ingredientColumnLabel}</th>
+                                      <th className="px-4 py-4">{estimatePresentation?.portionColumnLabel}</th>
+                                      <th className="px-4 py-4 text-right">{estimatePresentation?.energyColumnLabel}</th>
+                                      <th className="px-4 py-4 text-right">{estimatePresentation?.proteinColumnLabel}</th>
+                                      <th className="px-4 py-4 text-right">{estimatePresentation?.carbsColumnLabel}</th>
+                                      <th className="px-4 py-4 text-right">{estimatePresentation?.fatColumnLabel}</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-[#4A453E]/5 text-[14px]">
-                                    {messagePresentation.items?.map((item: { name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }, itemIndex: number) => (
+                                    {estimatePresentation?.items?.map((item: { name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }, itemIndex: number) => (
                                       <tr key={itemIndex} className="transition-colors hover:bg-[#F7F3E9]/10">
                                         <td className="px-6 py-4 font-bold text-[#4A453E]">{item.name}</td>
                                         <td className="px-4 py-4 font-medium text-[#4A453E]/50">{item.portion}</td>
@@ -806,14 +830,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                   </tbody>
                                   <tfoot className="border-t border-[#4A453E]/10 bg-[#FFFDF5] font-bold">
                                     {(() => {
-                                      const allItems = messagePresentation.items ?? [];
+                                      const allItems = estimatePresentation?.items ?? [];
                                       const tPro = allItems.reduce((s: number, it: { protein?: string }) => s + extractMacroNum(it.protein), 0);
                                       const tCarb = allItems.reduce((s: number, it: { carbs?: string }) => s + extractMacroNum(it.carbs), 0);
                                       const tFat = allItems.reduce((s: number, it: { fat?: string }) => s + extractMacroNum(it.fat), 0);
                                       return (
                                         <tr>
-                                          <td className="px-6 py-6 text-lg text-[#4A453E]" colSpan={2}>{messagePresentation.totalLabel}</td>
-                                          <td className="px-4 py-6 text-right font-serif-brand text-3xl text-[#FF8A65]">{formatEnergyInteger(messagePresentation.total)}</td>
+                                          <td className="px-6 py-6 text-lg text-[#4A453E]" colSpan={2}>{estimatePresentation?.totalLabel}</td>
+                                          <td className="px-4 py-6 text-right font-serif-brand text-3xl text-[#FF8A65]">{formatEnergyInteger(estimatePresentation?.total)}</td>
                                           <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tPro > 0 ? `${fmtNum(tPro)} g` : '—'}</td>
                                           <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tCarb > 0 ? `${fmtNum(tCarb)} g` : '—'}</td>
                                           <td className="px-4 py-6 text-right text-sm text-[#4A453E]/70">{tFat > 0 ? `${fmtNum(tFat)} g` : '—'}</td>
@@ -827,8 +851,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                           )}
                           {!renderedEstimates?.length ? (
                           <div className="flex flex-col items-end gap-3 rounded-[32px] border border-[#4A453E]/5 bg-white px-9 py-6 shadow-sm">
-                            {(messagePresentation.suggestion ?? message.content) && (
-                              <p className="w-full text-[14px] leading-relaxed text-[#4A453E]/70">{messagePresentation.suggestion ?? message.content}</p>
+                            {(estimatePresentation?.suggestion ?? message.content) && (
+                              <p className="w-full text-[14px] leading-relaxed text-[#4A453E]/70">{estimatePresentation?.suggestion ?? message.content}</p>
                             )}
                             <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
                               <div className={`inline-flex items-center gap-2 self-end rounded-full border px-4 py-2 text-sm font-bold md:self-auto ${
@@ -885,9 +909,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                               {savePresentation.helperText}
                             </p>
                           </div>
-                          ) : (messagePresentation.suggestion ?? message.content) ? (
+                          ) : (estimatePresentation?.suggestion ?? message.content) ? (
                           <div className="rounded-[32px] border border-[#4A453E]/5 bg-white px-9 py-6 shadow-sm">
-                            <p className="w-full text-[14px] leading-relaxed text-[#4A453E]/70">{messagePresentation.suggestion ?? message.content}</p>
+                            <p className="w-full text-[14px] leading-relaxed text-[#4A453E]/70">{estimatePresentation?.suggestion ?? message.content}</p>
                           </div>
                           ) : null}
                         </div>
@@ -897,42 +921,42 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             <div className="mb-3 flex items-center justify-between gap-4">
                               <div>
                                 <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#B5791A]">
-                                  {messagePresentation.eyebrow}
+                                  {clarificationPresentation?.eyebrow}
                                 </p>
                                 <h3 className="font-serif-brand text-2xl font-bold text-[#4A453E]">
-                                  {messagePresentation.title}
+                                  {clarificationPresentation?.title}
                                 </h3>
                               </div>
                               <span className="rounded-full border border-[#F5C16C]/30 bg-white/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#B5791A]">
-                                {messagePresentation.badgeLabel}
+                                {clarificationPresentation?.badgeLabel}
                               </span>
                             </div>
-                            {messagePresentation.inputSummary && (
+                            {clarificationPresentation?.inputSummary && (
                               <p className="text-[13px] font-semibold text-[#4A453E]/55">
-                                输入摘要：{messagePresentation.inputSummary}
+                                输入摘要：{clarificationPresentation?.inputSummary}
                               </p>
                             )}
                           </div>
                           <div className="flex flex-col gap-4 px-9 py-7">
-                            {messagePresentation.description && (
+                            {clarificationPresentation?.description && (
                               <p className="text-[15px] leading-relaxed text-[#4A453E]/75">
-                                {messagePresentation.description}
+                                {clarificationPresentation?.description}
                               </p>
                             )}
-                            {messagePresentation.content && (
+                            {clarificationPresentation?.content && (
                               <div className="rounded-[20px] border border-[#4A453E]/5 bg-white/80 px-5 py-4">
                                 <p className="text-[15px] leading-relaxed text-[#4A453E]/75">
-                                  {messagePresentation.content}
+                                  {clarificationPresentation?.content}
                                 </p>
                               </div>
                             )}
-                            {messagePresentation.riskTags?.length ? (
+                            {clarificationPresentation?.riskTags?.length ? (
                               <div>
                                 <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
-                                  {messagePresentation.riskLabel}
+                                  {clarificationPresentation?.riskLabel}
                                 </p>
                                 <div className="flex flex-wrap gap-2">
-                                  {messagePresentation.riskTags.map((tag: string) => (
+                                  {clarificationPresentation?.riskTags.map((tag: string) => (
                                     <span
                                       key={tag}
                                       className="rounded-full border border-[#F5C16C]/30 bg-[#FFF3D6] px-3 py-1 text-[11px] font-semibold text-[#8C6517]"
@@ -943,13 +967,13 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                 </div>
                               </div>
                             ) : null}
-                            {messagePresentation.adjustments?.length ? (
+                            {clarificationPresentation?.adjustments?.length ? (
                               <div>
                                 <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
-                                  {messagePresentation.actionLabel}
+                                  {clarificationPresentation?.actionLabel}
                                 </p>
                                 <div className="space-y-2">
-                                  {messagePresentation.adjustments.map((item: string, itemIndex: number) => (
+                                  {clarificationPresentation?.adjustments.map((item: string, itemIndex: number) => (
                                     <p key={`${itemIndex}-${item}`} className="text-[14px] leading-relaxed text-[#4A453E]/70">
                                       {item}
                                     </p>
@@ -965,34 +989,34 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             <div className="mb-3 flex items-center justify-between gap-4">
                               <div>
                                 <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#4A453E]/35">
-                                  {messagePresentation.eyebrow}
+                                  {recommendationPresentation?.eyebrow}
                                 </p>
                                 <h3 className="font-serif-brand text-2xl font-bold text-[#4A453E]">
-                                  {messagePresentation.title}
+                                  {recommendationPresentation?.title}
                                 </h3>
                               </div>
                               <span className="rounded-full border border-[#FF8A65]/15 bg-[#FF8A65]/8 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#FF8A65]">
-                                {messagePresentation.badgeLabel}
+                                {recommendationPresentation?.badgeLabel}
                               </span>
                             </div>
-                            {messagePresentation.description && (
+                            {recommendationPresentation?.description && (
                               <div className="rounded-[20px] border border-[#4A453E]/5 bg-[#FFFDF5] px-5 py-4">
                                 <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
-                                  {messagePresentation.reasonLabel}
+                                  {recommendationPresentation?.reasonLabel}
                                 </p>
                                 <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">
-                                  {messagePresentation.description}
+                                  {recommendationPresentation?.description}
                                 </p>
                               </div>
                             )}
                           </div>
-                          {messagePresentation.content && (
+                          {recommendationPresentation?.content && (
                             <div className="px-9 py-7">
                               <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
-                                {messagePresentation.contentLabel}
+                                {recommendationPresentation?.contentLabel}
                               </p>
                               <p className="text-[15px] leading-relaxed text-[#4A453E]/75">
-                                {messagePresentation.content}
+                                {recommendationPresentation?.content}
                               </p>
                             </div>
                           )}
@@ -1003,7 +1027,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             ? 'bg-[#F7F3E9] text-[#4A453E] border-[#4A453E]/5 rounded-tr-[4px]'
                             : 'bg-white text-[#4A453E] border-[#4A453E]/8 rounded-tl-[4px]'
                         }`}>
-                          {messagePresentation.content}
+                          {textPresentation?.content}
                         </div>
                       )}
                       <span className="px-1 text-[9px] font-bold uppercase tracking-widest text-[#4A453E]/20">{message.time || '刚刚'}</span>

@@ -3,7 +3,6 @@ import {
   ChatMessagePayload,
   ChatMessageType,
   ChatSession,
-  DecisionCard,
   IngredientResult,
   Message,
 } from '../types/types';
@@ -177,7 +176,7 @@ function normalizeSessionTitle(title: string): string {
   return title === 'New chat' ? '新对话' : title;
 }
 
-function mapMessage(message: ChatMessageResponse): Message {
+export function mapMessage(message: ChatMessageResponse): Message {
   const createdAt = message.createdAt;
   const createdDate = new Date(createdAt);
   const messageType = normalizeMessageType(message.messageType);
@@ -276,78 +275,11 @@ function normalizePayload(
   }
   if (message.payload?.decisionCard) {
     payload.decisionCard = message.payload.decisionCard;
-  } else {
-    const fallbackDecisionCard = buildFallbackDecisionCard(message, payload, messageType);
-    if (fallbackDecisionCard) {
-      payload.decisionCard = fallbackDecisionCard;
-    }
   }
 
   return Object.keys(payload).length > 0 ? payload : null;
 }
 
-function buildFallbackDecisionCard(
-  message: ChatMessageResponse,
-  payload: ChatMessagePayload,
-  messageType: ChatMessageType,
-): DecisionCard | null {
-  if (messageType !== 'meal_estimate') {
-    return null;
-  }
-
-  const title = payload.title ?? message.resultTitle;
-  const total = payload.total ?? message.resultTotal;
-  const confidence = payload.confidence ?? message.resultConfidence ?? 'unknown';
-  const items = payload.items ?? message.resultItems ?? [];
-  if (!title || !total || !items.length) {
-    return null;
-  }
-
-  const confidenceLevel = normalizeDecisionConfidence(confidence);
-  const needsClarification = confidenceLevel === 'low' || confidenceLevel === 'unknown';
-  const saveContainerKeySeed = `${message.id}:${title}:${total}`;
-  const saveContainerKey = `chat_message:${saveContainerKeySeed}`;
-  const adaptationNote = payload.description ?? message.resultDescription ?? undefined;
-  const suggestion = message.content ?? payload.suggestion ?? '';
-
-  return {
-    inputSummary: title,
-    normalizedProduct: {
-      productName: title,
-      productScope: items.length > 1 ? 'multi_item' : 'single_item',
-      itemRole: items.length > 1 ? 'top_level_item' : 'single_item',
-    },
-    nutritionEstimate: {
-      items: items.map((item) => ({ ...item })),
-      totalCalories: total,
-    },
-    confidenceLevel,
-    recommendationLevel: needsClarification ? 'needs_review' : 'acceptable',
-    riskTags: needsClarification ? ['needs_clarification'] : [],
-    adaptationNote,
-    adjustments: suggestion ? [suggestion] : [],
-    alternatives: [],
-    needsClarification,
-    saveContainerKey,
-    containerType: 'chat_message',
-    analysisEligible: !needsClarification,
-    saveEligible: true,
-  };
-}
-
-function normalizeDecisionConfidence(value: string): DecisionCard['confidenceLevel'] {
-  const normalized = value.trim().toLowerCase();
-  if (normalized === '高' || normalized === 'high') {
-    return 'high';
-  }
-  if (normalized === '中' || normalized === 'medium' || normalized === 'mid') {
-    return 'medium';
-  }
-  if (normalized === '低' || normalized === 'low') {
-    return 'low';
-  }
-  return 'unknown';
-}
 
 function buildMessagePayload(content: string, profileId?: number): Record<string, number | string> {
   return profileId ? { content, profileId } : { content };

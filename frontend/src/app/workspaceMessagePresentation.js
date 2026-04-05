@@ -1,59 +1,29 @@
-const ESTIMATE_COPY = {
-  ingredientColumnLabel: '食材',
-  portionColumnLabel: '份量',
-  energyColumnLabel: '估算热量',
-  proteinColumnLabel: '蛋白质',
-  carbsColumnLabel: '碳水',
-  fatColumnLabel: '脂肪',
-  totalLabel: '估算总热量',
-};
+import { buildDecisionResultPresentation } from './decisionResultPresentation.js';
 
 const RECOMMENDATION_COPY = {
-  eyebrow: '饮食推荐',
-  fallbackTitle: '推荐建议',
-  badgeLabel: '建议',
-  reasonLabel: '为什么这样选',
-  contentLabel: '推荐怎么吃',
-};
-
-const CLARIFICATION_COPY = {
-  eyebrow: '信息澄清',
-  fallbackTitle: '需要补充信息',
-  badgeLabel: '待澄清',
-  riskLabel: '风险标签',
-  actionLabel: '建议补充',
+  eyebrow: '楗鎺ㄨ崘',
+  fallbackTitle: '鎺ㄨ崘寤鸿',
+  badgeLabel: '寤鸿',
+  reasonLabel: '涓轰粈涔堣繖鏍烽€?',
+  contentLabel: '鎺ㄨ崘鎬庝箞鍚?',
 };
 
 export function buildWorkspaceMessagePresentation(message) {
   const variant = message?.messageType ?? 'text';
   const decisionCard = message?.payload?.decisionCard ?? message?.decisionCard ?? null;
 
-  if (decisionCard?.needsClarification) {
-    return buildClarificationPresentation(message, decisionCard);
-  }
-
   if (variant === 'meal_estimate') {
-    const normalizedProduct = decisionCard?.normalizedProduct ?? null;
-    const nutritionEstimate = decisionCard?.nutritionEstimate ?? null;
-    const cardSuggestion = Array.isArray(decisionCard?.adjustments)
-      ? decisionCard.adjustments[0]
-      : null;
-
-    return {
-      variant,
-      title: message.title ?? normalizedProduct?.productName,
-      confidence: message.confidence ?? decisionCard?.confidenceLevel,
-      description: message.description ?? decisionCard?.adaptationNote,
-      items: message.items ?? nutritionEstimate?.items ?? [],
-      total: message.total ?? nutritionEstimate?.totalCalories,
+    return buildDecisionResultPresentation({
+      title: message.title,
+      confidence: message.confidence,
+      description: message.description,
+      items: message.items,
+      total: message.total,
       estimates: message.estimates ?? null,
-      suggestion: message.payload?.suggestion ?? cardSuggestion ?? null,
+      suggestion: message.payload?.suggestion ?? null,
+      content: message.content ?? '',
       decisionCard,
-      needsClarification: false,
-      analysisEligible: decisionCard?.analysisEligible ?? null,
-      saveEligible: decisionCard?.saveEligible ?? null,
-      ...ESTIMATE_COPY,
-    };
+    });
   }
 
   if (variant === 'meal_recommendation') {
@@ -62,6 +32,7 @@ export function buildWorkspaceMessagePresentation(message) {
       title: message.title || RECOMMENDATION_COPY.fallbackTitle,
       description: message.description,
       content: message.content,
+      decisionCard,
       ...RECOMMENDATION_COPY,
     };
   }
@@ -70,26 +41,5 @@ export function buildWorkspaceMessagePresentation(message) {
     variant: 'text',
     content: message?.content ?? '',
     decisionCard,
-  };
-}
-
-function buildClarificationPresentation(message, decisionCard) {
-  const normalizedProduct = decisionCard?.normalizedProduct ?? null;
-
-  return {
-    variant: 'clarification',
-    title: normalizedProduct?.productName ?? decisionCard?.inputSummary ?? CLARIFICATION_COPY.fallbackTitle,
-    content: message?.content ?? '',
-    description: decisionCard?.adaptationNote ?? null,
-    confidence: decisionCard?.confidenceLevel ?? 'unknown',
-    inputSummary: decisionCard?.inputSummary ?? '',
-    recommendationLevel: decisionCard?.recommendationLevel ?? 'needs_review',
-    riskTags: Array.isArray(decisionCard?.riskTags) ? decisionCard.riskTags : [],
-    adjustments: Array.isArray(decisionCard?.adjustments) ? decisionCard.adjustments : [],
-    decisionCard,
-    needsClarification: true,
-    analysisEligible: decisionCard?.analysisEligible ?? null,
-    saveEligible: decisionCard?.saveEligible ?? null,
-    ...CLARIFICATION_COPY,
   };
 }

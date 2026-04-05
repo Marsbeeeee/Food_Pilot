@@ -95,7 +95,7 @@ class EstimateTests(unittest.TestCase):
         self.assertIsNone(response.food_log_id)
         self.assertEqual(response.save_status, "not_saved")
         self.assertEqual(response.error.code, "AI_UPSTREAM_ERROR")
-        self.assertEqual(response.error.message, "AI 服务暂时不可用，请稍后重试。")
+        self.assertEqual(response.error.message, "估算 AI 服务暂时不可用，请稍后重试。")
         self.assertTrue(response.error.retryable)
 
     def test_internal_error_returns_clear_chinese_fallback_message(self) -> None:
