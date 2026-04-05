@@ -84,6 +84,7 @@ def send_chat_message(
         session_id,
         request.content,
         profile_id=request.profile_id,
+        mode=request.mode,
     )
     if exchange is None:
         raise HTTPException(status_code=404, detail="Chat session not found")
@@ -104,6 +105,7 @@ def create_chat_message(
         current_user.id,
         request.content,
         profile_id=request.profile_id,
+        mode=request.mode,
     )
 
     return ChatMessageExchangeResponse(

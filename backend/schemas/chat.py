@@ -12,6 +12,7 @@ from backend.schemas.knowledge import KnowledgeReference
 
 
 ChatMessageType = Literal["text", "meal_estimate", "meal_recommendation"]
+ChatInputMode = Literal["chat", "decision"]
 
 LEGACY_CHAT_MESSAGE_TYPE_MAP = {
     "estimate_result": "meal_estimate",
@@ -21,12 +22,13 @@ LEGACY_CHAT_MESSAGE_TYPE_MAP = {
 class ChatSendMessageRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
-    content: str
+    content: str = Field(validation_alias=AliasChoices("content", "message"))
     profile_id: int | None = Field(
         default=None,
         validation_alias=AliasChoices("profile_id", "profileId"),
         serialization_alias="profileId",
     )
+    mode: ChatInputMode = "chat"
 
     @field_validator("content")
     @classmethod
@@ -80,6 +82,7 @@ class ChatMessagePayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     text: str | None = None
+    mode: ChatInputMode | None = None
     title: str | None = None
     confidence: str | None = None
     description: str | None = None

@@ -10,6 +10,7 @@ from backend.schemas.recommendation import GuidanceReply
 from backend.services.food_log_service import save_food_log
 from backend.services.chat_service import (
     CLARIFICATION_MESSAGE,
+    DECISION_PRODUCT_SUBJECT_CLARIFICATION_MESSAGE,
     DEFAULT_SESSION_TITLE,
     DEFAULT_ASSISTANT_ERROR_MESSAGE,
     DEFAULT_RECOMMENDATION_ERROR_MESSAGE,
@@ -157,6 +158,16 @@ class ChatServiceTests(unittest.TestCase):
 
         self.assertEqual(resolved, "meal_recommendation")
 
+    def test_resolve_message_type_prefers_decision_mode_for_product_input(self) -> None:
+        resolved = resolve_message_type(
+            "推荐一下瑞幸 生椰拿铁",
+            profile_id=12,
+            user_id=self.user_id,
+            mode="decision",
+        )
+
+        self.assertEqual(resolved, "meal_estimate")
+
     def test_resolve_message_type_routes_swap_and_worth_choice_phrases_to_recommendation(self) -> None:
         for content in (
             "麻辣烫和黄焖鸡哪个更值得选？",
@@ -203,6 +214,16 @@ class ChatServiceTests(unittest.TestCase):
             "麦当劳汉堡",
             profile_id=12,
             user_id=self.user_id,
+        )
+
+        self.assertEqual(resolved, "_clarification")
+
+    def test_resolve_message_type_returns_clarification_for_decision_mode_promotion_only_input(self) -> None:
+        resolved = resolve_message_type(
+            "限时优惠 买一送一",
+            profile_id=12,
+            user_id=self.user_id,
+            mode="decision",
         )
 
         self.assertEqual(resolved, "_clarification")
@@ -564,6 +585,26 @@ class ChatServiceTests(unittest.TestCase):
         self.assertFalse(payload["decision_card"]["saveEligible"])
         mocked_estimate.assert_not_called()
 
+    def test_send_message_in_session_returns_product_subject_clarification_in_decision_mode(self) -> None:
+        with patch("backend.services.chat_service.estimate_meal") as mocked_estimate:
+            exchange = create_session_and_reply(
+                self.user_id,
+                "限时优惠 买一送一",
+                profile_id=12,
+                mode="decision",
+            )
+
+        self.assertIsNotNone(exchange)
+        self.assertEqual(exchange["assistant_message"]["message_type"], "text")
+        self.assertEqual(
+            exchange["assistant_message"]["content"],
+            DECISION_PRODUCT_SUBJECT_CLARIFICATION_MESSAGE,
+        )
+        payload = json.loads(exchange["assistant_message"]["payload_json"])
+        self.assertIn("decision_card", payload)
+        self.assertIn("missing_product_subject", payload["decision_card"]["riskTags"])
+        mocked_estimate.assert_not_called()
+
     def test_send_message_in_session_persists_text_reply_for_explanatory_follow_up(self) -> None:
         session = create_empty_session(self.user_id)
 
@@ -752,6 +793,51 @@ class ChatServiceTests(unittest.TestCase):
             conn.close()
 
         self.assertEqual(food_log_total, 0)
+
+    def test_send_message_in_session_persists_user_mode_in_payload(self) -> None:
+        session = create_empty_session(self.user_id)
+
+        with patch(
+            "backend.services.chat_service.estimate_meal",
+            return_value=type(
+                "EstimateResultStub",
+                (),
+                {
+                    "title": "生椰拿铁",
+                    "confidence": "high",
+                    "description": "椰乳风味咖啡。",
+                    "items": [
+                        type(
+                            "EstimateItemStub",
+                            (),
+                            {
+                                "model_dump": staticmethod(
+                                    lambda: {
+                                        "name": "生椰拿铁",
+                                        "portion": "大杯",
+                                        "energy": "280 kcal",
+                                    }
+                                )
+                            },
+                        )()
+                    ],
+                    "total_calories": "280 kcal",
+                    "suggestion": "少糖会更稳妥。",
+                },
+            )(),
+        ):
+            send_message_in_session(
+                self.user_id,
+                int(session["id"]),
+                "瑞幸 生椰拿铁",
+                profile_id=12,
+                mode="decision",
+            )
+
+        detail = get_session_detail(self.user_id, int(session["id"]))
+        user_payload = json.loads(detail["messages"][0]["payload_json"])
+        self.assertEqual(user_payload["mode"], "decision")
+        self.assertEqual(user_payload["text"], "瑞幸 生椰拿铁")
 
     def test_rename_and_list_sessions_are_user_scoped(self) -> None:
         first = create_empty_session(self.user_id)

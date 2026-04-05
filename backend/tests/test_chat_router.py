@@ -87,6 +87,25 @@ class ChatRouterTests(unittest.TestCase):
         self.assertEqual(response.assistant_message.payload.title, "Chicken salad")
         self.assertEqual(response.assistant_message.payload.total, "240 kcal")
 
+    def test_send_chat_message_forwards_decision_mode_to_service(self) -> None:
+        request = ChatSendMessageRequest.model_validate(
+            {"message": "瑞幸 生椰拿铁", "mode": "decision"},
+        )
+
+        with patch(
+            "backend.routers.chat.send_message_in_session",
+            return_value=build_exchange(user_message=build_user_message(content="瑞幸 生椰拿铁")),
+        ) as mocked_send:
+            send_chat_message(1, request, self.user)
+
+        mocked_send.assert_called_once_with(
+            self.user.id,
+            1,
+            "瑞幸 生椰拿铁",
+            profile_id=None,
+            mode="decision",
+        )
+
     def test_create_chat_message_creates_session_and_returns_exchange_response(self) -> None:
         request = ChatSendMessageRequest.model_validate({"content": "oatmeal"})
 
@@ -98,6 +117,22 @@ class ChatRouterTests(unittest.TestCase):
 
         self.assertEqual(response.session.id, 1)
         self.assertEqual(response.user_message.content, "oatmeal")
+
+    def test_create_chat_message_accepts_message_alias_and_defaults_mode(self) -> None:
+        request = ChatSendMessageRequest.model_validate({"message": "oatmeal"})
+
+        with patch(
+            "backend.routers.chat.create_session_and_reply",
+            return_value=build_exchange(user_message=build_user_message(content="oatmeal")),
+        ) as mocked_create:
+            create_chat_message(request, self.user)
+
+        mocked_create.assert_called_once_with(
+            self.user.id,
+            "oatmeal",
+            profile_id=None,
+            mode="chat",
+        )
 
     def test_send_chat_message_maps_missing_session_to_404(self) -> None:
         request = ChatSendMessageRequest.model_validate({"content": "chicken salad"})

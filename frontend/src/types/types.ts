@@ -150,8 +150,11 @@ export interface EstimateBlock {
   total: string;
 }
 
+export type WorkspaceInputMode = 'chat' | 'decision';
+
 export interface ChatMessagePayload {
   text?: string;
+  mode?: WorkspaceInputMode;
   title?: string;
   confidence?: string;
   description?: string;

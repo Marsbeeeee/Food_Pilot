@@ -39,6 +39,8 @@ RECOMMENDATION_MESSAGE_TYPE = "meal_recommendation"
 TEXT_MESSAGE_TYPE = "text"
 MEAL_ESTIMATE_MESSAGE_TYPE = "meal_estimate"
 CLARIFICATION_NEEDED = "_clarification"
+DEFAULT_CHAT_INPUT_MODE = "chat"
+DECISION_CHAT_INPUT_MODE = "decision"
 RECOMMENDATION_ROUTE_PHRASES = (
     "推荐",  # 单独「推荐」即可触发，覆盖「推荐训练后吃什么」「推荐减脂晚餐」等
     "推荐吃什么",
@@ -149,6 +151,13 @@ PRODUCT_DETAIL_CLARIFICATION_MESSAGE = (
     "· 具体品名：如「板烧鸡腿堡」「双层吉士汉堡」\n"
     "· 规格或选项：如「大杯」「三分糖」「加芝士」\n"
     "· 套餐构成：如是否带薯条、可乐或其他配餐"
+)
+DECISION_PRODUCT_SUBJECT_CLARIFICATION_MESSAGE = (
+    "我还没看到明确的商品主体，暂时不能进入稳定决策。\n\n"
+    "请补充更具体的信息，例如：\n"
+    "· 商品名：如「生椰拿铁」「板烧鸡腿堡」\n"
+    "· 规格或选项：如「大杯」「三分糖」「少冰」\n"
+    "· 套餐内容：如「汉堡 + 薯条 + 可乐」"
 )
 # 食物描述常见量词，用于区分「模糊提问」与「食物描述」
 FOOD_QUANTITY_PATTERNS = (
@@ -306,6 +315,41 @@ BRANDED_GENERIC_DETAIL_HINTS = (
     "去冰",
     "套餐",
 )
+DECISION_PROMOTION_ONLY_PHRASES = (
+    "限时优惠",
+    "限时特惠",
+    "今日特价",
+    "买一送一",
+    "第二杯半价",
+    "第二份半价",
+    "满减",
+    "立减",
+    "折扣",
+    "优惠",
+    "特价",
+    "爆款",
+    "热销",
+)
+DECISION_PRODUCT_INPUT_HINTS = (
+    *FOOD_QUANTITY_PATTERNS,
+    *BRANDED_GENERIC_PRODUCT_BRANDS,
+    *BRANDED_GENERIC_PRODUCT_TERMS,
+    *BRANDED_GENERIC_DETAIL_HINTS,
+    "套餐",
+    "汉堡",
+    "薯条",
+    "可乐",
+    "奶茶",
+    "果茶",
+    "咖啡",
+    "拿铁",
+    "美式",
+)
+DECISION_NON_PRODUCT_REQUEST_PHRASES = (
+    *RECOMMENDATION_ROUTE_PHRASES,
+    *TEXT_ROUTE_PHRASES,
+    *AMBIGUOUS_PHRASES,
+)
 
 
 def create_empty_session(user_id: int) -> dict[str, object]:
@@ -321,6 +365,7 @@ def create_session_with_first_user_message(
     content: str,
     *,
     created_at: str | None = None,
+    mode: str = DEFAULT_CHAT_INPUT_MODE,
 ) -> dict[str, object]:
     conn = get_db_connection()
     try:
@@ -331,6 +376,7 @@ def create_session_with_first_user_message(
             int(session["id"]),
             content,
             created_at=created_at,
+            mode=mode,
         )
         return _get_session_detail_with_conn(conn, int(session["id"]), user_id)
     finally:
@@ -342,12 +388,14 @@ def create_session_and_reply(
     content: str,
     *,
     profile_id: int | None = None,
+    mode: str = DEFAULT_CHAT_INPUT_MODE,
 ) -> dict[str, object]:
     conn = get_db_connection()
     try:
         session_detail = create_session_with_first_user_message(
             user_id,
             content,
+            mode=mode,
         )
         session_id = int(session_detail["id"])
         user_message = session_detail["messages"][0]
@@ -357,6 +405,7 @@ def create_session_and_reply(
             session_id,
             content,
             profile_id,
+            mode=mode,
         )
         session = _get_session_detail_with_conn(conn, session_id, user_id)
         return {
@@ -374,6 +423,7 @@ def append_user_message(
     content: str,
     *,
     created_at: str | None = None,
+    mode: str = DEFAULT_CHAT_INPUT_MODE,
 ) -> dict[str, object] | None:
     conn = get_db_connection()
     try:
@@ -383,6 +433,7 @@ def append_user_message(
             session_id,
             content,
             created_at=created_at,
+            mode=mode,
         )
     finally:
         conn.close()
@@ -394,6 +445,7 @@ def send_message_in_session(
     content: str,
     *,
     profile_id: int | None = None,
+    mode: str = DEFAULT_CHAT_INPUT_MODE,
 ) -> dict[str, object] | None:
     conn = get_db_connection()
     try:
@@ -402,6 +454,7 @@ def send_message_in_session(
             user_id,
             session_id,
             content,
+            mode=mode,
         )
         if user_message is None:
             return None
@@ -412,6 +465,7 @@ def send_message_in_session(
             session_id,
             content,
             profile_id,
+            mode=mode,
         )
         session = _get_session_detail_with_conn(conn, session_id, user_id)
         return {
@@ -514,6 +568,7 @@ def _append_user_message_with_conn(
     content: str,
     *,
     created_at: str | None = None,
+    mode: str = DEFAULT_CHAT_INPUT_MODE,
 ) -> dict[str, object] | None:
     session = get_session_by_id_record(conn, session_id, user_id)
     if session is None:
@@ -527,6 +582,13 @@ def _append_user_message_with_conn(
         "user",
         "text",
         content=content,
+        payload_json=json.dumps(
+            {
+                "text": content,
+                "mode": mode if mode == DECISION_CHAT_INPUT_MODE else DEFAULT_CHAT_INPUT_MODE,
+            },
+            ensure_ascii=False,
+        ),
         created_at=created_at,
     )
 
@@ -561,6 +623,8 @@ def _generate_assistant_reply_with_conn(
     session_id: int,
     content: str,
     profile_id: int | None,
+    *,
+    mode: str = DEFAULT_CHAT_INPUT_MODE,
 ) -> dict[str, object]:
     message_type = DEFAULT_RESOLVED_MESSAGE_TYPE
     try:
@@ -568,6 +632,7 @@ def _generate_assistant_reply_with_conn(
             content,
             profile_id=profile_id,
             user_id=user_id,
+            mode=mode,
         )
         assistant_message = build_response_by_type(
             conn,
@@ -576,6 +641,7 @@ def _generate_assistant_reply_with_conn(
             content=content,
             profile_id=profile_id,
             message_type=message_type,
+            mode=mode,
         )
     except Exception as exc:
         conn.rollback()
@@ -595,9 +661,13 @@ def resolve_message_type(
     *,
     profile_id: int | None,
     user_id: int,
+    mode: str = DEFAULT_CHAT_INPUT_MODE,
 ) -> str:
     del profile_id, user_id
     normalized_content = _normalize_routing_text(content)
+
+    if mode == DECISION_CHAT_INPUT_MODE:
+        return _resolve_decision_mode_message_type(normalized_content)
 
     is_text_request = _matches_text_request(normalized_content)
     is_recommendation_request = _matches_recommendation_request(normalized_content)
@@ -645,13 +715,14 @@ def build_response_by_type(
     content: str,
     profile_id: int | None,
     message_type: str,
+    mode: str = DEFAULT_CHAT_INPUT_MODE,
 ) -> dict[str, object]:
     if message_type == CLARIFICATION_NEEDED:
-        clarification_message = _build_clarification_message(content)
+        clarification_message = _build_clarification_message(content, mode=mode)
         clarification_decision_card = build_clarification_decision_card(
             input_summary=content,
             container_type="chat_message",
-            reason="missing_key_fields",
+            reason=_resolve_clarification_reason(content, mode=mode),
         )
         return _create_text_message_with_conn(
             conn,
@@ -1050,9 +1121,74 @@ def _needs_standard_dish_estimate_clarification(value: str) -> bool:
     return _contains_any_phrase(value, AMBIGUOUS_STANDARD_DISH_ESTIMATE_HINTS)
 
 
-def _build_clarification_message(content: str) -> str:
-    if _needs_branded_generic_product_clarification(_normalize_routing_text(content)):
+def _resolve_decision_mode_message_type(value: str) -> str:
+    if _looks_like_missing_product_subject_request(value):
+        return CLARIFICATION_NEEDED
+
+    if _is_brand_only_input(value):
+        return CLARIFICATION_NEEDED
+
+    if _needs_branded_generic_product_clarification(value):
+        return CLARIFICATION_NEEDED
+
+    if _needs_standard_dish_estimate_clarification(value):
+        return CLARIFICATION_NEEDED
+
+    return DEFAULT_RESOLVED_MESSAGE_TYPE
+
+
+def _looks_like_missing_product_subject_request(value: str) -> bool:
+    if _looks_like_promotion_only_decision_input(value):
+        return True
+
+    return (
+        _contains_any_phrase(value, DECISION_NON_PRODUCT_REQUEST_PHRASES)
+        and not _contains_any_phrase(value, DECISION_PRODUCT_INPUT_HINTS)
+    )
+
+
+def _looks_like_promotion_only_decision_input(value: str) -> bool:
+    if not _contains_any_phrase(value, DECISION_PROMOTION_ONLY_PHRASES):
+        return False
+
+    return not _contains_any_phrase(value, DECISION_PRODUCT_INPUT_HINTS)
+
+
+def _is_brand_only_input(value: str) -> bool:
+    compact_value = value.replace(" ", "")
+    return compact_value in BRANDED_GENERIC_PRODUCT_BRANDS
+
+
+def _resolve_clarification_reason(content: str, *, mode: str) -> str:
+    normalized_content = _normalize_routing_text(content)
+    if mode == DECISION_CHAT_INPUT_MODE:
+        if _looks_like_missing_product_subject_request(normalized_content):
+            return "missing_product_subject"
+        if (
+            _is_brand_only_input(normalized_content)
+            or _needs_branded_generic_product_clarification(normalized_content)
+            or _needs_standard_dish_estimate_clarification(normalized_content)
+        ):
+            return "missing_product_detail"
+    return "missing_key_fields"
+
+
+def _build_clarification_message(content: str, *, mode: str = DEFAULT_CHAT_INPUT_MODE) -> str:
+    normalized_content = _normalize_routing_text(content)
+
+    if mode == DECISION_CHAT_INPUT_MODE and _looks_like_missing_product_subject_request(normalized_content):
+        return DECISION_PRODUCT_SUBJECT_CLARIFICATION_MESSAGE
+
+    if mode == DECISION_CHAT_INPUT_MODE and (
+        _is_brand_only_input(normalized_content)
+        or _needs_branded_generic_product_clarification(normalized_content)
+        or _needs_standard_dish_estimate_clarification(normalized_content)
+    ):
         return PRODUCT_DETAIL_CLARIFICATION_MESSAGE
+
+    if _needs_branded_generic_product_clarification(normalized_content):
+        return PRODUCT_DETAIL_CLARIFICATION_MESSAGE
+
     return CLARIFICATION_MESSAGE
 
 

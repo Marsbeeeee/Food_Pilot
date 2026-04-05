@@ -4,6 +4,13 @@ import { buildWorkspaceMessagePresentation } from '../app/workspaceMessagePresen
 import { resolveEstimateBlocksForRendering } from '../app/workspaceEstimateCards';
 import { resolveFoodLogSavePresentation } from '../app/workspaceFoodLogState';
 import {
+  WORKSPACE_INPUT_MODE_OPTIONS,
+  getStoredWorkspaceInputMode,
+  getWorkspaceInputModeConfig,
+  persistWorkspaceInputMode,
+  validateWorkspaceInput,
+} from '../app/workspaceInputMode.js';
+import {
   ChatApiError,
   createChatMessage,
   createChatSession,
@@ -21,6 +28,7 @@ import {
   FoodLogEntry,
   Message,
   WorkspaceClarificationPresentation,
+  WorkspaceInputMode,
   WorkspaceMealEstimatePresentation,
   WorkspaceMessagePresentation,
   WorkspaceRecommendationPresentation,
@@ -55,8 +63,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const WORKSPACE_FOOD_LOG_SAVE_ENABLED = false;
   const BOTTOM_SNAP_THRESHOLD_PX = 96;
   const [inputValue, setInputValue] = useState('');
+  const [inputMode, setInputMode] = useState<WorkspaceInputMode>(() => getStoredWorkspaceInputMode());
+  const [inputError, setInputError] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isInputModeMenuOpen, setIsInputModeMenuOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [renamingTitle, setRenamingTitle] = useState('');
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
@@ -70,9 +81,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const inputModeMenuRef = useRef<HTMLDivElement>(null);
   const previousSessionIdRef = useRef<string | null>(null);
   const previousMessageCountRef = useRef<number>(0);
   const shouldFollowNewMessagesRef = useRef(true);
+  const activeInputModeConfig = getWorkspaceInputModeConfig(inputMode);
 
   useEffect(() => {
     if (sessions.length > 0 && !activeSessionId) {
@@ -132,11 +145,18 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsMenuOpen(false);
       }
+      if (inputModeMenuRef.current && !inputModeMenuRef.current.contains(event.target as Node)) {
+        setIsInputModeMenuOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    persistWorkspaceInputMode(inputMode);
+  }, [inputMode]);
 
   useEffect(() => {
     if (!isRenameModalOpen) {
@@ -170,15 +190,32 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     }
   };
 
-  const handleSendMessage = async (text?: string) => {
+  const handleSelectInputMode = (nextMode: WorkspaceInputMode) => {
+    setInputMode(nextMode);
+    setInputError('');
+    setIsInputModeMenuOpen(false);
+  };
+
+  const handleSendMessage = async (text?: string, modeOverride?: WorkspaceInputMode) => {
     const finalQuery = text || inputValue.trim();
+    const resolvedMode = modeOverride ?? inputMode;
     if (!finalQuery || isTyping) {
+      return;
+    }
+
+    if (modeOverride && modeOverride !== inputMode) {
+      setInputMode(modeOverride);
+    }
+
+    const validationMessage = validateWorkspaceInput(resolvedMode, finalQuery);
+    if (validationMessage) {
+      setInputError(validationMessage);
       return;
     }
 
     const previousActiveSessionId = activeSessionId;
     const optimisticMessageId = `temp-user-${Date.now()}`;
-    const optimisticMessage = buildOptimisticUserMessage(optimisticMessageId, finalQuery);
+    const optimisticMessage = buildOptimisticUserMessage(optimisticMessageId, finalQuery, resolvedMode);
     const needsTemporarySession = !activeSessionId || sessions.length === 0;
     const optimisticSessionId = needsTemporarySession ? `temp-session-${Date.now()}` : null;
     const originalSession = !needsTemporarySession
@@ -201,11 +238,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     }
 
     setIsTyping(true);
+    setInputError('');
     setInputValue('');
 
     try {
       if (needsTemporarySession) {
-        const exchange = await createChatMessage(finalQuery, profileId);
+        const exchange = await createChatMessage(finalQuery, profileId, resolvedMode);
         setSessions((prev) => applyResolvedExchange(
           prev,
           exchange,
@@ -216,7 +254,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         return;
       }
 
-      const exchange = await sendChatMessage(previousActiveSessionId, finalQuery, profileId);
+      const exchange = await sendChatMessage(previousActiveSessionId, finalQuery, profileId, resolvedMode);
       setSessions((prev) => applyResolvedExchange(
         prev,
         exchange,
@@ -579,11 +617,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 值得保留的估算结果可以再保存到饮食记录。
               </p>
               <div className="mt-12 grid w-full max-w-xl grid-cols-1 gap-4 sm:grid-cols-2">
-                <button onClick={() => void handleSendMessage('一份牛油果吐司大概有什么营养？')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-5 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
-                  <p className="mb-1 text-[13px] font-bold text-[#4A453E]">估算这餐</p>
-                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">“一份牛油果吐司大概有什么营养？”</p>
+                <button onClick={() => void handleSendMessage('霸王茶姬 伯牙绝弦 大杯 三分糖', 'decision')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-5 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
+                  <p className="mb-1 text-[13px] font-bold text-[#4A453E]">点单决策</p>
+                  <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">“霸王茶姬 伯牙绝弦 大杯 三分糖”</p>
                 </button>
-                <button onClick={() => void handleSendMessage('晚饭在 poke 和拉面之间怎么选更合适？')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-5 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
+                <button onClick={() => void handleSendMessage('晚饭在 poke 和拉面之间怎么选更合适？', 'chat')} className="group rounded-[20px] border border-[#4A453E]/5 bg-white p-5 text-left transition-all hover:border-[#FF8A65]/30 hover:bg-[#F7F3E9]/20">
                   <p className="mb-1 text-[13px] font-bold text-[#4A453E]">推荐怎么吃</p>
                   <p className="text-xs text-[#4A453E]/40 group-hover:text-[#4A453E]/60">“晚饭在 poke 和拉面之间怎么选更合适？”</p>
                 </button>
@@ -1064,32 +1102,167 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           )}
         </div>
 
-        <div className="z-20 bg-gradient-to-t from-[#FFFDF5] via-[#FFFDF5] to-transparent px-10 pb-12 pt-6">
+        <div className="z-20 bg-gradient-to-t from-[#FFFDF5] via-[#FFFDF5] to-transparent px-10 pb-4 pt-4">
           <div className="mx-auto max-w-5xl">
-            <div className="relative flex items-end overflow-hidden rounded-[28px] border border-[#4A453E]/10 bg-white shadow-xl shadow-[#4A453E]/05 transition-all focus-within:border-[#FF8A65]/40">
-              <textarea
-                className="custom-scrollbar max-h-40 flex-1 resize-none border-none bg-transparent py-7 pl-8 pr-2 text-[16px] leading-relaxed text-[#4A453E] placeholder-[#4A453E]/30 focus:ring-0"
-                placeholder="描述你吃了什么，或问这餐大概多少热量 / 营养..."
-                rows={1}
-                value={inputValue}
-                onChange={(event) => setInputValue(event.target.value)}
-                onKeyDown={handleKeyDown}
-              ></textarea>
+            <div className="relative rounded-[28px] border border-[#4A453E]/10 bg-white shadow-xl shadow-[#4A453E]/05 transition-all focus-within:border-[#FF8A65]/40">
+              <div className="px-5 py-4">
+                <div className={`flex transition-all duration-300 ${inputMode === 'decision' ? 'items-start gap-4' : 'items-center gap-3'}`}>
+                  {inputMode !== 'decision' && (
+                    <div ref={inputModeMenuRef} className="relative flex shrink-0 items-center">
+                      <button
+                        type="button"
+                        onClick={() => setIsInputModeMenuOpen((current) => !current)}
+                        className="inline-flex size-11 items-center justify-center rounded-full border border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E] transition-all hover:border-[#FF8A65]/20 hover:bg-[#FFF7EF] active:scale-95"
+                      >
+                        <span className="material-symbols-outlined text-[24px]">add</span>
+                      </button>
 
-              <div className="p-3">
-                <button
-                  onClick={() => void handleSendMessage()}
-                  disabled={!inputValue.trim() || isTyping}
-                  className={`flex size-12 items-center justify-center rounded-[20px] transition-all active:scale-95 ${
-                    !inputValue.trim() || isTyping
-                      ? 'cursor-not-allowed bg-[#4A453E]/05 text-[#4A453E]/20'
-                      : 'bg-[#FF8A65] text-white shadow-lg shadow-[#FF8A65]/20 hover:bg-[#FF8A65]/90'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[24px]">arrow_upward</span>
-                </button>
+                      {isInputModeMenuOpen && (
+                        <div className="absolute bottom-full left-0 z-30 mb-3 w-72 overflow-hidden rounded-[24px] border border-[#4A453E]/10 bg-[#FFFDF5] p-2 shadow-[0_24px_60px_rgba(74,69,62,0.16)]">
+                          {WORKSPACE_INPUT_MODE_OPTIONS.map((option) => {
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => handleSelectInputMode(option.value as WorkspaceInputMode)}
+                                className="flex w-full items-start gap-3 rounded-[18px] px-4 py-4 text-left text-[#4A453E] transition-colors hover:bg-[#F7F3E9]"
+                              >
+                                <span className="material-symbols-outlined mt-0.5 text-[18px] text-[#FF8A65]">
+                                  {option.menuIcon || 'local_mall'}
+                                </span>
+                                <span className="min-w-0">
+                                  <span className="block text-sm font-bold">{option.label}</span>
+                                  <span className="mt-1 block text-xs leading-5 text-[#4A453E]/55">{option.description}</span>
+                                </span>
+                                <span className="ml-auto pt-0.5 text-[#4A453E]/25">
+                                  <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <textarea
+                      className={`custom-scrollbar max-h-40 flex-1 resize-none border-none bg-transparent px-0 text-[16px] leading-relaxed text-[#4A453E] placeholder-[#4A453E]/30 focus:ring-0 transition-all duration-300 ${
+                        inputMode === 'decision' ? 'min-h-[44px] pt-2' : 'min-h-[56px] pt-3'
+                      }`}
+                      placeholder={activeInputModeConfig.placeholder}
+                      rows={1}
+                      value={inputValue}
+                      onChange={(event) => {
+                        setInputValue(event.target.value);
+                        if (inputError) {
+                          setInputError('');
+                        }
+                      }}
+                      onKeyDown={handleKeyDown}
+                    ></textarea>
+
+                    <div className={`overflow-hidden transition-all duration-300 ${
+                      inputMode === 'decision'
+                        ? 'max-h-20 translate-y-0 pt-2 opacity-100'
+                        : 'max-h-0 -translate-y-2 pt-0 opacity-0'
+                    }`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div ref={inputModeMenuRef} className="relative flex shrink-0 items-center">
+                            <button
+                              type="button"
+                              onClick={() => setIsInputModeMenuOpen((current) => !current)}
+                              className="inline-flex size-11 items-center justify-center rounded-full border border-[#4A453E]/10 bg-[#F7F3E9] text-[#4A453E] transition-all hover:border-[#FF8A65]/20 hover:bg-[#FFF7EF] active:scale-95"
+                            >
+                              <span className="material-symbols-outlined text-[24px]">add</span>
+                            </button>
+
+                            {isInputModeMenuOpen && (
+                              <div className="absolute bottom-full left-0 z-30 mb-3 w-72 overflow-hidden rounded-[24px] border border-[#4A453E]/10 bg-[#FFFDF5] p-2 shadow-[0_24px_60px_rgba(74,69,62,0.16)]">
+                                {WORKSPACE_INPUT_MODE_OPTIONS.map((option) => {
+                                  return (
+                                    <button
+                                      key={option.value}
+                                      type="button"
+                                      onClick={() => handleSelectInputMode(option.value as WorkspaceInputMode)}
+                                      className="flex w-full items-start gap-3 rounded-[18px] px-4 py-4 text-left text-[#4A453E] transition-colors hover:bg-[#F7F3E9]"
+                                    >
+                                      <span className="material-symbols-outlined mt-0.5 text-[18px] text-[#FF8A65]">
+                                        {option.menuIcon || 'local_mall'}
+                                      </span>
+                                      <span className="min-w-0">
+                                        <span className="block text-sm font-bold">{option.label}</span>
+                                        <span className="mt-1 block text-xs leading-5 text-[#4A453E]/55">{option.description}</span>
+                                      </span>
+                                      <span className="ml-auto pt-0.5 text-[#4A453E]/25">
+                                        <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+
+                          {inputMode === 'decision' && (
+                            <button
+                              type="button"
+                              onClick={() => handleSelectInputMode('chat')}
+                              className="group inline-flex h-10 items-center gap-2 rounded-full border border-[#FF9B7B] bg-white px-4 text-sm font-bold text-[#FF8A65] transition-all hover:border-[#FFB39A] hover:bg-[#FFF1EB] hover:text-[#E8744E]"
+                            >
+                              <span className="relative flex size-5 items-center justify-center">
+                                <span className="material-symbols-outlined text-[18px] text-[#FF8A65] transition-opacity group-hover:opacity-0">
+                                  local_mall
+                                </span>
+                                <span className="material-symbols-outlined absolute text-[18px] text-[#E8744E] opacity-0 transition-opacity group-hover:opacity-100">
+                                  close
+                                </span>
+                              </span>
+                              <span>{activeInputModeConfig.shortLabel}</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => void handleSendMessage()}
+                          disabled={!inputValue.trim() || isTyping}
+                          className={`flex size-12 items-center justify-center rounded-full transition-all active:scale-95 ${
+                            !inputValue.trim() || isTyping
+                              ? 'cursor-not-allowed bg-[#4A453E]/05 text-[#4A453E]/20'
+                              : 'bg-[#FF8A65] text-white shadow-lg shadow-[#FF8A65]/20 hover:bg-[#FF8A65]/90'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[24px]">arrow_upward</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {inputMode !== 'decision' && (
+                    <div className="flex shrink-0 items-center">
+                      <button
+                        onClick={() => void handleSendMessage()}
+                        disabled={!inputValue.trim() || isTyping}
+                        className={`flex size-12 items-center justify-center rounded-full transition-all active:scale-95 ${
+                          !inputValue.trim() || isTyping
+                            ? 'cursor-not-allowed bg-[#4A453E]/05 text-[#4A453E]/20'
+                            : 'bg-[#FF8A65] text-white shadow-lg shadow-[#FF8A65]/20 hover:bg-[#FF8A65]/90'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[24px]">arrow_upward</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+
+            {inputError && (
+              <p className="mt-3 px-2 text-center text-[12px] font-semibold text-[#C95B3A]">
+                {inputError}
+              </p>
+            )}
 
             <p className="mt-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
               你的对话式营养助手。
@@ -1186,13 +1359,17 @@ function resolveFoodLogErrorMessage(error: unknown, fallbackMessage: string): st
       : fallbackMessage;
 }
 
-function buildOptimisticUserMessage(id: string, content: string): Message {
+function buildOptimisticUserMessage(
+  id: string,
+  content: string,
+  mode: WorkspaceInputMode,
+): Message {
   return {
     id,
     role: 'user',
     messageType: 'text',
     content,
-    payload: { text: content },
+    payload: { text: content, mode },
     time: formatOptimisticTime(),
     isResult: false,
   };

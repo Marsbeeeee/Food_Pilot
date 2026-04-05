@@ -5,8 +5,10 @@ import {
   ChatSession,
   IngredientResult,
   Message,
+  WorkspaceInputMode,
 } from '../types/types';
 import { API_BASE_URL } from '../config/api';
+import { buildWorkspaceMessageRequest } from '../app/workspaceInputMode.js';
 
 const CHAT_BASE_URL = `${API_BASE_URL}/chat`;
 
@@ -96,10 +98,11 @@ export async function deleteChatSession(sessionId: string): Promise<void> {
 export async function createChatMessage(
   content: string,
   profileId?: number,
+  mode: WorkspaceInputMode = 'chat',
 ): Promise<ChatExchange> {
   const data = await requestJson<ChatMessageExchangeResponse>('/messages', {
     method: 'POST',
-    body: JSON.stringify(buildMessagePayload(content, profileId)),
+    body: JSON.stringify(buildWorkspaceMessageRequest(content, profileId, mode)),
   });
   return mapChatExchange(data);
 }
@@ -108,10 +111,11 @@ export async function sendChatMessage(
   sessionId: string,
   content: string,
   profileId?: number,
+  mode: WorkspaceInputMode = 'chat',
 ): Promise<ChatExchange> {
   const data = await requestJson<ChatMessageExchangeResponse>(`/sessions/${sessionId}/messages`, {
     method: 'POST',
-    body: JSON.stringify(buildMessagePayload(content, profileId)),
+    body: JSON.stringify(buildWorkspaceMessageRequest(content, profileId, mode)),
   });
   return mapChatExchange(data);
 }
@@ -237,6 +241,10 @@ function normalizePayload(
     payload.text = message.content;
   }
 
+  if (message.payload?.mode) {
+    payload.mode = message.payload.mode;
+  }
+
   if (message.payload?.title) {
     payload.title = message.payload.title;
   } else if (message.resultTitle) {
@@ -278,11 +286,6 @@ function normalizePayload(
   }
 
   return Object.keys(payload).length > 0 ? payload : null;
-}
-
-
-function buildMessagePayload(content: string, profileId?: number): Record<string, number | string> {
-  return profileId ? { content, profileId } : { content };
 }
 
 async function requestJson<T = unknown>(
