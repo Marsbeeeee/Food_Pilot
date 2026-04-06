@@ -5,10 +5,44 @@ import json
 from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+
 from backend.services.analysis_eligibility import resolve_analysis_eligibility
+from backend.services.product_understanding import build_product_understanding
 
 
 DecisionConfidenceLevel = Literal["high", "medium", "low", "unknown"]
+_MISSING_TOTAL = "未提供"
+_UNKNOWN_INPUT = "未命名输入"
+
+
+class DecisionCardProductComponent(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    product_name: str = Field(
+        validation_alias=AliasChoices("product_name", "productName"),
+        serialization_alias="productName",
+    )
+    normalized_name: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("normalized_name", "normalizedName"),
+        serialization_alias="normalizedName",
+    )
+    category_name: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("category_name", "categoryName"),
+        serialization_alias="categoryName",
+    )
+    brand_name: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("brand_name", "brandName"),
+        serialization_alias="brandName",
+    )
+    item_role: str = Field(
+        default="component",
+        validation_alias=AliasChoices("item_role", "itemRole"),
+        serialization_alias="itemRole",
+    )
+    quantity: str | None = None
 
 
 class DecisionCardNormalizedProduct(BaseModel):
@@ -43,6 +77,11 @@ class DecisionCardNormalizedProduct(BaseModel):
         validation_alias=AliasChoices("product_name", "productName"),
         serialization_alias="productName",
     )
+    normalized_name: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("normalized_name", "normalizedName"),
+        serialization_alias="normalizedName",
+    )
     product_scope: str = Field(
         default="single_item",
         validation_alias=AliasChoices("product_scope", "productScope"),
@@ -52,6 +91,34 @@ class DecisionCardNormalizedProduct(BaseModel):
         default="top_level_item",
         validation_alias=AliasChoices("item_role", "itemRole"),
         serialization_alias="itemRole",
+    )
+    size_or_spec: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("size_or_spec", "sizeOrSpec"),
+        serialization_alias="sizeOrSpec",
+    )
+    addons: list[str] = Field(default_factory=list)
+    sugar_level: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("sugar_level", "sugarLevel"),
+        serialization_alias="sugarLevel",
+    )
+    temperature: str | None = None
+    quantity: str | None = None
+    combo_items: list[DecisionCardProductComponent] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("combo_items", "comboItems"),
+        serialization_alias="comboItems",
+    )
+    missing_fields: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("missing_fields", "missingFields"),
+        serialization_alias="missingFields",
+    )
+    match_level: str = Field(
+        default="unknown",
+        validation_alias=AliasChoices("match_level", "matchLevel"),
+        serialization_alias="matchLevel",
     )
 
 
@@ -158,16 +225,25 @@ def build_decision_card_from_estimate(
     needs_clarification: bool | None = None,
     analysis_eligible: bool | None = None,
 ) -> DecisionCard:
-    normalized_input = _normalize_text(input_summary) or _normalize_text(title) or "未命名输入"
+    normalized_input = _normalize_text(input_summary) or _normalize_text(title) or _UNKNOWN_INPUT
     normalized_title = _normalize_text(title) or normalized_input
     normalized_items = _normalize_items(items)
-    normalized_total = _normalize_text(total_calories) or "未提供"
-    confidence_level = normalize_confidence_level(confidence)
-    has_nutrition_estimate = bool(normalized_items) and normalized_total != "未提供"
+    normalized_total = _normalize_text(total_calories) or _MISSING_TOTAL
+    product_understanding = build_product_understanding(
+        input_summary=normalized_input,
+        title=normalized_title,
+        items=normalized_items,
+    )
+    confidence_level = _merge_confidence_levels(
+        normalize_confidence_level(confidence),
+        product_understanding["confidence_level"],
+    )
+    has_nutrition_estimate = bool(normalized_items) and normalized_total != _MISSING_TOTAL
 
     if needs_clarification is None:
         needs_clarification = (
-            confidence_level in {"low", "unknown"}
+            bool(product_understanding["needs_clarification"])
+            or confidence_level in {"low", "unknown"}
             or not has_nutrition_estimate
         )
 
@@ -177,17 +253,8 @@ def build_decision_card_from_estimate(
             title=normalized_title,
             has_nutrition_estimate=has_nutrition_estimate,
             needs_clarification=needs_clarification,
+            normalized_product=product_understanding["normalized_product"],
         )
-
-    recommendation_level = _recommendation_level_from_confidence(
-        confidence_level,
-        needs_clarification=needs_clarification,
-    )
-    risk_tags = []
-    if needs_clarification:
-        risk_tags.append("needs_clarification")
-    if confidence_level == "low":
-        risk_tags.append("low_confidence")
 
     if save_container_key is None:
         save_container_key = _build_save_container_key(
@@ -197,26 +264,29 @@ def build_decision_card_from_estimate(
             total_calories=normalized_total,
         )
 
-    product_scope = "multi_item" if len(normalized_items) > 1 else "single_item"
-    item_role = "top_level_item" if product_scope == "multi_item" else "single_item"
+    risk_tags = list(product_understanding["risk_tags"])
+    if needs_clarification:
+        risk_tags.append("needs_clarification")
+    if confidence_level == "low":
+        risk_tags.append("low_confidence")
+
     adaptation_note = _normalize_text(description) or None
     adjustments = [_normalize_text(suggestion)] if _normalize_text(suggestion) else []
 
     return DecisionCard.model_validate(
         {
             "input_summary": normalized_input,
-            "normalized_product": {
-                "product_name": normalized_title,
-                "product_scope": product_scope,
-                "item_role": item_role,
-            },
+            "normalized_product": product_understanding["normalized_product"],
             "nutrition_estimate": {
                 "items": normalized_items,
                 "total_calories": normalized_total,
             },
             "confidence_level": confidence_level,
-            "recommendation_level": recommendation_level,
-            "risk_tags": risk_tags,
+            "recommendation_level": _recommendation_level_from_confidence(
+                confidence_level,
+                needs_clarification=needs_clarification,
+            ),
+            "risk_tags": _dedupe_tags(risk_tags),
             "adaptation_note": adaptation_note,
             "adjustments": adjustments,
             "alternatives": [],
@@ -235,34 +305,35 @@ def build_clarification_decision_card(
     container_type: str,
     reason: str | None = None,
 ) -> DecisionCard:
-    normalized_input = _normalize_text(input_summary) or "未命名输入"
+    normalized_input = _normalize_text(input_summary) or _UNKNOWN_INPUT
+    product_understanding = build_product_understanding(
+        input_summary=normalized_input,
+        title=normalized_input,
+        items=None,
+        clarification_reason=reason,
+    )
     save_container_key = _build_save_container_key(
         container_type=container_type,
         input_summary=normalized_input,
         title="clarification",
         total_calories="none",
     )
-    risk_tags = ["needs_clarification"]
-    if reason:
-        risk_tags.append(_normalize_tag(reason))
 
     return DecisionCard.model_validate(
         {
             "input_summary": normalized_input,
-            "normalized_product": {
-                "product_name": normalized_input,
-                "product_scope": "unknown",
-                "item_role": "unknown",
-            },
+            "normalized_product": product_understanding["normalized_product"],
             "nutrition_estimate": {
                 "items": [],
-                "total_calories": "未提供",
+                "total_calories": _MISSING_TOTAL,
             },
             "confidence_level": "low",
             "recommendation_level": "needs_review",
-            "risk_tags": risk_tags,
-            "adaptation_note": "当前信息不足，需要进一步澄清后再给出稳定决策。",
-            "adjustments": [],
+            "risk_tags": _dedupe_tags(
+                ["needs_clarification", *product_understanding["risk_tags"]]
+            ),
+            "adaptation_note": "当前信息还不足以形成稳定商品理解，请先补充关键商品信息。",
+            "adjustments": product_understanding["clarification_questions"],
             "alternatives": [],
             "needs_clarification": True,
             "save_container_key": save_container_key,
@@ -296,6 +367,19 @@ def _normalize_items(items: list[Any] | None) -> list[dict[str, Any]]:
             continue
         normalized.append(normalized_item)
     return normalized
+
+
+def _merge_confidence_levels(
+    estimate_confidence: DecisionConfidenceLevel,
+    understanding_confidence: str | None,
+) -> DecisionConfidenceLevel:
+    ranking = {"high": 3, "medium": 2, "low": 1, "unknown": 0}
+    normalized_understanding = normalize_confidence_level(understanding_confidence)
+    return (
+        estimate_confidence
+        if ranking[estimate_confidence] <= ranking[normalized_understanding]
+        else normalized_understanding
+    )
 
 
 def _recommendation_level_from_confidence(
@@ -333,3 +417,13 @@ def _build_save_container_key(
 
 def _normalize_tag(value: str) -> str:
     return value.strip().lower().replace(" ", "_")
+
+
+def _dedupe_tags(values: list[str]) -> list[str]:
+    deduped: list[str] = []
+    for value in values:
+        normalized = _normalize_tag(value)
+        if not normalized or normalized in deduped:
+            continue
+        deduped.append(normalized)
+    return deduped

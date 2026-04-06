@@ -85,6 +85,8 @@ class EstimateTests(unittest.TestCase):
         self.assertIsNotNone(response.data.decision_card)
         self.assertTrue(response.data.decision_card.analysis_eligible)
         self.assertTrue(response.data.decision_card.save_eligible)
+        self.assertEqual(response.data.decision_card.normalized_product.brand_name, "霸王茶姬")
+        self.assertEqual(response.data.decision_card.normalized_product.sugar_level, "三分糖")
 
     def test_validation_error_response_has_unified_structure(self) -> None:
         with self.assertRaises(Exception) as context:

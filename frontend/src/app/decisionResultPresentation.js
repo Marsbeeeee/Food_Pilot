@@ -1,19 +1,42 @@
 const ESTIMATE_COPY = {
-  ingredientColumnLabel: '椋熸潗',
-  portionColumnLabel: '浠介噺',
-  energyColumnLabel: '浼扮畻鐑噺',
-  proteinColumnLabel: '铔嬬櫧璐?',
-  carbsColumnLabel: '纰虫按',
-  fatColumnLabel: '鑴傝偑',
-  totalLabel: '浼扮畻鎬荤儹閲?',
+  ingredientColumnLabel: '食材',
+  portionColumnLabel: '份量',
+  energyColumnLabel: '热量',
+  proteinColumnLabel: '蛋白质',
+  carbsColumnLabel: '碳水',
+  fatColumnLabel: '脂肪',
+  totalLabel: '总热量',
 };
 
 const CLARIFICATION_COPY = {
-  eyebrow: '淇℃伅婢勬竻',
-  fallbackTitle: '闇€瑕佽ˉ鍏呬俊鎭?',
-  badgeLabel: '寰呮緞娓?',
-  riskLabel: '椋庨櫓鏍囩',
-  actionLabel: '寤鸿琛ュ厖',
+  eyebrow: '需要澄清',
+  fallbackTitle: '商品信息待补充',
+  badgeLabel: '待确认',
+  riskLabel: '当前风险',
+  actionLabel: '建议补充',
+  missingFieldLabel: '缺少信息',
+  comboLabel: '套餐拆分',
+};
+
+const MATCH_LEVEL_LABELS = {
+  brand_product: '已识别品牌与商品',
+  brand_only: '仅识别到品牌',
+  category_product: '已识别品类与商品',
+  category_only: '仅识别到品类',
+  private_item: '按非标准商品处理',
+  source_ambiguous: '按来源不明确商品处理',
+  unknown: '商品理解不足',
+};
+
+const MISSING_FIELD_LABELS = {
+  product_subject: '商品主体',
+  product_name: '具体商品名',
+  combo_items: '套餐构成',
+  category: '品类',
+  brand: '品牌',
+  size_or_spec: '规格',
+  sugar_level: '糖度',
+  temperature: '冰热',
 };
 
 export function buildDecisionResultPresentation({
@@ -50,6 +73,8 @@ export function buildDecisionResultPresentation({
     estimates,
     suggestion: suggestion ?? firstAdjustment ?? null,
     decisionCard,
+    normalizedProduct,
+    summaryBadges: buildSummaryBadges(normalizedProduct),
     needsClarification: false,
     analysisEligible: decisionCard?.analysisEligible ?? null,
     saveEligible: decisionCard?.saveEligible ?? null,
@@ -62,6 +87,9 @@ export function buildClarificationResultPresentation({
   decisionCard = null,
 } = {}) {
   const normalizedProduct = decisionCard?.normalizedProduct ?? null;
+  const comboItems = Array.isArray(normalizedProduct?.comboItems)
+    ? normalizedProduct.comboItems.map((item) => item?.productName).filter(Boolean)
+    : [];
 
   return {
     variant: 'clarification',
@@ -74,9 +102,40 @@ export function buildClarificationResultPresentation({
     riskTags: Array.isArray(decisionCard?.riskTags) ? decisionCard.riskTags : [],
     adjustments: Array.isArray(decisionCard?.adjustments) ? decisionCard.adjustments : [],
     decisionCard,
+    normalizedProduct,
+    summaryBadges: buildSummaryBadges(normalizedProduct),
+    missingFields: mapMissingFields(normalizedProduct?.missingFields),
+    comboItems,
+    matchLevelLabel: normalizedProduct?.matchLevel
+      ? MATCH_LEVEL_LABELS[normalizedProduct.matchLevel] ?? normalizedProduct.matchLevel
+      : null,
     needsClarification: true,
     analysisEligible: decisionCard?.analysisEligible ?? null,
     saveEligible: decisionCard?.saveEligible ?? null,
     ...CLARIFICATION_COPY,
   };
+}
+
+function buildSummaryBadges(normalizedProduct) {
+  if (!normalizedProduct) {
+    return [];
+  }
+
+  const values = [
+    normalizedProduct.brandName,
+    normalizedProduct.categoryName,
+    normalizedProduct.sizeOrSpec,
+    normalizedProduct.sugarLevel,
+    normalizedProduct.temperature,
+  ].filter(Boolean);
+
+  return [...new Set(values)];
+}
+
+function mapMissingFields(missingFields) {
+  if (!Array.isArray(missingFields)) {
+    return [];
+  }
+
+  return missingFields.map((field) => MISSING_FIELD_LABELS[field] ?? field);
 }

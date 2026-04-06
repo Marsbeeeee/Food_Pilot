@@ -583,6 +583,8 @@ class ChatServiceTests(unittest.TestCase):
         self.assertIn("decision_card", payload)
         self.assertTrue(payload["decision_card"]["needsClarification"])
         self.assertFalse(payload["decision_card"]["saveEligible"])
+        self.assertEqual(payload["decision_card"]["normalizedProduct"]["brandName"], "麦当劳")
+        self.assertIn("product_name", payload["decision_card"]["normalizedProduct"]["missingFields"])
         mocked_estimate.assert_not_called()
 
     def test_send_message_in_session_returns_product_subject_clarification_in_decision_mode(self) -> None:
@@ -603,6 +605,7 @@ class ChatServiceTests(unittest.TestCase):
         payload = json.loads(exchange["assistant_message"]["payload_json"])
         self.assertIn("decision_card", payload)
         self.assertIn("missing_product_subject", payload["decision_card"]["riskTags"])
+        self.assertIn("product_subject", payload["decision_card"]["normalizedProduct"]["missingFields"])
         mocked_estimate.assert_not_called()
 
     def test_send_message_in_session_persists_text_reply_for_explanatory_follow_up(self) -> None:

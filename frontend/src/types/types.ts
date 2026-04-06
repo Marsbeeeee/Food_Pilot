@@ -42,8 +42,26 @@ export interface DecisionCardNormalizedProduct {
   brandName?: string;
   productId?: string;
   productName: string;
+  normalizedName?: string;
   productScope: string;
   itemRole: string;
+  sizeOrSpec?: string;
+  addons?: string[];
+  sugarLevel?: string;
+  temperature?: string;
+  quantity?: string;
+  comboItems?: DecisionCardProductComponent[];
+  missingFields?: string[];
+  matchLevel?: string;
+}
+
+export interface DecisionCardProductComponent {
+  productName: string;
+  normalizedName?: string;
+  categoryName?: string;
+  brandName?: string;
+  itemRole: string;
+  quantity?: string;
 }
 
 export interface DecisionCardNutritionEstimate {
@@ -201,6 +219,8 @@ export interface WorkspaceMealEstimatePresentation {
   estimates: EstimateBlock[] | null;
   suggestion: string | null;
   decisionCard: DecisionCard | null;
+  normalizedProduct: DecisionCardNormalizedProduct | null;
+  summaryBadges: string[];
   needsClarification: false;
   analysisEligible: boolean | null;
   saveEligible: boolean | null;
@@ -224,6 +244,11 @@ export interface WorkspaceClarificationPresentation {
   riskTags: string[];
   adjustments: string[];
   decisionCard: DecisionCard | null;
+  normalizedProduct: DecisionCardNormalizedProduct | null;
+  summaryBadges: string[];
+  missingFields: string[];
+  comboItems: string[];
+  matchLevelLabel: string | null;
   needsClarification: true;
   analysisEligible: boolean | null;
   saveEligible: boolean | null;
@@ -232,6 +257,8 @@ export interface WorkspaceClarificationPresentation {
   badgeLabel: string;
   riskLabel: string;
   actionLabel: string;
+  missingFieldLabel: string;
+  comboLabel: string;
 }
 
 export interface WorkspaceRecommendationPresentation {

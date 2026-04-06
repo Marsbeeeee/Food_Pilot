@@ -23,6 +23,7 @@ test('buildWorkspaceMessagePresentation returns estimate card shape with extende
   assert.equal(presentation.items.length, 2);
   assert.equal(presentation.estimates, null);
   assert.equal(presentation.suggestion, null);
+  assert.deepEqual(presentation.summaryBadges, []);
   assert.ok(presentation.ingredientColumnLabel);
   assert.ok(presentation.portionColumnLabel);
   assert.ok(presentation.energyColumnLabel);
@@ -69,9 +70,13 @@ test('buildWorkspaceMessagePresentation can render estimate from decision card o
       decisionCard: {
         inputSummary: '鸡胸肉沙拉',
         normalizedProduct: {
+          brandName: '麦当劳',
           productName: '鸡胸肉沙拉',
+          normalizedName: '鸡胸肉沙拉',
           productScope: 'single_item',
           itemRole: 'single_item',
+          missingFields: ['product_name'],
+          matchLevel: 'brand_only',
         },
         nutritionEstimate: {
           items: [{ name: '鸡胸肉', portion: '150 g', energy: '240 kcal' }],
@@ -99,6 +104,9 @@ test('buildWorkspaceMessagePresentation can render estimate from decision card o
   assert.equal(presentation.needsClarification, true);
   assert.equal(presentation.analysisEligible, false);
   assert.equal(presentation.saveEligible, false);
+  assert.deepEqual(presentation.summaryBadges, ['麦当劳']);
+  assert.deepEqual(presentation.missingFields, ['具体商品名']);
+  assert.equal(presentation.matchLevelLabel, '仅识别到品牌');
   assert.deepEqual(presentation.riskTags, ['needs_clarification']);
   assert.deepEqual(presentation.adjustments, ['补充份量信息']);
 });

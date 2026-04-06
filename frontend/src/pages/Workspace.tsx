@@ -985,12 +985,31 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                 输入摘要：{clarificationPresentation?.inputSummary}
                               </p>
                             )}
+                            {clarificationPresentation?.summaryBadges?.length ? (
+                              <div className="mt-4 flex flex-wrap gap-2">
+                                {clarificationPresentation.summaryBadges.map((badge: string) => (
+                                  <span
+                                    key={badge}
+                                    className="rounded-full border border-[#F5C16C]/25 bg-white/75 px-3 py-1 text-[11px] font-semibold text-[#8C6517]"
+                                  >
+                                    {badge}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
                           </div>
                           <div className="flex flex-col gap-4 px-9 py-7">
                             {clarificationPresentation?.description && (
                               <p className="text-[15px] leading-relaxed text-[#4A453E]/75">
                                 {clarificationPresentation?.description}
                               </p>
+                            )}
+                            {clarificationPresentation?.matchLevelLabel && (
+                              <div className="rounded-[20px] border border-[#F5C16C]/20 bg-white/70 px-5 py-4">
+                                <p className="text-[12px] font-semibold text-[#8C6517]">
+                                  {clarificationPresentation.matchLevelLabel}
+                                </p>
+                              </div>
                             )}
                             {clarificationPresentation?.content && (
                               <div className="rounded-[20px] border border-[#4A453E]/5 bg-white/80 px-5 py-4">
@@ -999,6 +1018,37 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                 </p>
                               </div>
                             )}
+                            {clarificationPresentation?.missingFields?.length ? (
+                              <div>
+                                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
+                                  {clarificationPresentation?.missingFieldLabel}
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {clarificationPresentation.missingFields.map((field: string) => (
+                                    <span
+                                      key={field}
+                                      className="rounded-full border border-[#F5C16C]/30 bg-[#FFF3D6] px-3 py-1 text-[11px] font-semibold text-[#8C6517]"
+                                    >
+                                      {field}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+                            {clarificationPresentation?.comboItems?.length ? (
+                              <div>
+                                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
+                                  {clarificationPresentation?.comboLabel}
+                                </p>
+                                <div className="space-y-2">
+                                  {clarificationPresentation.comboItems.map((item: string, itemIndex: number) => (
+                                    <p key={`${itemIndex}-${item}`} className="text-[14px] leading-relaxed text-[#4A453E]/70">
+                                      {item}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
                             {clarificationPresentation?.riskTags?.length ? (
                               <div>
                                 <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
@@ -1162,10 +1212,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                       onKeyDown={handleKeyDown}
                     ></textarea>
 
-                    <div className={`overflow-hidden transition-all duration-300 ${
+                    <div className={`transition-all duration-300 ${
                       inputMode === 'decision'
-                        ? 'max-h-20 translate-y-0 pt-2 opacity-100'
-                        : 'max-h-0 -translate-y-2 pt-0 opacity-0'
+                        ? 'max-h-20 translate-y-0 overflow-visible pt-2 opacity-100'
+                        : 'max-h-0 -translate-y-2 overflow-hidden pt-0 opacity-0'
                     }`}>
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
@@ -1179,7 +1229,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             </button>
 
                             {isInputModeMenuOpen && (
-                              <div className="absolute bottom-full left-0 z-30 mb-3 w-72 overflow-hidden rounded-[24px] border border-[#4A453E]/10 bg-[#FFFDF5] p-2 shadow-[0_24px_60px_rgba(74,69,62,0.16)]">
+                              <div className="absolute bottom-full left-0 z-40 mb-3 w-72 overflow-hidden rounded-[24px] border border-[#4A453E]/10 bg-[#FFFDF5] p-2 shadow-[0_24px_60px_rgba(74,69,62,0.16)]">
                                 {WORKSPACE_INPUT_MODE_OPTIONS.map((option) => {
                                   return (
                                     <button
@@ -1264,8 +1314,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               </p>
             )}
 
-            <p className="mt-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
-              你的对话式营养助手。
+            <p className="mt-4 px-2 text-center text-[11px] font-medium leading-5 text-[#4A453E]/45">
+              {activeInputModeConfig.description}
             </p>
           </div>
         </div>

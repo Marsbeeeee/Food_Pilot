@@ -85,6 +85,9 @@ class ChatServiceOutputContractTests(unittest.TestCase):
         self.assertIn("decision_card", payload)
         self.assertEqual(payload["decision_card"]["containerType"], "chat_message")
         self.assertTrue(payload["decision_card"]["analysisEligible"])
+        self.assertIn("normalizedProduct", payload["decision_card"])
+        self.assertIn("matchLevel", payload["decision_card"]["normalizedProduct"])
+        self.assertIn("missingFields", payload["decision_card"]["normalizedProduct"])
         self.assertEqual(payload["suggestion"], "Use less sauce to reduce calories.")
         self.assertEqual(len(payload["estimates"]), 2)
         self.assertEqual(

@@ -25,6 +25,8 @@ test('direct /estimate results reuse the same presentation contract as workspace
         productName: 'Chicken Avocado Bowl',
         productScope: 'single_item',
         itemRole: 'single_item',
+        matchLevel: 'category_product',
+        missingFields: [],
       },
       nutritionEstimate: {
         items: [
@@ -57,6 +59,7 @@ test('direct /estimate results reuse the same presentation contract as workspace
   assert.equal(directPresentation.title, 'Chicken Avocado Bowl');
   assert.equal(directPresentation.analysisEligible, true);
   assert.equal(directPresentation.saveEligible, true);
+  assert.deepEqual(directPresentation.summaryBadges, ['salad_bowl']);
 });
 
 test('direct /estimate clarification results render the shared clarification state', () => {
@@ -70,9 +73,12 @@ test('direct /estimate clarification results render the shared clarification sta
     decisionCard: {
       inputSummary: '麦当劳汉堡',
       normalizedProduct: {
+        brandName: '麦当劳',
         productName: '麦当劳汉堡',
         productScope: 'unknown',
         itemRole: 'unknown',
+        missingFields: ['product_name'],
+        matchLevel: 'brand_only',
       },
       nutritionEstimate: {
         items: [],
@@ -81,7 +87,7 @@ test('direct /estimate clarification results render the shared clarification sta
       confidenceLevel: 'low',
       recommendationLevel: 'needs_review',
       riskTags: ['needs_clarification'],
-      adaptationNote: '请补充具体产品名或规格。',
+      adaptationNote: '请补充具体商品名或规格。',
       adjustments: ['补充品牌下的具体商品名'],
       alternatives: [],
       needsClarification: true,
@@ -93,7 +99,7 @@ test('direct /estimate clarification results render the shared clarification sta
   };
 
   const presentation = buildEstimateResultPresentation(result, {
-    content: '请补充具体产品名或规格。',
+    content: '请补充具体商品名或规格。',
   });
 
   assert.equal(presentation.variant, 'clarification');
@@ -101,5 +107,7 @@ test('direct /estimate clarification results render the shared clarification sta
   assert.equal(presentation.needsClarification, true);
   assert.equal(presentation.analysisEligible, false);
   assert.equal(presentation.saveEligible, false);
+  assert.deepEqual(presentation.missingFields, ['具体商品名']);
+  assert.equal(presentation.matchLevelLabel, '仅识别到品牌');
   assert.deepEqual(presentation.adjustments, ['补充品牌下的具体商品名']);
 });

@@ -36,9 +36,20 @@ def resolve_analysis_eligibility(
     title: str,
     has_nutrition_estimate: bool,
     needs_clarification: bool,
+    normalized_product: dict[str, object] | None = None,
 ) -> bool:
     if not has_nutrition_estimate or needs_clarification:
         return False
+
+    if normalized_product:
+        match_level = str(normalized_product.get("match_level") or normalized_product.get("matchLevel") or "").strip().casefold()
+        missing_fields = normalized_product.get("missing_fields") or normalized_product.get("missingFields") or []
+        if match_level in {"brand_only", "unknown"}:
+            return False
+        if match_level == "source_ambiguous":
+            return False
+        if isinstance(missing_fields, list) and any(str(field).strip() for field in missing_fields):
+            return False
 
     normalized = f"{input_summary} {title}".strip().casefold()
     if not normalized:
