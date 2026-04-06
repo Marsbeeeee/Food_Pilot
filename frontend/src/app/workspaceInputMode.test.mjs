@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   DEFAULT_WORKSPACE_INPUT_MODE,
+  WORKSPACE_INPUT_MODE_OPTIONS,
   WORKSPACE_INPUT_MODE_STORAGE_KEY,
   buildWorkspaceMessageRequest,
   getStoredWorkspaceInputMode,
@@ -16,6 +17,14 @@ test('returns chat mode config by default for unknown mode', () => {
 
   assert.equal(config.value, 'chat');
   assert.equal(config.label, '普通对话');
+});
+
+test('workspace input mode options keep decision entry for launcher menu', () => {
+  assert.deepEqual(
+    WORKSPACE_INPUT_MODE_OPTIONS.map((option) => option.value),
+    ['decision'],
+  );
+  assert.equal(getWorkspaceInputModeConfig('decision').description, '适合商品标题、套餐描述和品牌 + 商品名。');
 });
 
 test('buildWorkspaceMessageRequest carries mode and optional profileId', () => {

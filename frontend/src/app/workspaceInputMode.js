@@ -6,21 +6,24 @@ const WORKSPACE_INPUT_MODE_CONFIG = {
     value: 'chat',
     label: '普通对话',
     shortLabel: '对话',
+    menuIcon: 'chat_bubble',
     placeholder: '问营养、问推荐，或直接描述你吃了什么',
+    description: '适合营养问答、吃什么推荐和自由追问。',
   },
   decision: {
     value: 'decision',
     label: '点单决策',
-    shortLabel: '点单模式',
+    shortLabel: '点单',
     menuIcon: 'local_mall',
     placeholder: '粘贴商品标题、套餐描述，或输入品牌 + 商品名',
+    description: '适合商品标题、套餐描述和品牌 + 商品名。',
   },
 };
 
 export const WORKSPACE_INPUT_MODE_OPTIONS = [
   {
     ...WORKSPACE_INPUT_MODE_CONFIG.decision,
-    description: '适合商品标题、套餐描述和品牌 + 商品名。',
+    description: WORKSPACE_INPUT_MODE_CONFIG.decision.description,
   },
 ];
 
