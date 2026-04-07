@@ -8,6 +8,7 @@ from backend.schemas.estimate import (
 )
 from backend.schemas.decision_card import build_decision_card_from_estimate
 from backend.services.estimate import EstimateServiceError, estimate_meal
+from backend.services.profile_service import get_profile
 
 
 def create_estimate_response(
@@ -45,6 +46,10 @@ def create_estimate_response(
 
     # `/estimate` returns the analysis result only. Persisting to Food Log must be
     # triggered separately by an explicit user save action.
+    profile = None
+    if request_model.profile_id is not None and user_id is not None:
+        profile = get_profile(request_model.profile_id, user_id)
+
     decision_card = build_decision_card_from_estimate(
         input_summary=request_model.query,
         title=result.title,
@@ -54,6 +59,8 @@ def create_estimate_response(
         total_calories=result.total_calories,
         suggestion=result.suggestion,
         container_type="estimate_api",
+        profile=profile,
+        profile_requested=request_model.profile_id is not None,
     )
     result = result.model_copy(update={"decision_card": decision_card})
 

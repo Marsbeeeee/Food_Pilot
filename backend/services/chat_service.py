@@ -776,6 +776,7 @@ def _build_meal_estimate_response_with_conn(
         query=content,
         estimate=estimate,
         estimates=estimates,
+        profile_id=profile_id,
     )
 
 
@@ -867,6 +868,7 @@ def _create_estimate_result_message_with_conn(
     query: str,
     estimate,
     estimates: list | None = None,
+    profile_id: int | None = None,
 ) -> dict[str, object]:
     # Chat analysis results stay in the conversation only. Food Log is an explicit
     # save action and must not be created automatically from successful analysis.
@@ -874,6 +876,9 @@ def _create_estimate_result_message_with_conn(
     # keep result_* as combined for Food Log save compatibility.
     estimates_list = estimates if estimates is not None else [estimate]
     knowledge_refs = getattr(estimate, "knowledge_refs", None)
+    profile = None
+    if profile_id is not None:
+        profile = get_profile(profile_id, user_id)
     decision_card = build_decision_card_from_estimate(
         input_summary=query,
         title=estimate.title,
@@ -883,6 +888,8 @@ def _create_estimate_result_message_with_conn(
         total_calories=estimate.total_calories,
         suggestion=estimate.suggestion,
         container_type="chat_message",
+        profile=profile,
+        profile_requested=profile_id is not None,
     )
     payload_obj: dict[str, object] = {
         "decision_card": decision_card.model_dump(by_alias=True),

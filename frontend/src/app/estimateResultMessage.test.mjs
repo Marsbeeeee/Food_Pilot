@@ -51,6 +51,8 @@ test('direct /estimate results reuse the same presentation contract as workspace
       adaptationNote: 'High protein with moderate fat.',
       adjustments: ['Use less sauce to reduce calories.'],
       alternatives: [],
+      isPersonalized: true,
+      personalizationNote: '已结合你的 High protein、2200 kcal 目标 做判断。',
       needsClarification: false,
       saveContainerKey: 'estimate_api:demo',
       containerType: 'estimate_api',
@@ -74,6 +76,8 @@ test('direct /estimate results reuse the same presentation contract as workspace
   assert.deepEqual(directPresentation.fallbackPathLabels, ['品牌模板命中', '品类模板回退']);
   assert.deepEqual(directPresentation.appliedRules, ['规格：大份（+20 kcal）']);
   assert.deepEqual(directPresentation.summaryBadges, ['salad_bowl']);
+  assert.equal(directPresentation.recommendationLabel, '更适合点');
+  assert.equal(directPresentation.isPersonalized, true);
 });
 
 test('direct /estimate clarification results render the shared clarification state', () => {
@@ -104,6 +108,8 @@ test('direct /estimate clarification results render the shared clarification sta
       adaptationNote: '请补充具体商品名或规格。',
       adjustments: ['补充品牌下的具体商品名'],
       alternatives: [],
+      isPersonalized: false,
+      personalizationNote: '商品信息不足，暂未进入稳定的个体化判断。',
       needsClarification: true,
       saveContainerKey: 'estimate_api:clarify',
       containerType: 'estimate_api',

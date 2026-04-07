@@ -92,6 +92,8 @@ export interface DecisionCard {
   adaptationNote?: string;
   adjustments: string[];
   alternatives: string[];
+  isPersonalized: boolean;
+  personalizationNote?: string | null;
   needsClarification: boolean;
   saveContainerKey: string;
   containerType: string;
@@ -240,6 +242,15 @@ export interface WorkspaceMealEstimatePresentation {
   fallbackPathLabels: string[];
   confidenceReasons: string[];
   appliedRules: string[];
+  recommendationLevel: string;
+  recommendationLabel: string;
+  riskTags: string[];
+  riskLabels: string[];
+  adaptationNote: string | null;
+  adjustments: string[];
+  alternatives: string[];
+  isPersonalized: boolean;
+  personalizationNote: string | null;
   needsClarification: false;
   analysisEligible: boolean | null;
   saveEligible: boolean | null;

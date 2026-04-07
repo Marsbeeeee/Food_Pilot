@@ -899,11 +899,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                               </div>
                             </div>
                           )}
+                          {renderDecisionGuidance(estimatePresentation, message.content)}
                           {!renderedEstimates?.length ? (
                           <div className="flex flex-col items-end gap-3 rounded-[32px] border border-[#4A453E]/5 bg-white px-9 py-6 shadow-sm">
-                            {(estimatePresentation?.suggestion ?? message.content) && (
-                              <p className="w-full text-[14px] leading-relaxed text-[#4A453E]/70">{estimatePresentation?.suggestion ?? message.content}</p>
-                            )}
                             <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
                               <div className={`inline-flex items-center gap-2 self-end rounded-full border px-4 py-2 text-sm font-bold md:self-auto ${
                                 saveState === 'saved'
@@ -958,10 +956,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             <p className="w-full text-right text-[11px] leading-5 text-[#4A453E]/40">
                               {savePresentation.helperText}
                             </p>
-                          </div>
-                          ) : (estimatePresentation?.suggestion ?? message.content) ? (
-                          <div className="rounded-[32px] border border-[#4A453E]/5 bg-white px-9 py-6 shadow-sm">
-                            <p className="w-full text-[14px] leading-relaxed text-[#4A453E]/70">{estimatePresentation?.suggestion ?? message.content}</p>
                           </div>
                           ) : null}
                         </div>
@@ -1632,6 +1626,134 @@ function renderEstimateMeta(
             </span>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+function renderDecisionGuidance(
+  estimatePresentation: WorkspaceMealEstimatePresentation | null,
+  fallbackSuggestion?: string,
+): React.ReactNode {
+  if (!estimatePresentation) {
+    return null;
+  }
+
+  const {
+    recommendationLabel,
+    riskLabels,
+    adaptationNote,
+    adjustments,
+    alternatives,
+    isPersonalized,
+    personalizationNote,
+    suggestion,
+  } = estimatePresentation;
+  const suggestionText = suggestion ?? fallbackSuggestion ?? null;
+  if (!estimatePresentation.decisionCard) {
+    if (!suggestionText) {
+      return null;
+    }
+    return (
+      <div className="rounded-[32px] border border-[#4A453E]/5 bg-white px-9 py-6 shadow-sm">
+        <p className="text-[14px] leading-relaxed text-[#4A453E]/70">
+          {suggestionText}
+        </p>
+      </div>
+    );
+  }
+  const hasStructuredContent = Boolean(
+    recommendationLabel
+    || riskLabels.length
+    || adaptationNote
+    || adjustments.length
+    || alternatives.length
+    || personalizationNote,
+  );
+
+  if (!hasStructuredContent && !suggestionText) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-[32px] border border-[#4A453E]/5 bg-white px-9 py-6 shadow-sm">
+      <div className="flex flex-wrap gap-2">
+        <span className="rounded-full border border-[#FF8A65]/15 bg-[#FFF1EB] px-4 py-2 text-[11px] font-bold tracking-wide text-[#C95B3A]">
+          {recommendationLabel}
+        </span>
+        <span className={`rounded-full border px-4 py-2 text-[11px] font-bold tracking-wide ${
+          isPersonalized
+            ? 'border-[#81C784]/20 bg-[#EEF8EE] text-[#4E9E63]'
+            : 'border-[#4A453E]/10 bg-[#FFFDF5] text-[#4A453E]/55'
+        }`}>
+          {isPersonalized ? '已结合档案' : '通用结论'}
+        </span>
+      </div>
+
+      {personalizationNote && (
+        <p className="mt-4 text-[14px] leading-relaxed text-[#4A453E]/58">
+          {personalizationNote}
+        </p>
+      )}
+
+      {adaptationNote && (
+        <p className="mt-3 text-[15px] leading-relaxed text-[#4A453E]/75">
+          {adaptationNote}
+        </p>
+      )}
+
+      {riskLabels.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
+            风险标签
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {riskLabels.map((label) => (
+              <span
+                key={label}
+                className="rounded-full border border-[#F5C16C]/30 bg-[#FFF3D6] px-3 py-1 text-[11px] font-semibold text-[#8C6517]"
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {adjustments.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
+            调整建议
+          </p>
+          <div className="space-y-2">
+            {adjustments.map((item, index) => (
+              <p key={`${index}-${item}`} className="text-[14px] leading-relaxed text-[#4A453E]/70">
+                {item}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {alternatives.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
+            替代建议
+          </p>
+          <div className="space-y-2">
+            {alternatives.map((item, index) => (
+              <p key={`${index}-${item}`} className="text-[14px] leading-relaxed text-[#4A453E]/70">
+                {item}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!adjustments.length && !alternatives.length && suggestionText && (
+        <p className="mt-4 text-[14px] leading-relaxed text-[#4A453E]/70">
+          {suggestionText}
+        </p>
       )}
     </div>
   );

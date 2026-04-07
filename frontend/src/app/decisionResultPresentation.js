@@ -45,6 +45,30 @@ const TEMPLATE_LEVEL_LABELS = {
   generic_template: '通用模板回退',
 };
 
+const RECOMMENDATION_LEVEL_LABELS = {
+  recommended: '更适合点',
+  acceptable: '可以点',
+  caution: '可点但有边界',
+  not_recommended: '不建议点',
+  needs_review: '需要复核',
+};
+
+const RISK_TAG_LABELS = {
+  allergen_conflict: '过敏原冲突',
+  lactose_sensitive: '乳制品风险',
+  diet_style_conflict: '饮食风格冲突',
+  high_calorie: '热量偏高',
+  high_sugar: '糖负担偏高',
+  large_portion: '份量偏大',
+  low_protein: '蛋白质偏弱',
+  low_confidence: '置信度偏低',
+  needs_clarification: '信息待补充',
+  combo_incomplete: '套餐信息不完整',
+  source_ambiguous: '来源不明确',
+  missing_product_detail: '商品信息不完整',
+  missing_product_subject: '缺少商品主体',
+};
+
 export function buildDecisionResultPresentation({
   title,
   confidence,
@@ -74,7 +98,7 @@ export function buildDecisionResultPresentation({
     variant: 'meal_estimate',
     title: title ?? normalizedProduct?.productName,
     confidence: confidence ?? decisionCard?.confidenceLevel,
-    description: description ?? decisionCard?.adaptationNote,
+    description: decisionCard?.adaptationNote ?? description ?? null,
     items: items ?? nutritionEstimate?.items ?? [],
     total: total ?? nutritionEstimate?.totalCalories,
     estimates,
@@ -94,6 +118,15 @@ export function buildDecisionResultPresentation({
     appliedRules: Array.isArray(estimationMeta?.appliedRules)
       ? estimationMeta.appliedRules
       : [],
+    recommendationLevel: decisionCard?.recommendationLevel ?? 'needs_review',
+    recommendationLabel: mapRecommendationLevel(decisionCard?.recommendationLevel),
+    riskTags: Array.isArray(decisionCard?.riskTags) ? decisionCard.riskTags : [],
+    riskLabels: mapRiskTags(decisionCard?.riskTags),
+    adaptationNote: decisionCard?.adaptationNote ?? description ?? null,
+    adjustments: Array.isArray(decisionCard?.adjustments) ? decisionCard.adjustments : [],
+    alternatives: Array.isArray(decisionCard?.alternatives) ? decisionCard.alternatives : [],
+    isPersonalized: Boolean(decisionCard?.isPersonalized),
+    personalizationNote: decisionCard?.personalizationNote ?? null,
     needsClarification: false,
     analysisEligible: decisionCard?.analysisEligible ?? null,
     saveEligible: decisionCard?.saveEligible ?? null,
@@ -166,4 +199,16 @@ function mapFallbackPath(fallbackPath) {
   }
 
   return fallbackPath.map((step) => TEMPLATE_LEVEL_LABELS[step] ?? step);
+}
+
+function mapRecommendationLevel(level) {
+  return RECOMMENDATION_LEVEL_LABELS[level] ?? '需要复核';
+}
+
+function mapRiskTags(riskTags) {
+  if (!Array.isArray(riskTags)) {
+    return [];
+  }
+
+  return riskTags.map((tag) => RISK_TAG_LABELS[tag] ?? tag);
 }

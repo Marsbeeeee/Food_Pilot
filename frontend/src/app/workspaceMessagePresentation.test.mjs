@@ -103,6 +103,8 @@ test('buildWorkspaceMessagePresentation can render estimate from decision card o
         adaptationNote: '信息不足',
         adjustments: ['补充份量信息'],
         alternatives: [],
+        isPersonalized: false,
+        personalizationNote: '商品信息不足，暂未进入稳定的个体化判断。',
         needsClarification: true,
         saveContainerKey: 'chat_message:demo',
         containerType: 'chat_message',

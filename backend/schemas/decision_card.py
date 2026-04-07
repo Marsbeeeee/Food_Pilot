@@ -6,8 +6,10 @@ from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
+from backend.schemas.profile import ProfileOut
 from backend.services.analysis_eligibility import resolve_analysis_eligibility
 from backend.services.brand_estimation import resolve_brand_estimation
+from backend.services.personalized_decision import resolve_personalized_decision
 from backend.services.product_understanding import build_product_understanding
 
 
@@ -221,6 +223,16 @@ class DecisionCard(BaseModel):
     )
     adjustments: list[str] = Field(default_factory=list)
     alternatives: list[str] = Field(default_factory=list)
+    is_personalized: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("is_personalized", "isPersonalized"),
+        serialization_alias="isPersonalized",
+    )
+    personalization_note: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("personalization_note", "personalizationNote"),
+        serialization_alias="personalizationNote",
+    )
     needs_clarification: bool = Field(
         default=False,
         validation_alias=AliasChoices("needs_clarification", "needsClarification"),
@@ -276,6 +288,8 @@ def build_decision_card_from_estimate(
     save_container_key: str | None = None,
     needs_clarification: bool | None = None,
     analysis_eligible: bool | None = None,
+    profile: ProfileOut | None = None,
+    profile_requested: bool = False,
 ) -> DecisionCard:
     normalized_input = _normalize_text(input_summary) or _normalize_text(title) or _UNKNOWN_INPUT
     normalized_title = _normalize_text(title) or normalized_input
@@ -330,8 +344,26 @@ def build_decision_card_from_estimate(
     if confidence_level == "low":
         risk_tags.append("low_confidence")
 
-    adaptation_note = _normalize_text(description) or None
-    adjustments = [_normalize_text(suggestion)] if _normalize_text(suggestion) else []
+    personalized_decision = resolve_personalized_decision(
+        input_summary=normalized_input,
+        normalized_product=product_understanding["normalized_product"],
+        nutrition_items=normalized_items,
+        total_calories=normalized_total,
+        confidence_level=confidence_level,
+        description=description,
+        suggestion=suggestion,
+        profile=profile,
+        profile_requested=profile_requested,
+        needs_clarification=needs_clarification,
+    )
+    risk_tags.extend(personalized_decision.risk_tags)
+    adaptation_note = (
+        _normalize_text(personalized_decision.adaptation_note)
+        or _normalize_text(description)
+        or None
+    )
+    adjustments = personalized_decision.adjustments
+    alternatives = personalized_decision.alternatives
 
     return DecisionCard.model_validate(
         {
@@ -345,14 +377,13 @@ def build_decision_card_from_estimate(
                 estimation_snapshot["estimation_meta"] if estimation_snapshot is not None else None
             ),
             "confidence_level": confidence_level,
-            "recommendation_level": _recommendation_level_from_confidence(
-                confidence_level,
-                needs_clarification=needs_clarification,
-            ),
+            "recommendation_level": personalized_decision.recommendation_level,
             "risk_tags": _dedupe_tags(risk_tags),
             "adaptation_note": adaptation_note,
             "adjustments": adjustments,
-            "alternatives": [],
+            "alternatives": alternatives,
+            "is_personalized": personalized_decision.is_personalized,
+            "personalization_note": personalized_decision.personalization_note,
             "needs_clarification": needs_clarification,
             "save_container_key": save_container_key,
             "container_type": container_type,
@@ -398,6 +429,8 @@ def build_clarification_decision_card(
             "adaptation_note": "当前信息还不足以形成稳定商品理解，请先补充关键商品信息。",
             "adjustments": product_understanding["clarification_questions"],
             "alternatives": [],
+            "is_personalized": False,
+            "personalization_note": "商品信息不足，暂未进入稳定的个体化判断。",
             "needs_clarification": True,
             "save_container_key": save_container_key,
             "container_type": container_type,
