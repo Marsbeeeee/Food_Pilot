@@ -422,9 +422,13 @@ const App: React.FC = () => {
             activeSessionId={activeSessionId}
             setActiveSessionId={setActiveSessionId}
             profileId={profile.id}
+            currentUserId={session.user.id}
+            analysisDate={currentAnalysisDate}
             refreshFoodLog={refreshFoodLog}
             onDeleteFoodLog={handleDeleteFoodLog}
             unlinkDeletedChatFromFoodLog={handleChatSessionDeleted}
+            onNavigateToExplorer={() => setCurrentView(AppView.EXPLORER)}
+            onNavigateToInsights={() => setCurrentView(AppView.INSIGHTS)}
           />
         );
       case AppView.EXPLORER:
@@ -476,9 +480,13 @@ const App: React.FC = () => {
               activeSessionId={activeSessionId}
               setActiveSessionId={setActiveSessionId}
               profileId={profile.id}
+              currentUserId={session.user.id}
+              analysisDate={currentAnalysisDate}
               refreshFoodLog={refreshFoodLog}
               onDeleteFoodLog={handleDeleteFoodLog}
               unlinkDeletedChatFromFoodLog={handleChatSessionDeleted}
+              onNavigateToExplorer={() => setCurrentView(AppView.EXPLORER)}
+              onNavigateToInsights={() => setCurrentView(AppView.INSIGHTS)}
             />
           );
       default:
@@ -490,9 +498,13 @@ const App: React.FC = () => {
             activeSessionId={activeSessionId}
             setActiveSessionId={setActiveSessionId}
             profileId={profile.id}
+            currentUserId={session.user.id}
+            analysisDate={currentAnalysisDate}
             refreshFoodLog={refreshFoodLog}
             onDeleteFoodLog={handleDeleteFoodLog}
             unlinkDeletedChatFromFoodLog={handleChatSessionDeleted}
+            onNavigateToExplorer={() => setCurrentView(AppView.EXPLORER)}
+            onNavigateToInsights={() => setCurrentView(AppView.INSIGHTS)}
           />
         );
     }

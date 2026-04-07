@@ -1,5 +1,12 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
+import {
+  autoSaveAnalysisBasket,
+  createAnalysisBasketItemId,
+  restoreAllAnalysisItems,
+  restoreAnalysisItemsFromSyncedBasket,
+} from '../app/insightsBasketState';
+import { buildDecisionAnalysisAction } from '../app/workspaceDecisionUiState.js';
 import { buildWorkspaceMessagePresentation } from '../app/workspaceMessagePresentation';
 import { resolveEstimateBlocksForRendering } from '../app/workspaceEstimateCards';
 import { resolveFoodLogSavePresentation } from '../app/workspaceFoodLogState';
@@ -21,7 +28,12 @@ import {
   sendChatMessage,
 } from '../api/chat';
 import { FoodLogApiError, saveFoodLogEntry } from '../api/foodLog';
+import { fetchInsightsBasket, syncInsightsBasket } from '../api/insights';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import {
+  WorkspaceClarificationWorkbench,
+  WorkspaceEstimateWorkbench,
+} from '../components/WorkspaceDecisionWorkbench';
 import {
   ChatMessageType,
   ChatSession,
@@ -42,9 +54,13 @@ interface WorkspaceProps {
   activeSessionId: string;
   setActiveSessionId: (id: string) => void;
   profileId?: number;
+  currentUserId?: string | number;
+  analysisDate?: string;
   refreshFoodLog: () => Promise<void>;
   onDeleteFoodLog: (entryId: string) => Promise<void>;
   unlinkDeletedChatFromFoodLog: (sessionId: string) => Promise<void>;
+  onNavigateToExplorer?: () => void;
+  onNavigateToInsights?: () => void;
 }
 
 export const Workspace: React.FC<WorkspaceProps> = ({
@@ -54,13 +70,15 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   activeSessionId,
   setActiveSessionId,
   profileId,
+  currentUserId,
+  analysisDate,
   refreshFoodLog,
   onDeleteFoodLog,
   unlinkDeletedChatFromFoodLog,
+  onNavigateToExplorer,
+  onNavigateToInsights,
 }) => {
-  // TODO: Re-enable Workspace -> Food Log saves after Food Log / Insights are
-  // updated to the new analysis-eligibility direction.
-  const WORKSPACE_FOOD_LOG_SAVE_ENABLED = false;
+  const WORKSPACE_FOOD_LOG_SAVE_ENABLED = true;
   const BOTTOM_SNAP_THRESHOLD_PX = 96;
   const [inputValue, setInputValue] = useState('');
   const [inputMode, setInputMode] = useState<WorkspaceInputMode>(() => getStoredWorkspaceInputMode());
@@ -78,8 +96,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const [savedFoodLogMessageIds, setSavedFoodLogMessageIds] = useState<Record<string, string>>({});
   const [failedFoodLogSaves, setFailedFoodLogSaves] = useState<Record<string, string>>({});
   const [deletingFoodLogMessageIds, setDeletingFoodLogMessageIds] = useState<string[]>([]);
+  const [addingToAnalysisKeys, setAddingToAnalysisKeys] = useState<string[]>([]);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const inputTextareaRef = useRef<HTMLTextAreaElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const inputModeMenuRef = useRef<HTMLDivElement>(null);
   const previousSessionIdRef = useRef<string | null>(null);
@@ -194,6 +214,21 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     setInputMode(nextMode);
     setInputError('');
     setIsInputModeMenuOpen(false);
+  };
+
+  const focusDecisionInput = (nextValue: string) => {
+    setInputMode('decision');
+    setInputValue(nextValue);
+    setInputError('');
+    window.requestAnimationFrame(() => {
+      const element = inputTextareaRef.current;
+      if (!element) {
+        return;
+      }
+      element.focus();
+      const cursor = nextValue.length;
+      element.setSelectionRange(cursor, cursor);
+    });
   };
 
   const handleSendMessage = async (text?: string, modeOverride?: WorkspaceInputMode) => {
@@ -387,19 +422,19 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     message: Message,
     mealDescription: string,
     estimateBlock?: { title: string; description?: string; total: string; items: Array<{ name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }> },
-  ) => {
+  ): Promise<FoodLogEntry | null> => {
     if (!WORKSPACE_FOOD_LOG_SAVE_ENABLED) {
-      return;
+      return null;
     }
 
     if (getMessageType(message) !== 'meal_estimate') {
-      return;
+      return null;
     }
 
     const decisionCard = message.payload?.decisionCard ?? message.decisionCard;
     const isSaveEligibleByContract = decisionCard ? decisionCard.saveEligible : true;
     if (!isSaveEligibleByContract) {
-      return;
+      return null;
     }
 
     const saveKey = estimateBlock
@@ -415,7 +450,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       : mealDescription;
 
     if (!message.id || !title || !description || !total || !items?.length) {
-      return;
+      return null;
     }
 
     setSavingFoodLogMessageIds((current) => (
@@ -456,6 +491,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         return next;
       });
       await refreshFoodLog();
+      return savedEntry;
     } catch (error) {
       setFailedFoodLogSaves((current) => ({
         ...current,
@@ -464,6 +500,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           '这条估算结果暂时无法保存到饮食记录，请稍后重试。',
         ),
       }));
+      return null;
     } finally {
       setSavingFoodLogMessageIds((current) => current.filter((item) => item !== saveKey));
     }
@@ -496,6 +533,106 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       handleFoodLogError(error, '暂时无法撤销这条饮食记录保存记录，请稍后重试。');
     } finally {
       setDeletingFoodLogMessageIds((current) => current.filter((item) => item !== saveKey));
+    }
+  };
+
+  const resolveSavedFoodLogEntry = (saveKey: string): FoodLogEntry | null => {
+    const persistedEntry = persistedSavedFoodLogEntriesByMessageId.get(saveKey);
+    if (persistedEntry) {
+      return persistedEntry;
+    }
+
+    const entryId = savedFoodLogMessageIds[saveKey];
+    if (!entryId) {
+      return null;
+    }
+
+    return foodLog.find((entry) => entry.id === entryId) ?? null;
+  };
+
+  const addEntryToAnalysisBasket = async (entry: FoodLogEntry): Promise<void> => {
+    const userKey = currentUserId != null ? String(currentUserId).trim() : '';
+    if (!userKey) {
+      throw new Error('登录状态已失效，请重新登录。');
+    }
+
+    const resolvedAnalysisDate = analysisDate || getTodayAnalysisDate();
+    const remoteBasket = await fetchInsightsBasket();
+    const restoredRemoteItems = restoreAnalysisItemsFromSyncedBasket(remoteBasket.items, foodLog);
+    const restoredLocalItems = restoreAllAnalysisItems(userKey, foodLog);
+    const baseItems = restoredRemoteItems.length > 0 ? restoredRemoteItems : restoredLocalItems;
+    const alreadyAdded = baseItems.some((item) => (
+      item.id === entry.id && item.analysisDate === resolvedAnalysisDate
+    ));
+    const basketId = createAnalysisBasketItemId();
+    const nextLocalItems = alreadyAdded
+      ? baseItems
+      : [
+        ...baseItems,
+        {
+          ...entry,
+          basketId,
+          analysisDate: resolvedAnalysisDate,
+        },
+      ];
+
+    autoSaveAnalysisBasket(userKey, nextLocalItems);
+
+    const hasRemoteEntry = remoteBasket.items.some((item) => (
+      item.analysisDate === resolvedAnalysisDate
+      && String(item.snapshot?.id ?? '') === String(entry.id)
+    ));
+    if (!hasRemoteEntry) {
+      await syncInsightsBasket([
+        ...remoteBasket.items,
+        {
+          basketId,
+          analysisDate: resolvedAnalysisDate,
+          snapshot: entry,
+        },
+      ]);
+    }
+  };
+
+  const handleAddEstimateToAnalysis = async (
+    saveKey: string,
+    message: Message,
+    mealDescription: string | null,
+  ) => {
+    const decisionCard = message.payload?.decisionCard ?? message.decisionCard;
+    if (!decisionCard?.analysisEligible) {
+      if (decisionCard?.needsClarification) {
+        window.alert('这条结果还需要补充商品信息，暂时不能加入分析。');
+        return;
+      }
+      window.alert('这条结果当前允许保存，但还不满足加入分析条件。');
+      return;
+    }
+
+    setAddingToAnalysisKeys((current) => (
+      current.includes(saveKey) ? current : [...current, saveKey]
+    ));
+
+    try {
+      let entry = resolveSavedFoodLogEntry(saveKey);
+      if (!entry) {
+        if (!mealDescription) {
+          throw new Error('当前结果缺少原始输入，暂时无法先保存再加入分析。');
+        }
+
+        entry = await handleSaveFoodLogEntry(activeSession.id, message, mealDescription, undefined);
+      }
+
+      if (!entry) {
+        throw new Error('保存结果尚未完成，暂时无法加入分析。');
+      }
+
+      await addEntryToAnalysisBasket(entry);
+      onNavigateToInsights?.();
+    } catch (error) {
+      handleFoodLogError(error, '暂时无法把这条结果加入分析，请稍后重试。');
+    } finally {
+      setAddingToAnalysisKeys((current) => current.filter((item) => item !== saveKey));
     }
   };
 
@@ -708,6 +845,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                   failedMessage: isSaveFailedToFoodLog ? saveFailureMessage : undefined,
                 });
                 const saveState = savePresentation.state;
+                const isAddingToAnalysis = Boolean(
+                  defaultSaveKey && addingToAnalysisKeys.includes(defaultSaveKey),
+                );
+                const analysisAction = buildDecisionAnalysisAction(decisionCard, {
+                  isSaved: isSavedToFoodLog,
+                  canSaveFromWorkspace,
+                  hasMealDescription: Boolean(mealDescription),
+                });
 
                 return (
                   <div key={message.id ?? index} className={`flex items-start gap-5 ${message.role === 'user' ? 'justify-end' : ''}`}>
@@ -719,6 +864,76 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
                     <div className={`flex max-w-[95%] flex-col gap-3 ${message.role === 'user' ? 'items-end max-w-[80%]' : 'items-start'}`}>
                       {isMealEstimate ? (
+                        <WorkspaceEstimateWorkbench
+                          presentation={estimatePresentation}
+                          renderedEstimates={renderedEstimates}
+                          mealDescription={mealDescription}
+                          messageTime={message.time || '刚刚'}
+                          savePresentation={savePresentation}
+                          canSaveFromWorkspace={canSaveFromWorkspace && Boolean(mealDescription)}
+                          isSavedToFoodLog={isSavedToFoodLog}
+                          isDeletingSavedFoodLog={isDeletingSavedFoodLog}
+                          isAddingToAnalysis={isAddingToAnalysis}
+                          analysisActionLabel={analysisAction.label}
+                          analysisActionDisabled={analysisAction.disabled || !defaultSaveKey}
+                          analysisHelperText={analysisAction.helperText}
+                          onSave={() => {
+                            if (mealDescription) {
+                              void handleSaveFoodLogEntry(activeSession.id, message, mealDescription, undefined);
+                            }
+                          }}
+                          onUndoSave={() => {
+                            if (defaultSaveKey) {
+                              void handleUndoFoodLogSave(defaultSaveKey);
+                            }
+                          }}
+                          onAddToAnalysis={() => void handleAddEstimateToAnalysis(defaultSaveKey, message, mealDescription)}
+                          onRerun={() => void handleSendMessage(mealDescription ?? decisionCard?.inputSummary ?? '', 'decision')}
+                          onEditQuery={() => focusDecisionInput(mealDescription ?? decisionCard?.inputSummary ?? '')}
+                          onContinueCompare={() => focusDecisionInput(buildComparisonDraft(mealDescription ?? decisionCard?.inputSummary ?? ''))}
+                          onOpenExplorer={onNavigateToExplorer ?? null}
+                        />
+                      ) : isClarification ? (
+                        <WorkspaceClarificationWorkbench
+                          presentation={clarificationPresentation}
+                          messageTime={message.time || '刚刚'}
+                          savePresentation={savePresentation}
+                          canSaveFromWorkspace={canSaveFromWorkspace}
+                          isSavedToFoodLog={isSavedToFoodLog}
+                          isDeletingSavedFoodLog={isDeletingSavedFoodLog}
+                          isAddingToAnalysis={isAddingToAnalysis}
+                          analysisActionLabel={analysisAction.label}
+                          analysisActionDisabled={analysisAction.disabled || !defaultSaveKey}
+                          analysisHelperText={analysisAction.helperText}
+                          onSave={() => {
+                            const clarificationInput = decisionCard?.inputSummary ?? clarificationPresentation?.inputSummary ?? '';
+                            if (clarificationInput) {
+                              void handleSaveFoodLogEntry(activeSession.id, message, clarificationInput, undefined);
+                            }
+                          }}
+                          onUndoSave={() => {
+                            if (defaultSaveKey) {
+                              void handleUndoFoodLogSave(defaultSaveKey);
+                            }
+                          }}
+                          onAddToAnalysis={() => void handleAddEstimateToAnalysis(
+                            defaultSaveKey,
+                            message,
+                            decisionCard?.inputSummary ?? clarificationPresentation?.inputSummary ?? '',
+                          )}
+                          onRerun={() => void handleSendMessage(
+                            decisionCard?.inputSummary ?? clarificationPresentation?.inputSummary ?? '',
+                            'decision',
+                          )}
+                          onEditQuery={() => focusDecisionInput(
+                            decisionCard?.inputSummary ?? clarificationPresentation?.inputSummary ?? '',
+                          )}
+                          onContinueCompare={() => focusDecisionInput(buildComparisonDraft(
+                            decisionCard?.inputSummary ?? clarificationPresentation?.inputSummary ?? '',
+                          ))}
+                          onOpenExplorer={onNavigateToExplorer ?? null}
+                        />
+                      ) : isMealEstimate ? (
                         <div className="flex w-full flex-col gap-5">
                           {renderedEstimates?.length ? (
                             renderedEstimates.map((est: { title: string; confidence?: string; description?: string; items: Array<{ name: string; portion: string; energy: string; protein?: string; carbs?: string; fat?: string }>; total: string }, estIdx: number) => {
@@ -1192,6 +1407,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
                   <div className="flex min-w-0 flex-1 flex-col">
                     <textarea
+                      ref={inputTextareaRef}
                       className={`custom-scrollbar max-h-40 flex-1 resize-none border-none bg-transparent px-0 text-[16px] leading-relaxed text-[#4A453E] placeholder-[#4A453E]/30 focus:ring-0 transition-all duration-300 ${
                         inputMode === 'decision' ? 'min-h-[44px] pt-2' : 'min-h-[56px] pt-3'
                       }`}
@@ -1519,6 +1735,21 @@ function formatOptimisticTime(): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function buildComparisonDraft(baseText: string): string {
+  const normalized = baseText.trim();
+  if (!normalized) {
+    return '';
+  }
+  return `${normalized} 和 `;
+}
+
+function getTodayAnalysisDate(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function extractMacroNum(value?: string | null): number {
