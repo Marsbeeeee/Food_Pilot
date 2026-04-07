@@ -35,6 +35,16 @@ test('direct /estimate results reuse the same presentation contract as workspace
         ],
         totalCalories: '420 kcal',
       },
+      estimationMeta: {
+        sourceType: 'category_template',
+        sourceLabel: '轻食 / 鸡肉沙拉',
+        templateId: 'category.light_meal.chicken_salad.v1',
+        hitLevel: 'category',
+        fallbackPath: ['brand_template', 'category_template'],
+        confidenceReasons: ['估算依据：品类模板回退。'],
+        appliedRules: ['规格：大份（+20 kcal）'],
+        missingConfiguration: [],
+      },
       confidenceLevel: 'high',
       recommendationLevel: 'recommended',
       riskTags: [],
@@ -59,6 +69,10 @@ test('direct /estimate results reuse the same presentation contract as workspace
   assert.equal(directPresentation.title, 'Chicken Avocado Bowl');
   assert.equal(directPresentation.analysisEligible, true);
   assert.equal(directPresentation.saveEligible, true);
+  assert.equal(directPresentation.templateHitLabel, '品类模板回退');
+  assert.equal(directPresentation.templateSourceLabel, '轻食 / 鸡肉沙拉');
+  assert.deepEqual(directPresentation.fallbackPathLabels, ['品牌模板命中', '品类模板回退']);
+  assert.deepEqual(directPresentation.appliedRules, ['规格：大份（+20 kcal）']);
   assert.deepEqual(directPresentation.summaryBadges, ['salad_bowl']);
 });
 

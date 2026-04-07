@@ -844,17 +844,18 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             })
                           ) : (
                             <div className="overflow-hidden rounded-[32px] border border-[#4A453E]/5 bg-white shadow-sm">
-                              <div className="border-b border-[#4A453E]/5 p-9">
-                                <div className="mb-4 flex items-center justify-between">
-                                  <h3 className="font-serif-brand text-2xl font-bold text-[#4A453E]">{estimatePresentation?.title}</h3>
-                                  <span className="rounded-full border border-[#81C784]/10 bg-[#81C784]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#81C784]">
-                                    {estimatePresentation?.confidence}
-                                  </span>
+                                <div className="border-b border-[#4A453E]/5 p-9">
+                                  <div className="mb-4 flex items-center justify-between">
+                                    <h3 className="font-serif-brand text-2xl font-bold text-[#4A453E]">{estimatePresentation?.title}</h3>
+                                    <span className="rounded-full border border-[#81C784]/10 bg-[#81C784]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#81C784]">
+                                      {estimatePresentation?.confidence}
+                                    </span>
+                                  </div>
+                                  <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">{estimatePresentation?.description}</p>
+                                  {renderEstimateMeta(estimatePresentation)}
                                 </div>
-                                <p className="text-[16px] font-medium leading-relaxed text-[#4A453E]/70">{estimatePresentation?.description}</p>
-                              </div>
-                              <div className="p-0">
-                                <table className="w-full text-left">
+                                <div className="p-0">
+                                  <table className="w-full text-left">
                                   <thead className="bg-[#F7F3E9]/30 text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/40">
                                     <tr>
                                       <th className="px-6 py-4">{estimatePresentation?.ingredientColumnLabel}</th>
@@ -1568,6 +1569,72 @@ function resolveMealDescription(
   }
 
   return null;
+}
+
+function renderEstimateMeta(
+  estimatePresentation: WorkspaceMealEstimatePresentation | null,
+): React.ReactNode {
+  if (!estimatePresentation) {
+    return null;
+  }
+
+  const hasTopLine = Boolean(
+    estimatePresentation.templateHitLabel
+    || estimatePresentation.templateSourceLabel
+    || estimatePresentation.fallbackPathLabels.length,
+  );
+  const hasDetails = Boolean(
+    estimatePresentation.confidenceReasons.length
+    || estimatePresentation.appliedRules.length,
+  );
+  if (!hasTopLine && !hasDetails) {
+    return null;
+  }
+
+  return (
+    <div className="mt-5 rounded-[20px] border border-[#4A453E]/8 bg-[#FFFDF5] px-5 py-4">
+      {hasTopLine && (
+        <div className="flex flex-wrap gap-2">
+          {estimatePresentation.templateHitLabel && (
+            <span className="rounded-full border border-[#FF8A65]/20 bg-[#FFF1EB] px-3 py-1 text-[11px] font-semibold text-[#C95B3A]">
+              {estimatePresentation.templateHitLabel}
+            </span>
+          )}
+          {estimatePresentation.templateSourceLabel && (
+            <span className="rounded-full border border-[#4A453E]/10 bg-white px-3 py-1 text-[11px] font-semibold text-[#4A453E]/70">
+              来源：{estimatePresentation.templateSourceLabel}
+            </span>
+          )}
+          {estimatePresentation.fallbackPathLabels.length > 0 && (
+            <span className="rounded-full border border-[#4A453E]/10 bg-white px-3 py-1 text-[11px] font-semibold text-[#4A453E]/70">
+              路径：{estimatePresentation.fallbackPathLabels.join(' → ')}
+            </span>
+          )}
+        </div>
+      )}
+      {estimatePresentation.confidenceReasons.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {estimatePresentation.confidenceReasons.map((reason, index) => (
+            <p key={`reason-${index}-${reason}`} className="text-[13px] leading-relaxed text-[#4A453E]/65">
+              {reason}
+            </p>
+          ))}
+        </div>
+      )}
+      {estimatePresentation.appliedRules.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {estimatePresentation.appliedRules.map((rule, index) => (
+            <span
+              key={`rule-${index}-${rule}`}
+              className="rounded-full border border-[#4A453E]/10 bg-white px-3 py-1 text-[11px] font-semibold text-[#4A453E]/65"
+            >
+              {rule}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function getSessionStatusLabel(

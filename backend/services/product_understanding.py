@@ -140,9 +140,20 @@ _SUGAR_LEVEL_PATTERNS = (
 _TEMPERATURE_PATTERNS = (
     "热",
     "常温",
+    "多冰",
     "少冰",
     "去冰",
     "冰",
+)
+
+_MILK_BASE_PATTERNS = (
+    "鲜奶",
+    "厚乳",
+    "燕麦奶",
+    "椰乳",
+    "豆奶",
+    "脱脂奶",
+    "全脂奶",
 )
 
 _SPEC_PATTERNS = (
@@ -197,6 +208,7 @@ def build_product_understanding(
     spec = _match_first(compact_text, _SPEC_PATTERNS)
     sugar_level = _match_first(compact_text, _SUGAR_LEVEL_PATTERNS)
     temperature = _match_first(compact_text, _TEMPERATURE_PATTERNS)
+    milk_base = _match_first(compact_text, _MILK_BASE_PATTERNS)
     quantity = _match_quantity(compact_text)
     addons = _extract_addons(compact_text)
 
@@ -272,6 +284,7 @@ def build_product_understanding(
         "addons": addons,
         "sugar_level": sugar_level,
         "temperature": temperature,
+        "milk_base": milk_base,
         "quantity": quantity,
         "combo_items": combo_items,
         "missing_fields": missing_fields,
@@ -325,8 +338,16 @@ def _match_quantity(text: str) -> str | None:
 
 def _extract_addons(text: str) -> list[str]:
     results: list[str] = []
+    excluded_markers = {
+        *[pattern.casefold() for pattern in _SUGAR_LEVEL_PATTERNS],
+        *[pattern.casefold() for pattern in _TEMPERATURE_PATTERNS],
+    }
     for pattern in _ADDON_PATTERNS:
-        results.extend(match.group(0) for match in re.finditer(pattern, text))
+        for match in re.finditer(pattern, text):
+            candidate = match.group(0).strip()
+            if candidate.casefold() in excluded_markers:
+                continue
+            results.append(candidate)
     return _dedupe(results)
 
 

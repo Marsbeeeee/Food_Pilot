@@ -7,6 +7,7 @@ from typing import Any, Literal
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from backend.services.analysis_eligibility import resolve_analysis_eligibility
+from backend.services.brand_estimation import resolve_brand_estimation
 from backend.services.product_understanding import build_product_understanding
 
 
@@ -103,6 +104,11 @@ class DecisionCardNormalizedProduct(BaseModel):
         validation_alias=AliasChoices("sugar_level", "sugarLevel"),
         serialization_alias="sugarLevel",
     )
+    milk_base: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("milk_base", "milkBase"),
+        serialization_alias="milkBase",
+    )
     temperature: str | None = None
     quantity: str | None = None
     combo_items: list[DecisionCardProductComponent] = Field(
@@ -132,6 +138,47 @@ class DecisionCardNutritionEstimate(BaseModel):
     )
 
 
+class DecisionCardEstimationMeta(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    source_type: str = Field(
+        validation_alias=AliasChoices("source_type", "sourceType"),
+        serialization_alias="sourceType",
+    )
+    source_label: str = Field(
+        validation_alias=AliasChoices("source_label", "sourceLabel"),
+        serialization_alias="sourceLabel",
+    )
+    template_id: str = Field(
+        validation_alias=AliasChoices("template_id", "templateId"),
+        serialization_alias="templateId",
+    )
+    hit_level: str = Field(
+        validation_alias=AliasChoices("hit_level", "hitLevel"),
+        serialization_alias="hitLevel",
+    )
+    fallback_path: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("fallback_path", "fallbackPath"),
+        serialization_alias="fallbackPath",
+    )
+    confidence_reasons: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("confidence_reasons", "confidenceReasons"),
+        serialization_alias="confidenceReasons",
+    )
+    applied_rules: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("applied_rules", "appliedRules"),
+        serialization_alias="appliedRules",
+    )
+    missing_configuration: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("missing_configuration", "missingConfiguration"),
+        serialization_alias="missingConfiguration",
+    )
+
+
 class DecisionCard(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -146,6 +193,11 @@ class DecisionCard(BaseModel):
     nutrition_estimate: DecisionCardNutritionEstimate = Field(
         validation_alias=AliasChoices("nutrition_estimate", "nutritionEstimate"),
         serialization_alias="nutritionEstimate",
+    )
+    estimation_meta: DecisionCardEstimationMeta | None = Field(
+        default=None,
+        validation_alias=AliasChoices("estimation_meta", "estimationMeta"),
+        serialization_alias="estimationMeta",
     )
     confidence_level: DecisionConfidenceLevel = Field(
         default="unknown",
@@ -234,8 +286,16 @@ def build_decision_card_from_estimate(
         title=normalized_title,
         items=normalized_items,
     )
+    estimation_snapshot = resolve_brand_estimation(
+        input_summary=normalized_input,
+        title=normalized_title,
+        items=normalized_items,
+        product_understanding=product_understanding,
+    )
     confidence_level = _merge_confidence_levels(
-        normalize_confidence_level(confidence),
+        normalize_confidence_level(
+            confidence if confidence is not None else _extract_estimation_confidence(estimation_snapshot)
+        ),
         product_understanding["confidence_level"],
     )
     has_nutrition_estimate = bool(normalized_items) and normalized_total != _MISSING_TOTAL
@@ -281,6 +341,9 @@ def build_decision_card_from_estimate(
                 "items": normalized_items,
                 "total_calories": normalized_total,
             },
+            "estimation_meta": (
+                estimation_snapshot["estimation_meta"] if estimation_snapshot is not None else None
+            ),
             "confidence_level": confidence_level,
             "recommendation_level": _recommendation_level_from_confidence(
                 confidence_level,
@@ -348,6 +411,13 @@ def _normalize_text(value: str | None) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def _extract_estimation_confidence(estimation_snapshot: dict[str, Any] | None) -> str | None:
+    if not estimation_snapshot:
+        return None
+    value = estimation_snapshot.get("confidence")
+    return value if isinstance(value, str) else None
 
 
 def _normalize_items(items: list[Any] | None) -> list[dict[str, Any]]:

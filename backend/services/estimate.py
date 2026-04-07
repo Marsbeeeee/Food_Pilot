@@ -8,6 +8,7 @@ from backend.schemas.estimate import EstimateItem, EstimateResult
 from backend.schemas.knowledge import KnowledgeReference
 from backend.schemas.profile import ProfileOut
 from backend.services.ai_client import call_ai
+from backend.services.brand_estimation import resolve_brand_estimation
 from backend.services.estimate_contract import (
     ESTIMATE_CAPABILITY_RULES,
     ESTIMATE_OUTPUT_CONTRACT,
@@ -151,6 +152,7 @@ def estimate_meal(
         except ValueError:
             pass
 
+    parsed = _apply_brand_template_estimate(parsed, query)
     parsed = _apply_single_dish_itemization(parsed, query, inferred_multi_food_count)
 
     if retrieved_knowledge.references:
@@ -262,6 +264,9 @@ def _apply_single_dish_itemization(
     query: str,
     inferred_multi_food_count: int | None,
 ) -> EstimateResult:
+    if result.itemization_mode == "template_snapshot":
+        return result
+
     if inferred_multi_food_count and inferred_multi_food_count > 1:
         return result
 
@@ -292,6 +297,38 @@ def _apply_single_dish_itemization(
         return result.model_copy(update={"itemization_mode": "single_dish_ingredients"})
 
     return result
+
+
+def _apply_brand_template_estimate(
+    result: EstimateResult,
+    query: str,
+) -> EstimateResult:
+    normalized_items = [
+        item.model_dump() if hasattr(item, "model_dump") else item
+        for item in result.items
+    ]
+    estimation_snapshot = resolve_brand_estimation(
+        input_summary=query,
+        title=result.title,
+        items=normalized_items,
+    )
+    if estimation_snapshot is None:
+        return result
+
+    return result.model_copy(
+        update={
+            "title": estimation_snapshot["title"],
+            "description": estimation_snapshot["description"],
+            "confidence": estimation_snapshot["confidence"],
+            "items": [
+                EstimateItem.model_validate(item)
+                for item in estimation_snapshot["items"]
+            ],
+            "total_calories": estimation_snapshot["total_calories"],
+            "suggestion": estimation_snapshot["suggestion"],
+            "itemization_mode": "template_snapshot",
+        }
+    )
 
 
 def _infer_multi_food_count(query: str) -> int | None:

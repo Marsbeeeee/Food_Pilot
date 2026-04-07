@@ -35,6 +35,11 @@ class DecisionCardProductUnderstandingTests(unittest.TestCase):
         self.assertEqual(decision_card.normalized_product.sugar_level, "三分糖")
         self.assertEqual(decision_card.normalized_product.match_level, "brand_product")
         self.assertEqual(decision_card.normalized_product.missing_fields, [])
+        self.assertIsNotNone(decision_card.estimation_meta)
+        assert decision_card.estimation_meta is not None
+        self.assertEqual(decision_card.estimation_meta.source_type, "brand_template")
+        self.assertEqual(decision_card.estimation_meta.source_label, "霸王茶姬 / 伯牙绝弦")
+        self.assertEqual(decision_card.estimation_meta.fallback_path, ["brand_template"])
         self.assertTrue(decision_card.analysis_eligible)
 
     def test_build_decision_card_detects_combo_scope_from_multi_item_estimate(self) -> None:

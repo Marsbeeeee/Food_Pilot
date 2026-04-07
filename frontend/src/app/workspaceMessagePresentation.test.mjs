@@ -24,6 +24,11 @@ test('buildWorkspaceMessagePresentation returns estimate card shape with extende
   assert.equal(presentation.estimates, null);
   assert.equal(presentation.suggestion, null);
   assert.deepEqual(presentation.summaryBadges, []);
+  assert.equal(presentation.templateHitLabel, null);
+  assert.equal(presentation.templateSourceLabel, null);
+  assert.deepEqual(presentation.fallbackPathLabels, []);
+  assert.deepEqual(presentation.confidenceReasons, []);
+  assert.deepEqual(presentation.appliedRules, []);
   assert.ok(presentation.ingredientColumnLabel);
   assert.ok(presentation.portionColumnLabel);
   assert.ok(presentation.energyColumnLabel);
@@ -81,6 +86,16 @@ test('buildWorkspaceMessagePresentation can render estimate from decision card o
         nutritionEstimate: {
           items: [{ name: '鸡胸肉', portion: '150 g', energy: '240 kcal' }],
           totalCalories: '240 kcal',
+        },
+        estimationMeta: {
+          sourceType: 'brand_template',
+          sourceLabel: '麦当劳 / 鸡胸肉沙拉',
+          templateId: 'brand.mcdonalds.chicken_salad.v1',
+          hitLevel: 'brand',
+          fallbackPath: ['brand_template'],
+          confidenceReasons: ['估算依据：品牌模板命中。'],
+          appliedRules: ['规格：大份（+20 kcal）'],
+          missingConfiguration: [],
         },
         confidenceLevel: 'low',
         recommendationLevel: 'needs_review',

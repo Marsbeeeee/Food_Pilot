@@ -39,6 +39,12 @@ const MISSING_FIELD_LABELS = {
   temperature: '冰热',
 };
 
+const TEMPLATE_LEVEL_LABELS = {
+  brand_template: '品牌模板命中',
+  category_template: '品类模板回退',
+  generic_template: '通用模板回退',
+};
+
 export function buildDecisionResultPresentation({
   title,
   confidence,
@@ -59,6 +65,7 @@ export function buildDecisionResultPresentation({
 
   const normalizedProduct = decisionCard?.normalizedProduct ?? null;
   const nutritionEstimate = decisionCard?.nutritionEstimate ?? null;
+  const estimationMeta = decisionCard?.estimationMeta ?? null;
   const firstAdjustment = Array.isArray(decisionCard?.adjustments)
     ? decisionCard.adjustments[0]
     : null;
@@ -74,7 +81,19 @@ export function buildDecisionResultPresentation({
     suggestion: suggestion ?? firstAdjustment ?? null,
     decisionCard,
     normalizedProduct,
+    estimationMeta,
     summaryBadges: buildSummaryBadges(normalizedProduct),
+    templateHitLabel: estimationMeta?.sourceType
+      ? TEMPLATE_LEVEL_LABELS[estimationMeta.sourceType] ?? estimationMeta.sourceType
+      : null,
+    templateSourceLabel: estimationMeta?.sourceLabel ?? null,
+    fallbackPathLabels: mapFallbackPath(estimationMeta?.fallbackPath),
+    confidenceReasons: Array.isArray(estimationMeta?.confidenceReasons)
+      ? estimationMeta.confidenceReasons
+      : [],
+    appliedRules: Array.isArray(estimationMeta?.appliedRules)
+      ? estimationMeta.appliedRules
+      : [],
     needsClarification: false,
     analysisEligible: decisionCard?.analysisEligible ?? null,
     saveEligible: decisionCard?.saveEligible ?? null,
@@ -126,6 +145,7 @@ function buildSummaryBadges(normalizedProduct) {
     normalizedProduct.categoryName,
     normalizedProduct.sizeOrSpec,
     normalizedProduct.sugarLevel,
+    normalizedProduct.milkBase,
     normalizedProduct.temperature,
   ].filter(Boolean);
 
@@ -138,4 +158,12 @@ function mapMissingFields(missingFields) {
   }
 
   return missingFields.map((field) => MISSING_FIELD_LABELS[field] ?? field);
+}
+
+function mapFallbackPath(fallbackPath) {
+  if (!Array.isArray(fallbackPath)) {
+    return [];
+  }
+
+  return fallbackPath.map((step) => TEMPLATE_LEVEL_LABELS[step] ?? step);
 }

@@ -48,6 +48,7 @@ export interface DecisionCardNormalizedProduct {
   sizeOrSpec?: string;
   addons?: string[];
   sugarLevel?: string;
+  milkBase?: string;
   temperature?: string;
   quantity?: string;
   comboItems?: DecisionCardProductComponent[];
@@ -69,10 +70,22 @@ export interface DecisionCardNutritionEstimate {
   totalCalories: string;
 }
 
+export interface DecisionCardEstimationMeta {
+  sourceType: 'brand_template' | 'category_template' | 'generic_template';
+  sourceLabel: string;
+  templateId: string;
+  hitLevel: 'brand' | 'category' | 'generic' | string;
+  fallbackPath: Array<'brand_template' | 'category_template' | 'generic_template' | string>;
+  confidenceReasons: string[];
+  appliedRules: string[];
+  missingConfiguration: string[];
+}
+
 export interface DecisionCard {
   inputSummary: string;
   normalizedProduct: DecisionCardNormalizedProduct;
   nutritionEstimate: DecisionCardNutritionEstimate;
+  estimationMeta?: DecisionCardEstimationMeta | null;
   confidenceLevel: 'high' | 'medium' | 'low' | 'unknown';
   recommendationLevel: string;
   riskTags: string[];
@@ -220,7 +233,13 @@ export interface WorkspaceMealEstimatePresentation {
   suggestion: string | null;
   decisionCard: DecisionCard | null;
   normalizedProduct: DecisionCardNormalizedProduct | null;
+  estimationMeta: DecisionCardEstimationMeta | null;
   summaryBadges: string[];
+  templateHitLabel: string | null;
+  templateSourceLabel: string | null;
+  fallbackPathLabels: string[];
+  confidenceReasons: string[];
+  appliedRules: string[];
   needsClarification: false;
   analysisEligible: boolean | null;
   saveEligible: boolean | null;

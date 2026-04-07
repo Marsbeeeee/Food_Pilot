@@ -1,0 +1,462 @@
+{
+  "fallback_order": [
+    "brand_template",
+    "category_template",
+    "generic_template"
+  ],
+  "template_level_labels": {
+    "brand_template": "品牌模板命中",
+    "category_template": "品类模板回退",
+    "generic_template": "通用模板回退"
+  },
+  "drink_category_ids": [
+    "tea_drink",
+    "coffee"
+  ],
+  "quantity_units": [
+    "杯",
+    "份",
+    "个",
+    "盒",
+    "袋",
+    "瓶",
+    "罐"
+  ],
+  "chinese_numbers": {
+    "一": 1,
+    "二": 2,
+    "两": 2,
+    "三": 3,
+    "四": 4,
+    "五": 5
+  },
+  "generic_product_names": [
+    "奶茶",
+    "果茶",
+    "咖啡",
+    "拿铁",
+    "美式",
+    "汉堡",
+    "薯条",
+    "可乐"
+  ],
+  "templates": {
+    "brand": [
+      {
+        "template_id": "brand.chagee.boya_juexian.v1",
+        "source_type": "brand_template",
+        "source_label": "霸王茶姬 / 伯牙绝弦",
+        "brand_id": "chagee",
+        "product_keywords": [
+          "伯牙绝弦"
+        ],
+        "category_id": "tea_drink",
+        "title": "霸王茶姬 伯牙绝弦",
+        "item_name": "伯牙绝弦",
+        "portion": "1 杯",
+        "default_size": "大杯",
+        "default_sugar_level": "三分糖",
+        "default_temperature": "冰",
+        "nutrition": {
+          "calories": 310.0,
+          "protein": 4.0,
+          "carbs": 47.0,
+          "fat": 11.0
+        }
+      },
+      {
+        "template_id": "brand.luckin.raw_coconut_latte.v1",
+        "source_type": "brand_template",
+        "source_label": "瑞幸 / 生椰拿铁",
+        "brand_id": "luckin",
+        "product_keywords": [
+          "生椰拿铁",
+          "生椰"
+        ],
+        "category_id": "coffee",
+        "title": "瑞幸 生椰拿铁",
+        "item_name": "生椰拿铁",
+        "portion": "1 杯",
+        "default_size": "中杯",
+        "default_sugar_level": "五分糖",
+        "default_temperature": "冰",
+        "default_milk_base": "椰乳",
+        "nutrition": {
+          "calories": 325.0,
+          "protein": 7.0,
+          "carbs": 28.0,
+          "fat": 20.0
+        }
+      },
+      {
+        "template_id": "brand.starbucks.latte.v1",
+        "source_type": "brand_template",
+        "source_label": "星巴克 / 拿铁",
+        "brand_id": "starbucks",
+        "product_keywords": [
+          "拿铁"
+        ],
+        "category_id": "coffee",
+        "title": "星巴克 拿铁",
+        "item_name": "拿铁",
+        "portion": "1 杯",
+        "default_size": "中杯",
+        "default_sugar_level": "无糖",
+        "default_temperature": "热",
+        "default_milk_base": "全脂奶",
+        "nutrition": {
+          "calories": 190.0,
+          "protein": 9.0,
+          "carbs": 18.0,
+          "fat": 9.0
+        }
+      },
+      {
+        "template_id": "brand.mixue.pearl_milk_tea.v1",
+        "source_type": "brand_template",
+        "source_label": "蜜雪冰城 / 珍珠奶茶",
+        "brand_id": "mixue",
+        "product_keywords": [
+          "珍珠奶茶",
+          "奶茶"
+        ],
+        "category_id": "tea_drink",
+        "title": "蜜雪冰城 珍珠奶茶",
+        "item_name": "珍珠奶茶",
+        "portion": "1 杯",
+        "default_size": "大杯",
+        "default_sugar_level": "全糖",
+        "default_temperature": "冰",
+        "nutrition": {
+          "calories": 430.0,
+          "protein": 4.0,
+          "carbs": 70.0,
+          "fat": 14.0
+        }
+      }
+    ],
+    "category": [
+      {
+        "template_id": "category.tea_drink.pearl_milk_tea.v1",
+        "source_type": "category_template",
+        "source_label": "现制茶饮 / 珍珠奶茶",
+        "category_id": "tea_drink",
+        "product_keywords": [
+          "珍珠奶茶"
+        ],
+        "title": "珍珠奶茶",
+        "item_name": "珍珠奶茶",
+        "portion": "1 杯",
+        "default_size": "中杯",
+        "default_sugar_level": "五分糖",
+        "default_temperature": "冰",
+        "nutrition": {
+          "calories": 320.0,
+          "protein": 3.0,
+          "carbs": 54.0,
+          "fat": 9.0
+        }
+      },
+      {
+        "template_id": "category.tea_drink.fruit_tea.v1",
+        "source_type": "category_template",
+        "source_label": "现制茶饮 / 果茶",
+        "category_id": "tea_drink",
+        "product_keywords": [
+          "果茶",
+          "柠檬茶",
+          "葡萄",
+          "幽兰"
+        ],
+        "title": "果茶",
+        "item_name": "果茶",
+        "portion": "1 杯",
+        "default_size": "中杯",
+        "default_sugar_level": "五分糖",
+        "default_temperature": "冰",
+        "nutrition": {
+          "calories": 190.0,
+          "protein": 1.0,
+          "carbs": 45.0,
+          "fat": 1.0
+        }
+      },
+      {
+        "template_id": "category.coffee.latte.v1",
+        "source_type": "category_template",
+        "source_label": "咖啡饮品 / 拿铁",
+        "category_id": "coffee",
+        "product_keywords": [
+          "拿铁",
+          "澳白"
+        ],
+        "title": "拿铁",
+        "item_name": "拿铁",
+        "portion": "1 杯",
+        "default_size": "中杯",
+        "default_sugar_level": "无糖",
+        "default_temperature": "热",
+        "default_milk_base": "全脂奶",
+        "nutrition": {
+          "calories": 185.0,
+          "protein": 8.5,
+          "carbs": 16.0,
+          "fat": 8.5
+        }
+      },
+      {
+        "template_id": "category.coffee.americano.v1",
+        "source_type": "category_template",
+        "source_label": "咖啡饮品 / 美式",
+        "category_id": "coffee",
+        "product_keywords": [
+          "美式"
+        ],
+        "title": "美式咖啡",
+        "item_name": "美式咖啡",
+        "portion": "1 杯",
+        "default_size": "中杯",
+        "default_sugar_level": "无糖",
+        "default_temperature": "热",
+        "nutrition": {
+          "calories": 15.0,
+          "protein": 0.5,
+          "carbs": 2.0,
+          "fat": 0.0
+        }
+      },
+      {
+        "template_id": "category.fast_food.burger.v1",
+        "source_type": "category_template",
+        "source_label": "西式快餐 / 汉堡",
+        "category_id": "fast_food",
+        "product_keywords": [
+          "鸡腿堡",
+          "牛肉堡",
+          "汉堡",
+          "堡"
+        ],
+        "title": "汉堡",
+        "item_name": "汉堡",
+        "portion": "1 个",
+        "nutrition": {
+          "calories": 430.0,
+          "protein": 18.0,
+          "carbs": 41.0,
+          "fat": 22.0
+        }
+      },
+      {
+        "template_id": "category.fast_food.fries.v1",
+        "source_type": "category_template",
+        "source_label": "西式快餐 / 薯条",
+        "category_id": "fast_food",
+        "product_keywords": [
+          "薯条"
+        ],
+        "title": "薯条",
+        "item_name": "薯条",
+        "portion": "1 份",
+        "nutrition": {
+          "calories": 320.0,
+          "protein": 4.0,
+          "carbs": 41.0,
+          "fat": 15.0
+        }
+      },
+      {
+        "template_id": "category.fast_food.cola.v1",
+        "source_type": "category_template",
+        "source_label": "西式快餐 / 可乐",
+        "category_id": "fast_food",
+        "product_keywords": [
+          "可乐"
+        ],
+        "title": "可乐",
+        "item_name": "可乐",
+        "portion": "1 杯",
+        "nutrition": {
+          "calories": 150.0,
+          "protein": 0.0,
+          "carbs": 37.0,
+          "fat": 0.0
+        }
+      }
+    ],
+    "generic": [
+      {
+        "template_id": "generic.tea_drink.v1",
+        "source_type": "generic_template",
+        "source_label": "通用饮品 / 现制茶饮",
+        "category_id": "tea_drink",
+        "title": "通用茶饮",
+        "item_name": "通用茶饮",
+        "portion": "1 杯",
+        "default_size": "中杯",
+        "default_sugar_level": "五分糖",
+        "default_temperature": "冰",
+        "nutrition": {
+          "calories": 260.0,
+          "protein": 2.0,
+          "carbs": 42.0,
+          "fat": 8.0
+        }
+      },
+      {
+        "template_id": "generic.coffee.v1",
+        "source_type": "generic_template",
+        "source_label": "通用饮品 / 咖啡",
+        "category_id": "coffee",
+        "title": "通用咖啡",
+        "item_name": "通用咖啡",
+        "portion": "1 杯",
+        "default_size": "中杯",
+        "default_sugar_level": "无糖",
+        "default_temperature": "热",
+        "nutrition": {
+          "calories": 120.0,
+          "protein": 5.0,
+          "carbs": 10.0,
+          "fat": 6.0
+        }
+      },
+      {
+        "template_id": "generic.fast_food.v1",
+        "source_type": "generic_template",
+        "source_label": "通用快餐 / 单品",
+        "category_id": "fast_food",
+        "title": "通用快餐单品",
+        "item_name": "通用快餐单品",
+        "portion": "1 份",
+        "nutrition": {
+          "calories": 380.0,
+          "protein": 15.0,
+          "carbs": 35.0,
+          "fat": 18.0
+        }
+      }
+    ]
+  },
+  "modifiers": {
+    "size": {
+      "tea_drink": {
+        "小杯": -55.0,
+        "中杯": -20.0,
+        "大杯": 20.0,
+        "超大杯": 80.0
+      },
+      "coffee": {
+        "小杯": -45.0,
+        "中杯": -10.0,
+        "大杯": 20.0,
+        "超大杯": 70.0
+      }
+    },
+    "sugar": {
+      "无糖": -70.0,
+      "微糖": -35.0,
+      "少糖": -30.0,
+      "三分糖": -25.0,
+      "半糖": -12.0,
+      "五分糖": 0.0,
+      "七分糖": 18.0,
+      "全糖": 45.0
+    },
+    "temperature": {
+      "多冰": -8.0,
+      "少冰": 5.0,
+      "去冰": 12.0,
+      "常温": 0.0,
+      "冰": 0.0,
+      "热": 8.0
+    },
+    "milk_base": {
+      "鲜奶": {
+        "calories": 18.0,
+        "protein": 1.5,
+        "carbs": 1.0,
+        "fat": 1.0
+      },
+      "厚乳": {
+        "calories": 45.0,
+        "protein": 2.0,
+        "carbs": 3.0,
+        "fat": 3.0
+      },
+      "燕麦奶": {
+        "calories": 22.0,
+        "protein": 0.5,
+        "carbs": 3.5,
+        "fat": 0.8
+      },
+      "椰乳": {
+        "calories": 40.0,
+        "protein": 0.5,
+        "carbs": 2.0,
+        "fat": 4.0
+      },
+      "豆奶": {
+        "calories": 15.0,
+        "protein": 1.0,
+        "carbs": 1.5,
+        "fat": 0.6
+      },
+      "脱脂奶": {
+        "calories": -12.0,
+        "protein": 0.0,
+        "carbs": 0.0,
+        "fat": -1.5
+      },
+      "全脂奶": {
+        "calories": 0.0,
+        "protein": 0.0,
+        "carbs": 0.0,
+        "fat": 0.0
+      }
+    },
+    "addon": {
+      "珍珠": {
+        "calories": 70.0,
+        "protein": 0.0,
+        "carbs": 18.0,
+        "fat": 0.0
+      },
+      "椰果": {
+        "calories": 35.0,
+        "protein": 0.0,
+        "carbs": 8.0,
+        "fat": 0.0
+      },
+      "奶盖": {
+        "calories": 82.0,
+        "protein": 1.0,
+        "carbs": 7.0,
+        "fat": 6.0
+      },
+      "布丁": {
+        "calories": 75.0,
+        "protein": 2.0,
+        "carbs": 14.0,
+        "fat": 2.0
+      },
+      "芝士": {
+        "calories": 90.0,
+        "protein": 2.0,
+        "carbs": 4.0,
+        "fat": 7.0
+      },
+      "奥利奥": {
+        "calories": 80.0,
+        "protein": 1.0,
+        "carbs": 11.0,
+        "fat": 4.0
+      },
+      "红豆": {
+        "calories": 65.0,
+        "protein": 2.0,
+        "carbs": 14.0,
+        "fat": 0.0
+      }
+    }
+  }
+}
