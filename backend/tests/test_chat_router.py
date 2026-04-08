@@ -8,11 +8,13 @@ from backend.routers.chat import (
     create_chat_session,
     delete_chat_session,
     get_chat_session,
+    parse_chat_ocr,
     list_chat_sessions,
     rename_chat_session,
     send_chat_message,
 )
 from backend.schemas.chat import ChatSendMessageRequest, RenameSessionRequest
+from backend.schemas.chat_ocr import ChatOcrParseRequest, ChatOcrParseResponse
 from backend.schemas.user import UserOut
 
 
@@ -142,6 +144,39 @@ class ChatRouterTests(unittest.TestCase):
                 send_chat_message(99, request, self.user)
 
         self.assertEqual(exc.exception.status_code, 404)
+
+    def test_parse_chat_ocr_forwards_request_to_service(self) -> None:
+        request = ChatOcrParseRequest.model_validate(
+            {
+                "imageDataUrl": "data:image/png;base64,ZmFrZS1wbmc=",
+                "fileName": "order.png",
+            }
+        )
+
+        with patch(
+            "backend.routers.chat.parse_chat_screenshot",
+            return_value=ChatOcrParseResponse.model_validate({
+                "status": "needs_confirmation",
+                "recognized_text": "霸王茶姬 伯牙绝弦",
+                "primary_text": "霸王茶姬 伯牙绝弦",
+                "normalized_input": "霸王茶姬 伯牙绝弦",
+                "confidence_level": "medium",
+                "candidate_titles": ["霸王茶姬 伯牙绝弦"],
+                "brand_candidate": "霸王茶姬",
+                "spec_candidate": None,
+                "warnings": ["识别结果需要你确认后，才会继续进入点单决策。"],
+                "failure_reason": None,
+                "file_name": "order.png",
+                "content_type": "image/png",
+                "file_size_bytes": 8,
+                "platform": None,
+            }),
+        ) as mocked_parse:
+            response = parse_chat_ocr(request, self.user)
+
+        mocked_parse.assert_called_once_with(request, user_id=self.user.id)
+        self.assertEqual(response.status, "needs_confirmation")
+        self.assertEqual(response.file_name, "order.png")
 
 
 def build_session_summary(

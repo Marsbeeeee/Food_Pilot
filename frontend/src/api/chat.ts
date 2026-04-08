@@ -1,5 +1,7 @@
 import { clearSession, getStoredToken } from './auth';
 import {
+  ChatScreenshotOcrResult,
+  ChatScreenshotParseRequest,
   ChatMessagePayload,
   ChatMessageType,
   ChatSession,
@@ -118,6 +120,16 @@ export async function sendChatMessage(
     body: JSON.stringify(buildWorkspaceMessageRequest(content, profileId, mode)),
   });
   return mapChatExchange(data);
+}
+
+export async function parseChatScreenshot(
+  payload: ChatScreenshotParseRequest,
+): Promise<ChatScreenshotOcrResult> {
+  const data = await requestJson<ChatScreenshotOcrResult>('/ocr/parse', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return mapChatScreenshotOcrResult(data);
 }
 
 export function mergeSessionIntoList(
@@ -286,6 +298,27 @@ function normalizePayload(
   }
 
   return Object.keys(payload).length > 0 ? payload : null;
+}
+
+function mapChatScreenshotOcrResult(
+  result: ChatScreenshotOcrResult,
+): ChatScreenshotOcrResult {
+  return {
+    status: result.status,
+    recognizedText: result.recognizedText ?? null,
+    primaryText: result.primaryText ?? null,
+    normalizedInput: result.normalizedInput ?? null,
+    confidenceLevel: result.confidenceLevel ?? 'unknown',
+    candidateTitles: Array.isArray(result.candidateTitles) ? result.candidateTitles : [],
+    brandCandidate: result.brandCandidate ?? null,
+    specCandidate: result.specCandidate ?? null,
+    warnings: Array.isArray(result.warnings) ? result.warnings : [],
+    failureReason: result.failureReason ?? null,
+    fileName: result.fileName,
+    contentType: result.contentType,
+    fileSizeBytes: result.fileSizeBytes,
+    platform: result.platform ?? null,
+  };
 }
 
 async function requestJson<T = unknown>(

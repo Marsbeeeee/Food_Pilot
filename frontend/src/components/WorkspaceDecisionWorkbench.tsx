@@ -42,14 +42,12 @@ interface DecisionWorkbenchActionProps {
   isAddingToAnalysis: boolean;
   analysisActionLabel: string;
   analysisActionDisabled: boolean;
-  analysisHelperText: string;
   onSave: () => void;
   onUndoSave: () => void;
   onAddToAnalysis: () => void;
   onRerun: () => void;
   onEditQuery: () => void;
   onContinueCompare: () => void;
-  onOpenExplorer?: (() => void) | null;
 }
 
 interface WorkspaceEstimateWorkbenchProps extends DecisionWorkbenchActionProps {
@@ -76,14 +74,12 @@ export const WorkspaceEstimateWorkbench: React.FC<WorkspaceEstimateWorkbenchProp
   isAddingToAnalysis,
   analysisActionLabel,
   analysisActionDisabled,
-  analysisHelperText,
   onSave,
   onUndoSave,
   onAddToAnalysis,
   onRerun,
   onEditQuery,
   onContinueCompare,
-  onOpenExplorer,
 }) => {
   const decisionCard = presentation.decisionCard;
   const summary = buildDecisionWorkspaceSummary(decisionCard, {
@@ -101,100 +97,37 @@ export const WorkspaceEstimateWorkbench: React.FC<WorkspaceEstimateWorkbenchProp
   return (
     <div className={`w-full overflow-hidden rounded-[32px] border shadow-[0_18px_48px_rgba(74,69,62,0.08)] ${
       summary.tone === 'low_confidence'
-        ? 'border-[#F5C16C]/35 bg-[#FFF9EF]'
+        ? 'border-[#F5C16C]/35 bg-white'
         : 'border-[#4A453E]/6 bg-white'
     }`}>
-      <div className={`px-5 py-6 md:px-8 md:py-8 ${
-        summary.tone === 'low_confidence'
-          ? 'bg-[linear-gradient(135deg,rgba(255,245,223,0.98),rgba(255,252,245,0.94))]'
-          : 'bg-[linear-gradient(135deg,rgba(255,241,235,0.9),rgba(255,253,245,0.98))]'
-      }`}>
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <div className="border-b border-[#4A453E]/6 bg-white px-5 py-6 md:px-8 md:py-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 flex-1">
-            <p className={`text-[10px] font-bold uppercase tracking-[0.24em] ${
-              summary.tone === 'low_confidence' ? 'text-[#B5791A]' : 'text-[#C95B3A]'
-            }`}>
-              {summary.eyebrow}
-            </p>
-            <div className="mt-3 flex flex-wrap items-start gap-3">
-              <h3 className="min-w-0 flex-1 text-balance font-serif-brand text-[28px] font-bold leading-[1.12] text-[#4A453E] md:text-[34px]">
-                {presentation.title || normalizedProduct?.productName || '本次决策结果'}
-              </h3>
-              <div className="rounded-[24px] border border-white/70 bg-white/80 px-4 py-3 text-right shadow-sm backdrop-blur">
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/35">
-                  总热量
-                </p>
-                <p className="mt-1 font-serif-brand text-[28px] font-bold leading-none text-[#FF8A65]">
-                  {formatEnergyInteger(presentation.total)}
-                </p>
-              </div>
-            </div>
+            <h3 className="text-balance font-serif-brand text-[28px] font-bold leading-[1.12] text-[#4A453E] md:text-[34px]">
+              {presentation.title || normalizedProduct?.productName || '本次决策结果'}
+            </h3>
             <p className="mt-3 max-w-3xl text-[14px] leading-7 text-[#4A453E]/70 md:text-[15px]">
-              {decisionCard?.adaptationNote || presentation.description || summary.description}
+              {decisionCard?.adaptationNote || presentation.description || '当前结果已整理为可直接扫读的决策卡片。'}
             </p>
-            {decisionCard?.inputSummary && (
-              <div className="mt-4 rounded-[20px] border border-[#4A453E]/8 bg-white/78 px-4 py-4 shadow-sm">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A453E]/35">
-                  输入摘要
-                </p>
-                <p className="mt-2 text-[14px] leading-7 text-[#4A453E]/78">
-                  {decisionCard.inputSummary}
-                </p>
-              </div>
-            )}
           </div>
-
-          <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:w-[360px] lg:grid-cols-1">
-            <HighlightBadge
-              icon="verified"
-              label="置信状态"
-              value={summary.confidenceLabel}
-              tone={summary.tone === 'low_confidence' ? 'warn' : 'neutral'}
-            />
-            <HighlightBadge
-              icon="psychology"
-              label="推荐等级"
-              value={presentation.recommendationLabel}
-              tone={presentation.recommendationLevel === 'recommended' ? 'success' : 'neutral'}
-            />
-            <HighlightBadge
-              icon={presentation.isPersonalized ? 'person' : 'groups'}
-              label="判断模式"
-              value={presentation.isPersonalized ? '已结合个人档案' : '通用结论'}
-              tone={presentation.isPersonalized ? 'success' : 'neutral'}
-            />
+          <div className="w-fit max-w-full shrink-0 self-start rounded-[24px] border border-[#E8DCCB] bg-[#FFFDF7] px-5 py-4 shadow-sm md:text-right">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/35">
+              热量
+            </p>
+            <p className="mt-2 font-serif-brand text-[30px] font-bold leading-none text-[#FF8A65]">
+              {formatEnergyInteger(presentation.total)}
+            </p>
           </div>
-        </div>
-
-        <div className="mt-5 flex flex-wrap gap-2">
-          {summary.specBadges.map((badge) => (
-            <Pill key={badge} label={badge} tone={summary.tone === 'low_confidence' ? 'warn' : 'neutral'} />
-          ))}
-          {presentation.riskLabels.map((label) => (
-            <Pill key={label} label={label} tone="warn" />
-          ))}
         </div>
       </div>
 
-      <div className="grid gap-4 border-b border-[#4A453E]/6 px-5 py-5 md:px-8 md:py-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.9fr)]">
-        <InfoPanel
+      <div className="border-b border-[#4A453E]/6 px-5 py-5 md:px-8 md:py-6">
+        <TagPanel
           title="分类标签"
           icon="sell"
-          items={summary.archiveEntries}
-          emptyText="当前结果尚未返回完整分类标签。"
+          tags={buildPrimaryTags(normalizedProduct)}
+          emptyText="当前结果还没有足够的标签信息。"
         />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-          <MetaCard
-            icon="inventory_2"
-            title={summary.saveTarget.title}
-            detail={summary.saveTarget.detail}
-          />
-          <MetaCard
-            icon="analytics"
-            title={summary.analysisMeta.title}
-            detail={summary.analysisMeta.detail}
-          />
-        </div>
       </div>
 
       {summary.tone === 'low_confidence' && (
@@ -215,15 +148,7 @@ export const WorkspaceEstimateWorkbench: React.FC<WorkspaceEstimateWorkbenchProp
         </div>
       )}
 
-      <div className="space-y-6 px-5 py-6 md:px-8 md:py-8">
-        {presentation.personalizationNote && (
-          <MessageBlock
-            icon={presentation.isPersonalized ? 'person' : 'groups'}
-            title={presentation.isPersonalized ? '个体化判断' : '通用判断'}
-            content={presentation.personalizationNote}
-          />
-        )}
-
+      <div className="space-y-6 bg-white px-5 py-6 md:px-8 md:py-8">
         {shouldShowGroupedBlocks && renderedEstimates ? (
           <div className="space-y-4">
             <SectionHeading icon="local_dining" title="套餐结构" />
@@ -267,18 +192,16 @@ export const WorkspaceEstimateWorkbench: React.FC<WorkspaceEstimateWorkbenchProp
           isAddingToAnalysis={isAddingToAnalysis}
           analysisActionLabel={analysisActionLabel}
           analysisActionDisabled={analysisActionDisabled}
-          analysisHelperText={analysisHelperText}
           onSave={onSave}
           onUndoSave={onUndoSave}
           onAddToAnalysis={onAddToAnalysis}
           onRerun={onRerun}
           onEditQuery={onEditQuery}
           onContinueCompare={onContinueCompare}
-          onOpenExplorer={onOpenExplorer}
         />
       </div>
 
-      <div className="border-t border-[#4A453E]/6 bg-[#FFFDF7] px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.18em] text-[#4A453E]/25 md:px-8">
+      <div className="border-t border-[#4A453E]/6 bg-white px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.18em] text-[#4A453E]/25 md:px-8">
         {messageTime || '刚刚'}
       </div>
     </div>
@@ -295,14 +218,12 @@ export const WorkspaceClarificationWorkbench: React.FC<WorkspaceClarificationWor
   isAddingToAnalysis,
   analysisActionLabel,
   analysisActionDisabled,
-  analysisHelperText,
   onSave,
   onUndoSave,
   onAddToAnalysis,
   onRerun,
   onEditQuery,
   onContinueCompare,
-  onOpenExplorer,
 }) => {
   const decisionCard = presentation.decisionCard;
   const summary = buildDecisionWorkspaceSummary(decisionCard, {
@@ -316,8 +237,8 @@ export const WorkspaceClarificationWorkbench: React.FC<WorkspaceClarificationWor
     : [];
 
   return (
-    <div className="w-full overflow-hidden rounded-[32px] border border-[#F5C16C]/35 bg-[#FFF9EE] shadow-[0_18px_48px_rgba(74,69,62,0.08)]">
-      <div className="bg-[linear-gradient(135deg,rgba(255,242,214,0.96),rgba(255,249,238,0.98))] px-5 py-6 md:px-8 md:py-8">
+      <div className="w-full overflow-hidden rounded-[32px] border border-[#F5C16C]/35 bg-white shadow-[0_18px_48px_rgba(74,69,62,0.08)]">
+      <div className="bg-white px-5 py-6 md:px-8 md:py-8">
         <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#B5791A]">
           {summary.eyebrow}
         </p>
@@ -330,7 +251,7 @@ export const WorkspaceClarificationWorkbench: React.FC<WorkspaceClarificationWor
               {presentation.description || presentation.content || summary.description}
             </p>
             {presentation.inputSummary && (
-              <div className="mt-4 rounded-[20px] border border-[#F5C16C]/20 bg-white/75 px-4 py-4 shadow-sm">
+              <div className="mt-4 rounded-[20px] border border-[#F5C16C]/20 bg-[#FFF8EE] px-4 py-4 shadow-sm">
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8C6517]/60">
                   当前输入
                 </p>
@@ -375,30 +296,17 @@ export const WorkspaceClarificationWorkbench: React.FC<WorkspaceClarificationWor
         </div>
       </div>
 
-      <div className="grid gap-4 border-b border-[#F5C16C]/20 px-5 py-5 md:px-8 md:py-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.9fr)]">
-        <InfoPanel
-          title="当前识别结果"
+      <div className="border-b border-[#F5C16C]/20 px-5 py-5 md:px-8 md:py-6">
+        <TagPanel
+          title="分类标签"
           icon="sell"
-          items={summary.archiveEntries}
-          emptyText="当前还没有足够的分类信息。"
+          tags={buildPrimaryTags(normalizedProduct)}
+          emptyText="当前还没有足够的标签信息。"
+          tone="warn"
         />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-          <MetaCard
-            icon="inventory_2"
-            title={summary.saveTarget.title}
-            detail={summary.saveTarget.detail}
-            tone="warn"
-          />
-          <MetaCard
-            icon="analytics"
-            title={summary.analysisMeta.title}
-            detail={summary.analysisMeta.detail}
-            tone="warn"
-          />
-        </div>
       </div>
 
-      <div className="space-y-6 px-5 py-6 md:px-8 md:py-8">
+      <div className="space-y-6 bg-white px-5 py-6 md:px-8 md:py-8">
         {presentation.content && presentation.content !== presentation.description && (
           <MessageBlock icon="forum" title="需要你补充的内容" content={presentation.content} tone="warn" />
         )}
@@ -463,14 +371,12 @@ export const WorkspaceClarificationWorkbench: React.FC<WorkspaceClarificationWor
           isAddingToAnalysis={isAddingToAnalysis}
           analysisActionLabel={analysisActionLabel}
           analysisActionDisabled={analysisActionDisabled}
-          analysisHelperText={analysisHelperText}
           onSave={onSave}
           onUndoSave={onUndoSave}
           onAddToAnalysis={onAddToAnalysis}
           onRerun={onRerun}
           onEditQuery={onEditQuery}
           onContinueCompare={onContinueCompare}
-          onOpenExplorer={onOpenExplorer}
           tone="warn"
         />
       </div>
@@ -490,18 +396,16 @@ const DecisionWorkbenchActions: React.FC<DecisionWorkbenchActionProps & { tone?:
   isAddingToAnalysis,
   analysisActionLabel,
   analysisActionDisabled,
-  analysisHelperText,
   onSave,
   onUndoSave,
   onAddToAnalysis,
   onRerun,
   onEditQuery,
   onContinueCompare,
-  onOpenExplorer,
   tone = 'neutral',
 }) => (
   <div className={`rounded-[28px] border px-4 py-4 md:px-5 md:py-5 ${
-    tone === 'warn' ? 'border-[#F5C16C]/20 bg-white/70' : 'border-[#4A453E]/8 bg-[#FFFDF7]'
+    tone === 'warn' ? 'border-[#F5C16C]/20 bg-[#FFF8EE]' : 'border-[#4A453E]/8 bg-[#FFFDF7]'
   }`}>
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
       {isSavedToFoodLog ? (
@@ -555,7 +459,7 @@ const DecisionWorkbenchActions: React.FC<DecisionWorkbenchActionProps & { tone?:
       <button
         type="button"
         onClick={onRerun}
-        className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#4A453E]/10 bg-white px-5 text-sm font-bold text-[#4A453E]/72 transition-all hover:bg-[#F7F3E9]"
+        className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#4A453E]/10 bg-[#FFFDF7] px-5 text-sm font-bold text-[#4A453E]/72 transition-all hover:bg-[#F7F3E9]"
       >
         <span className="material-symbols-outlined text-[18px]">refresh</span>
         重新分析
@@ -565,26 +469,6 @@ const DecisionWorkbenchActions: React.FC<DecisionWorkbenchActionProps & { tone?:
     <div className="mt-4 flex flex-wrap gap-2">
       <SecondaryActionButton icon="edit" label="修改后重跑" onClick={onEditQuery} />
       <SecondaryActionButton icon="compare_arrows" label="继续比较" onClick={onContinueCompare} />
-      {onOpenExplorer && (
-        <SecondaryActionButton
-          icon={isSavedToFoodLog ? 'folder_open' : 'collections_bookmark'}
-          label={isSavedToFoodLog ? '打开收藏夹' : '收藏夹入口'}
-          onClick={onOpenExplorer}
-        />
-      )}
-    </div>
-
-    <div className="mt-4 grid gap-3 xl:grid-cols-2">
-      <ActionHelper
-        icon={savePresentation.badgeIcon}
-        title={savePresentation.badgeLabel}
-        detail={savePresentation.helperText}
-      />
-      <ActionHelper
-        icon="analytics"
-        title="分析动作"
-        detail={analysisHelperText}
-      />
     </div>
   </div>
 );
@@ -604,22 +488,13 @@ const DecisionGuidancePanel: React.FC<{
         </div>
       ),
     } : null,
-    presentation.personalizationNote ? {
-      title: presentation.isPersonalized ? '个体化说明' : '说明',
-      icon: presentation.isPersonalized ? 'person' : 'info',
-      content: (
-        <p className="text-[14px] leading-7 text-[#4A453E]/74">
-          {presentation.personalizationNote}
-        </p>
-      ),
-    } : null,
     presentation.adjustments.length > 0 ? {
       title: '调整建议',
       icon: 'tune',
       content: (
         <div className="space-y-2">
           {presentation.adjustments.map((item) => (
-            <div key={item} className="rounded-[16px] border border-[#4A453E]/6 bg-[#FFFDF7] px-4 py-3 text-[14px] leading-7 text-[#4A453E]/74">
+            <div key={item} className="rounded-[16px] border border-[#E8DCCB] bg-[#FFFDF7] px-4 py-3 text-[14px] leading-7 text-[#4A453E]/74">
               {item}
             </div>
           ))}
@@ -632,7 +507,7 @@ const DecisionGuidancePanel: React.FC<{
       content: (
         <div className="space-y-2">
           {presentation.alternatives.map((item) => (
-            <div key={item} className="rounded-[16px] border border-[#4A453E]/6 bg-[#FFFDF7] px-4 py-3 text-[14px] leading-7 text-[#4A453E]/74">
+            <div key={item} className="rounded-[16px] border border-[#E8DCCB] bg-[#FFFDF7] px-4 py-3 text-[14px] leading-7 text-[#4A453E]/74">
               {item}
             </div>
           ))}
@@ -643,7 +518,7 @@ const DecisionGuidancePanel: React.FC<{
 
   if (blocks.length === 0) {
     return (
-      <div className="rounded-[24px] border border-[#4A453E]/8 bg-white p-5 shadow-sm">
+      <div className="rounded-[24px] border border-[#4A453E]/8 bg-[#FFFDF7] p-5 shadow-sm">
         <SectionHeading icon="psychology" title="决策建议" />
         <p className="mt-3 text-[14px] leading-7 text-[#4A453E]/70">
           当前结果还没有返回更多结构化建议，可以直接参考上方热量和分类标签继续判断。
@@ -653,7 +528,7 @@ const DecisionGuidancePanel: React.FC<{
   }
 
   return (
-    <div className="rounded-[24px] border border-[#4A453E]/8 bg-white p-5 shadow-sm">
+    <div className="rounded-[24px] border border-[#E8DCCB] bg-[#FFFDF7] p-5 shadow-sm">
       <SectionHeading icon="psychology" title="决策建议" />
       <div className="mt-4 space-y-4">
         {blocks.map((block) => (
@@ -693,7 +568,7 @@ const MetaDetailSection: React.FC<{
       {presentation.confidenceReasons.length > 0 && (
         <div className="mt-4 space-y-2">
           {presentation.confidenceReasons.map((reason) => (
-            <div key={reason} className="rounded-[16px] border border-[#4A453E]/6 bg-white px-4 py-3 text-[13px] leading-6 text-[#4A453E]/72">
+            <div key={reason} className="rounded-[16px] border border-[#4A453E]/6 bg-[#FFFDF9] px-4 py-3 text-[13px] leading-6 text-[#4A453E]/72">
               {reason}
             </div>
           ))}
@@ -720,7 +595,7 @@ const NutritionTable: React.FC<{
   const totalFat = items.reduce((sum, item) => sum + extractMacroNum(item.fat), 0);
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-[#4A453E]/8 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-[24px] border border-[#4A453E]/8 bg-[#FFFDF7] shadow-sm">
       <div className="grid gap-3 border-b border-[#4A453E]/6 bg-[#FFFDF7] px-4 py-4 sm:grid-cols-2 xl:grid-cols-4">
         <MacroSummaryCard label="总热量" value={formatEnergyInteger(total)} tone="accent" />
         <MacroSummaryCard label="蛋白质" value={formatMacroValue(totalProtein)} />
@@ -731,7 +606,7 @@ const NutritionTable: React.FC<{
       <div className="md:hidden">
         <div className="divide-y divide-[#4A453E]/6">
           {items.map((item, index) => (
-            <div key={`${item.name}-${index}`} className={`px-4 py-4 ${mobileCardTone === 'warn' ? 'bg-[#FFFDF9]' : 'bg-white'}`}>
+            <div key={`${item.name}-${index}`} className={`px-4 py-4 ${mobileCardTone === 'warn' ? 'bg-[#FFFDF9]' : 'bg-[#FFFDF7]'}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[14px] font-bold text-[#4A453E]">{item.name}</p>
@@ -751,7 +626,7 @@ const NutritionTable: React.FC<{
 
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[680px] text-left">
-          <thead className="bg-[#FFFDF7] text-[10px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/35">
+          <thead className="bg-[#FBF6EC] text-[10px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/35">
             <tr>
               <th className="px-5 py-4">食材</th>
               <th className="px-4 py-4">份量</th>
@@ -782,7 +657,7 @@ const NutritionTable: React.FC<{
 const GroupedEstimateCard: React.FC<{
   block: RenderedEstimateBlock;
 }> = ({ block }) => (
-  <div className="rounded-[24px] border border-[#4A453E]/8 bg-white p-5 shadow-sm">
+  <div className="rounded-[24px] border border-[#4A453E]/8 bg-[#FFFDF7] p-5 shadow-sm">
     <div className="flex items-start justify-between gap-3">
       <div>
         <h4 className="text-[18px] font-bold text-[#4A453E]">{block.title}</h4>
@@ -822,8 +697,8 @@ const ComboItemCard: React.FC<{
 }> = ({ item, tone = 'neutral' }) => (
   <div className={`rounded-[20px] border px-4 py-4 ${
     tone === 'warn'
-      ? 'border-[#F5C16C]/20 bg-white/76'
-      : 'border-[#4A453E]/8 bg-white'
+      ? 'border-[#F5C16C]/20 bg-[#FFF8EE]'
+      : 'border-[#4A453E]/8 bg-[#FFFDF7]'
   }`}>
     <div className="flex items-start justify-between gap-3">
       <div>
@@ -840,13 +715,47 @@ const ComboItemCard: React.FC<{
   </div>
 );
 
+const TagPanel: React.FC<{
+  title: string;
+  icon: string;
+  tags: string[];
+  emptyText: string;
+  tone?: 'warn' | 'neutral';
+}> = ({ title, icon, tags, emptyText, tone = 'neutral' }) => (
+  <div className={`rounded-[24px] border px-5 py-5 shadow-sm ${
+    tone === 'warn'
+      ? 'border-[#F5C16C]/20 bg-[#FFF8EE]'
+      : 'border-[#E8DCCB] bg-[#FFFDF7]'
+  }`}>
+    <SectionHeading icon={icon} title={title} tone={tone} />
+    {tags.length > 0 ? (
+      <div className="mt-4 flex flex-wrap gap-3">
+        {tags.map((tag) => (
+          <span
+            key={tag}
+            className={`inline-flex items-center rounded-full px-4 py-2 text-[13px] font-semibold ${
+              tone === 'warn'
+                ? 'border border-[#F5C16C]/28 bg-[#FFF1D9] text-[#8C6517]'
+                : 'border border-[#FF8A65]/18 bg-[#FFF1EB] text-[#C95B3A]'
+            }`}
+          >
+            {tag}
+          </span>
+        ))}
+      </div>
+    ) : (
+      <p className="mt-3 text-[14px] leading-7 text-[#4A453E]/58">{emptyText}</p>
+    )}
+  </div>
+);
+
 const InfoPanel: React.FC<{
   title: string;
   icon: string;
   items: Array<{ label: string; value: string }>;
   emptyText: string;
 }> = ({ title, icon, items, emptyText }) => (
-  <div className="rounded-[24px] border border-[#4A453E]/8 bg-white p-5 shadow-sm">
+  <div className="rounded-[24px] border border-[#4A453E]/8 bg-[#FFFDF7] p-5 shadow-sm">
     <SectionHeading icon={icon} title={title} />
     {items.length > 0 ? (
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -871,8 +780,8 @@ const MetaCard: React.FC<{
 }> = ({ icon, title, detail, tone = 'neutral' }) => (
   <div className={`rounded-[24px] border px-4 py-4 shadow-sm ${
     tone === 'warn'
-      ? 'border-[#F5C16C]/20 bg-white/74'
-      : 'border-[#4A453E]/8 bg-white'
+      ? 'border-[#F5C16C]/20 bg-[#FBF4E5]'
+      : 'border-[#E8DCCB] bg-[#FFFDF7]'
   }`}>
     <SectionHeading icon={icon} title={title} compact />
     <p className="mt-3 text-[13px] leading-6 text-[#4A453E]/64">{detail}</p>
@@ -887,8 +796,8 @@ const MessageBlock: React.FC<{
 }> = ({ icon, title, content, tone = 'neutral' }) => (
   <div className={`rounded-[24px] border px-5 py-5 shadow-sm ${
     tone === 'warn'
-      ? 'border-[#F5C16C]/20 bg-white/74'
-      : 'border-[#4A453E]/8 bg-white'
+      ? 'border-[#F5C16C]/20 bg-[#FFF8EE]'
+      : 'border-[#4A453E]/8 bg-[#FFFDF7]'
   }`}>
     <SectionHeading icon={icon} title={title} />
     <p className="mt-3 text-[14px] leading-7 text-[#4A453E]/74">{content}</p>
@@ -906,7 +815,7 @@ const HighlightBadge: React.FC<{
       ? 'border-[#81C784]/22 bg-[#EEF8EE]'
       : tone === 'warn'
         ? 'border-[#F5C16C]/24 bg-[#FFF3D8]'
-        : 'border-[#4A453E]/10 bg-white/82'
+        : 'border-[#E8DCCB] bg-[#FFFDF7]'
   }`}>
     <div className="flex items-center gap-2">
       <span className={`material-symbols-outlined text-[18px] ${
@@ -926,7 +835,7 @@ const MacroSummaryCard: React.FC<{
   tone?: 'accent' | 'neutral';
 }> = ({ label, value, tone = 'neutral' }) => (
   <div className={`rounded-[18px] px-4 py-3 ${
-    tone === 'accent' ? 'bg-[#FFF1EB]' : 'bg-white'
+    tone === 'accent' ? 'bg-[#FFF1EB]' : 'bg-[#FFFDF7]'
   }`}>
     <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/35">{label}</p>
     <p className={`mt-2 text-[16px] font-semibold ${
@@ -934,20 +843,6 @@ const MacroSummaryCard: React.FC<{
     }`}>
       {value}
     </p>
-  </div>
-);
-
-const ActionHelper: React.FC<{
-  icon: string;
-  title: string;
-  detail: string;
-}> = ({ icon, title, detail }) => (
-  <div className="rounded-[18px] border border-[#4A453E]/6 bg-white px-4 py-3">
-    <div className="flex items-center gap-2">
-      <span className="material-symbols-outlined text-[18px] text-[#FF8A65]">{icon}</span>
-      <p className="text-[12px] font-semibold text-[#4A453E]">{title}</p>
-    </div>
-    <p className="mt-2 text-[12px] leading-6 text-[#4A453E]/60">{detail}</p>
   </div>
 );
 
@@ -959,7 +854,7 @@ const SecondaryActionButton: React.FC<{
   <button
     type="button"
     onClick={onClick}
-    className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#4A453E]/10 bg-white px-4 text-[12px] font-semibold text-[#4A453E]/68 transition-all hover:bg-[#F7F3E9]"
+    className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#4A453E]/10 bg-[#FFFDF7] px-4 text-[12px] font-semibold text-[#4A453E]/68 transition-all hover:bg-[#F7F3E9]"
   >
     <span className="material-symbols-outlined text-[16px]">{icon}</span>
     {label}
@@ -995,7 +890,7 @@ const Pill: React.FC<{
       ? 'border-[#F5C16C]/28 bg-[#FFF3D8] text-[#8C6517]'
       : tone === 'accent'
         ? 'border-[#FF8A65]/20 bg-[#FFF1EB] text-[#C95B3A]'
-        : 'border-[#4A453E]/10 bg-white text-[#4A453E]/68'
+        : 'border-[#4A453E]/10 bg-[#FFFDF7] text-[#4A453E]/68'
   }`}>
     {label}
   </span>
@@ -1023,3 +918,43 @@ function formatEnergyInteger(energy?: string | null): string {
   }
   return `${Math.round(num)} kcal`;
 }
+
+function buildPrimaryTags(
+  normalizedProduct?: WorkspaceMealEstimatePresentation['normalizedProduct'] | WorkspaceClarificationPresentation['normalizedProduct'] | null,
+): string[] {
+  if (!normalizedProduct) {
+    return [];
+  }
+
+  const tags = [
+    normalizeCategoryTag(normalizedProduct.categoryName),
+    normalizedProduct.brandName || null,
+  ].filter(Boolean) as string[];
+
+  return [...new Set(tags)];
+}
+
+function normalizeCategoryTag(categoryName?: string | null): string | null {
+  if (!categoryName) {
+    return null;
+  }
+
+  const normalized = categoryName.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  if (
+    normalized.includes('茶')
+    || normalized.includes('咖啡')
+    || normalized.includes('饮')
+    || normalized.includes('奶')
+    || normalized.includes('果汁')
+    || normalized.includes('汽水')
+  ) {
+    return '饮料';
+  }
+
+  return normalized;
+}
+

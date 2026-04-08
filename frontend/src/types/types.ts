@@ -185,6 +185,35 @@ export interface EstimateBlock {
 
 export type WorkspaceInputMode = 'chat' | 'decision';
 
+export type ChatScreenshotOcrStatus = 'needs_confirmation' | 'failed';
+export type ChatScreenshotOcrConfidenceLevel = 'high' | 'medium' | 'low' | 'unknown';
+
+export interface ChatScreenshotParseRequest {
+  imageDataUrl: string;
+  fileName: string;
+  contentType?: string;
+  fileSizeBytes?: number;
+  platform?: string;
+  note?: string;
+}
+
+export interface ChatScreenshotOcrResult {
+  status: ChatScreenshotOcrStatus;
+  recognizedText?: string | null;
+  primaryText?: string | null;
+  normalizedInput?: string | null;
+  confidenceLevel: ChatScreenshotOcrConfidenceLevel;
+  candidateTitles: string[];
+  brandCandidate?: string | null;
+  specCandidate?: string | null;
+  warnings: string[];
+  failureReason?: string | null;
+  fileName: string;
+  contentType: string;
+  fileSizeBytes: number;
+  platform?: string | null;
+}
+
 export interface ChatMessagePayload {
   text?: string;
   mode?: WorkspaceInputMode;

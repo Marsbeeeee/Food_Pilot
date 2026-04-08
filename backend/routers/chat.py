@@ -12,7 +12,9 @@ from backend.schemas.chat import (
     RenameSessionRequest,
     parse_result_items,
 )
+from backend.schemas.chat_ocr import ChatOcrParseRequest, ChatOcrParseResponse
 from backend.schemas.user import UserOut
+from backend.services.chat_ocr_service import ChatOcrServiceError, parse_chat_screenshot
 from backend.services.chat_service import (
     create_empty_session,
     create_session_and_reply,
@@ -113,6 +115,17 @@ def create_chat_message(
         user_message=_serialize_message(exchange["user_message"]),
         assistant_message=_serialize_message(exchange["assistant_message"]),
     )
+
+
+@router.post("/ocr/parse", response_model=ChatOcrParseResponse)
+def parse_chat_ocr(
+    request: ChatOcrParseRequest,
+    current_user: UserOut = Depends(get_current_user),
+):
+    try:
+        return parse_chat_screenshot(request, user_id=current_user.id)
+    except ChatOcrServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.user_message) from exc
 
 
 def _serialize_session_summary(session: dict[str, object]) -> ChatSessionSummary:

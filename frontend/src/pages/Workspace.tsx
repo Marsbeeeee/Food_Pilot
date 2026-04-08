@@ -24,18 +24,25 @@ import {
   deleteChatSession,
   getChatSession,
   mergeSessionIntoList,
+  parseChatScreenshot,
   renameChatSession,
   sendChatMessage,
 } from '../api/chat';
+import {
+  resolveWorkspaceScreenshotConfirmationText,
+  validateWorkspaceScreenshotFile,
+} from '../app/workspaceScreenshotOcr.js';
 import { FoodLogApiError, saveFoodLogEntry } from '../api/foodLog';
 import { fetchInsightsBasket, syncInsightsBasket } from '../api/insights';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { WorkspaceScreenshotOcrDialog } from '../components/WorkspaceScreenshotOcrDialog';
 import {
   WorkspaceClarificationWorkbench,
   WorkspaceEstimateWorkbench,
 } from '../components/WorkspaceDecisionWorkbench';
 import {
   ChatMessageType,
+  ChatScreenshotOcrResult,
   ChatSession,
   FoodLogEntry,
   Message,
@@ -86,6 +93,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const [isTyping, setIsTyping] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isInputModeMenuOpen, setIsInputModeMenuOpen] = useState(false);
+  const [isOcrDialogOpen, setIsOcrDialogOpen] = useState(false);
+  const [isParsingScreenshot, setIsParsingScreenshot] = useState(false);
+  const [ocrDialogError, setOcrDialogError] = useState('');
+  const [ocrPreviewUrl, setOcrPreviewUrl] = useState<string | null>(null);
+  const [ocrParseResult, setOcrParseResult] = useState<ChatScreenshotOcrResult | null>(null);
+  const [ocrEditableText, setOcrEditableText] = useState('');
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [renamingTitle, setRenamingTitle] = useState('');
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
@@ -100,6 +113,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const screenshotFileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const inputModeMenuRef = useRef<HTMLDivElement>(null);
   const previousSessionIdRef = useRef<string | null>(null);
@@ -230,6 +244,134 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       element.setSelectionRange(cursor, cursor);
     });
   };
+
+  const openScreenshotPicker = () => {
+    setInputMode('decision');
+    setInputError('');
+    setIsInputModeMenuOpen(false);
+    screenshotFileInputRef.current?.click();
+  };
+
+  const closeOcrDialog = () => {
+    if (isParsingScreenshot) {
+      return;
+    }
+    setIsOcrDialogOpen(false);
+    setOcrDialogError('');
+    setOcrPreviewUrl(null);
+    setOcrParseResult(null);
+    setOcrEditableText('');
+  };
+
+  const handleSwitchToTextInput = () => {
+    const nextText = ocrEditableText.trim();
+    closeOcrDialog();
+    focusDecisionInput(nextText);
+  };
+
+  const handleRetryScreenshotUpload = () => {
+    if (isParsingScreenshot) {
+      return;
+    }
+    screenshotFileInputRef.current?.click();
+  };
+
+  const handleScreenshotFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = '';
+    const validationMessage = validateWorkspaceScreenshotFile(file);
+    if (validationMessage) {
+      setInputError(validationMessage);
+      return;
+    }
+    if (!file) {
+      return;
+    }
+
+    setInputMode('decision');
+    setInputError('');
+    setIsOcrDialogOpen(true);
+    setIsParsingScreenshot(true);
+    setOcrDialogError('');
+    setOcrParseResult(null);
+    setOcrEditableText('');
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setOcrPreviewUrl(dataUrl);
+      const result = await parseChatScreenshot({
+        imageDataUrl: dataUrl,
+        fileName: file.name,
+        contentType: file.type || undefined,
+        fileSizeBytes: file.size,
+      });
+      setOcrParseResult(result);
+      setOcrEditableText(resolveWorkspaceScreenshotConfirmationText(result));
+    } catch (error) {
+      setOcrDialogError(resolveChatScreenshotErrorMessage(error));
+    } finally {
+      setIsParsingScreenshot(false);
+    }
+  };
+
+  const handleConfirmScreenshotOcr = async () => {
+    const validationMessage = validateWorkspaceInput('decision', ocrEditableText);
+    if (validationMessage) {
+      setOcrDialogError(validationMessage);
+      return;
+    }
+
+    const confirmedText = ocrEditableText.trim();
+    closeOcrDialog();
+    await handleSendMessage(confirmedText, 'decision');
+  };
+
+  const renderInputLauncherMenu = () => (
+    <div className="absolute bottom-full left-0 z-40 mb-3 w-72 overflow-hidden rounded-[24px] border border-[#4A453E]/10 bg-[#FFFDF5] p-2 shadow-[0_24px_60px_rgba(74,69,62,0.16)]">
+      <button
+        type="button"
+        onClick={openScreenshotPicker}
+        className="flex w-full items-start gap-3 rounded-[18px] px-4 py-4 text-left text-[#4A453E] transition-colors hover:bg-[#F7F3E9]"
+      >
+        <span className="material-symbols-outlined mt-0.5 text-[18px] text-[#FF8A65]">
+          screenshot_monitor
+        </span>
+        <span className="min-w-0">
+          <span className="block text-sm font-bold">截图识别</span>
+          <span className="mt-1 block text-xs leading-5 text-[#4A453E]/55">
+            上传点单截图，确认 OCR 结果后继续进入点单决策。
+          </span>
+        </span>
+        <span className="ml-auto pt-0.5 text-[#4A453E]/25">
+          <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+        </span>
+      </button>
+
+      {WORKSPACE_INPUT_MODE_OPTIONS.map((option) => {
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => handleSelectInputMode(option.value as WorkspaceInputMode)}
+            className="flex w-full items-start gap-3 rounded-[18px] px-4 py-4 text-left text-[#4A453E] transition-colors hover:bg-[#F7F3E9]"
+          >
+            <span className="material-symbols-outlined mt-0.5 text-[18px] text-[#FF8A65]">
+              {option.menuIcon || 'local_mall'}
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-bold">{option.label}</span>
+              <span className="mt-1 block text-xs leading-5 text-[#4A453E]/55">{option.description}</span>
+            </span>
+            <span className="ml-auto pt-0.5 text-[#4A453E]/25">
+              <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
 
   const handleSendMessage = async (text?: string, modeOverride?: WorkspaceInputMode) => {
     const finalQuery = text || inputValue.trim();
@@ -1378,29 +1520,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                       </button>
 
                       {isInputModeMenuOpen && (
-                        <div className="absolute bottom-full left-0 z-30 mb-3 w-72 overflow-hidden rounded-[24px] border border-[#4A453E]/10 bg-[#FFFDF5] p-2 shadow-[0_24px_60px_rgba(74,69,62,0.16)]">
-                          {WORKSPACE_INPUT_MODE_OPTIONS.map((option) => {
-                            return (
-                              <button
-                                key={option.value}
-                                type="button"
-                                onClick={() => handleSelectInputMode(option.value as WorkspaceInputMode)}
-                                className="flex w-full items-start gap-3 rounded-[18px] px-4 py-4 text-left text-[#4A453E] transition-colors hover:bg-[#F7F3E9]"
-                              >
-                                <span className="material-symbols-outlined mt-0.5 text-[18px] text-[#FF8A65]">
-                                  {option.menuIcon || 'local_mall'}
-                                </span>
-                                <span className="min-w-0">
-                                  <span className="block text-sm font-bold">{option.label}</span>
-                                  <span className="mt-1 block text-xs leading-5 text-[#4A453E]/55">{option.description}</span>
-                                </span>
-                                <span className="ml-auto pt-0.5 text-[#4A453E]/25">
-                                  <span className="material-symbols-outlined text-[18px]">chevron_right</span>
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
+                        renderInputLauncherMenu()
                       )}
                     </div>
                   )}
@@ -1440,29 +1560,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             </button>
 
                             {isInputModeMenuOpen && (
-                              <div className="absolute bottom-full left-0 z-40 mb-3 w-72 overflow-hidden rounded-[24px] border border-[#4A453E]/10 bg-[#FFFDF5] p-2 shadow-[0_24px_60px_rgba(74,69,62,0.16)]">
-                                {WORKSPACE_INPUT_MODE_OPTIONS.map((option) => {
-                                  return (
-                                    <button
-                                      key={option.value}
-                                      type="button"
-                                      onClick={() => handleSelectInputMode(option.value as WorkspaceInputMode)}
-                                      className="flex w-full items-start gap-3 rounded-[18px] px-4 py-4 text-left text-[#4A453E] transition-colors hover:bg-[#F7F3E9]"
-                                    >
-                                      <span className="material-symbols-outlined mt-0.5 text-[18px] text-[#FF8A65]">
-                                        {option.menuIcon || 'local_mall'}
-                                      </span>
-                                      <span className="min-w-0">
-                                        <span className="block text-sm font-bold">{option.label}</span>
-                                        <span className="mt-1 block text-xs leading-5 text-[#4A453E]/55">{option.description}</span>
-                                      </span>
-                                      <span className="ml-auto pt-0.5 text-[#4A453E]/25">
-                                        <span className="material-symbols-outlined text-[18px]">chevron_right</span>
-                                      </span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
+                              renderInputLauncherMenu()
                             )}
                           </div>
 
@@ -1531,6 +1629,33 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           </div>
         </div>
       </section>
+
+      <input
+        ref={screenshotFileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(event) => void handleScreenshotFileChange(event)}
+      />
+
+      <WorkspaceScreenshotOcrDialog
+        open={isOcrDialogOpen}
+        isParsing={isParsingScreenshot}
+        previewUrl={ocrPreviewUrl}
+        parseResult={ocrParseResult}
+        errorMessage={ocrDialogError}
+        editableText={ocrEditableText}
+        onChangeText={(value) => {
+          setOcrEditableText(value);
+          if (ocrDialogError) {
+            setOcrDialogError('');
+          }
+        }}
+        onClose={closeOcrDialog}
+        onRetry={handleRetryScreenshotUpload}
+        onSwitchToText={handleSwitchToTextInput}
+        onConfirm={() => void handleConfirmScreenshotOcr()}
+      />
 
       {isRenameModalOpen && (
         <div
@@ -1610,6 +1735,31 @@ function handleFoodLogError(error: unknown, fallbackMessage: string): void {
   console.error('饮食记录错误:', error);
   const message = resolveFoodLogErrorMessage(error, fallbackMessage);
   window.alert(message || fallbackMessage);
+}
+
+function resolveChatScreenshotErrorMessage(error: unknown): string {
+  if (error instanceof ChatApiError) {
+    return error.message;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return '截图识别暂时失败，请重新上传，或先改用文本输入。';
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('截图读取失败，请重新选择图片。'));
+    reader.onload = () => {
+      if (typeof reader.result === 'string' && reader.result) {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error('截图读取失败，请重新选择图片。'));
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function resolveFoodLogErrorMessage(error: unknown, fallbackMessage: string): string {
