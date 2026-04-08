@@ -39,6 +39,15 @@ const MISSING_FIELD_LABELS = {
   temperature: '冰热',
 };
 
+const MISSING_CONFIGURATION_LABELS = {
+  size_or_spec: '规格',
+  sugar_level: '糖度',
+  milk_base: '奶基底',
+  temperature: '冰量/温度',
+  quantity: '份量',
+  addons: '加料',
+};
+
 const TEMPLATE_LEVEL_LABELS = {
   brand_template: '品牌模板命中',
   category_template: '品类模板回退',
@@ -111,6 +120,12 @@ export function buildDecisionResultPresentation({
       ? TEMPLATE_LEVEL_LABELS[estimationMeta.sourceType] ?? estimationMeta.sourceType
       : null,
     templateSourceLabel: estimationMeta?.sourceLabel ?? null,
+    templateVersionLabel: estimationMeta?.templateVersion
+      ? `模板版本：${estimationMeta.templateVersion}`
+      : null,
+    configVersionLabel: estimationMeta?.configVersion
+      ? `规则版本：${estimationMeta.configVersion}`
+      : null,
     fallbackPathLabels: mapFallbackPath(estimationMeta?.fallbackPath),
     confidenceReasons: Array.isArray(estimationMeta?.confidenceReasons)
       ? estimationMeta.confidenceReasons
@@ -118,6 +133,10 @@ export function buildDecisionResultPresentation({
     appliedRules: Array.isArray(estimationMeta?.appliedRules)
       ? estimationMeta.appliedRules
       : [],
+    missingConfiguration: Array.isArray(estimationMeta?.missingConfiguration)
+      ? estimationMeta.missingConfiguration
+      : [],
+    missingConfigurationLabels: mapMissingConfiguration(estimationMeta?.missingConfiguration),
     recommendationLevel: decisionCard?.recommendationLevel ?? 'needs_review',
     recommendationLabel: mapRecommendationLevel(decisionCard?.recommendationLevel),
     riskTags: Array.isArray(decisionCard?.riskTags) ? decisionCard.riskTags : [],
@@ -191,6 +210,14 @@ function mapMissingFields(missingFields) {
   }
 
   return missingFields.map((field) => MISSING_FIELD_LABELS[field] ?? field);
+}
+
+function mapMissingConfiguration(missingConfiguration) {
+  if (!Array.isArray(missingConfiguration)) {
+    return [];
+  }
+
+  return missingConfiguration.map((field) => MISSING_CONFIGURATION_LABELS[field] ?? field);
 }
 
 function mapFallbackPath(fallbackPath) {

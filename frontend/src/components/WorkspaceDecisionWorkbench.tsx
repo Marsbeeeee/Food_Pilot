@@ -145,6 +145,13 @@ export const WorkspaceEstimateWorkbench: React.FC<WorkspaceEstimateWorkbenchProp
               ))}
             </ul>
           )}
+          {presentation.missingConfigurationLabels.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {presentation.missingConfigurationLabels.map((label) => (
+                <Pill key={label} label={`待确认：${label}`} tone="warn" />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -548,9 +555,12 @@ const MetaDetailSection: React.FC<{
   const hasMeta = Boolean(
     presentation.templateHitLabel
     || presentation.templateSourceLabel
+    || presentation.templateVersionLabel
+    || presentation.configVersionLabel
     || presentation.fallbackPathLabels.length
     || presentation.confidenceReasons.length
-    || presentation.appliedRules.length,
+    || presentation.appliedRules.length
+    || presentation.missingConfigurationLabels.length,
   );
 
   if (!hasMeta) {
@@ -563,6 +573,8 @@ const MetaDetailSection: React.FC<{
       <div className="mt-4 flex flex-wrap gap-2">
         {presentation.templateHitLabel && <Pill label={presentation.templateHitLabel} tone="accent" />}
         {presentation.templateSourceLabel && <Pill label={`来源：${presentation.templateSourceLabel}`} tone="neutral" />}
+        {presentation.templateVersionLabel && <Pill label={presentation.templateVersionLabel} tone="neutral" />}
+        {presentation.configVersionLabel && <Pill label={presentation.configVersionLabel} tone="neutral" />}
         {presentation.fallbackPathLabels.length > 0 && <Pill label={`路径：${presentation.fallbackPathLabels.join(' → ')}`} tone="neutral" />}
       </div>
       {presentation.confidenceReasons.length > 0 && (
@@ -579,6 +591,16 @@ const MetaDetailSection: React.FC<{
           {presentation.appliedRules.map((rule) => (
             <Pill key={rule} label={rule} tone="neutral" />
           ))}
+        </div>
+      )}
+      {presentation.missingConfigurationLabels.length > 0 && (
+        <div className="mt-4">
+          <SectionHeading icon="rule" title="缺失配置" compact />
+          <div className="mt-3 flex flex-wrap gap-2">
+            {presentation.missingConfigurationLabels.map((label) => (
+              <Pill key={label} label={label} tone="warn" />
+            ))}
+          </div>
         </div>
       )}
     </div>

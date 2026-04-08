@@ -62,6 +62,31 @@ test('buildDecisionWorkspaceSummary exposes success-state archive and action met
   assert.deepEqual(summary.specBadges, ['大杯', '三分糖']);
 });
 
+test('buildDecisionWorkspaceSummary keeps estimable low-confidence results out of clarification tone', () => {
+  const summary = buildDecisionWorkspaceSummary(createDecisionCard({
+    confidenceLevel: 'low',
+    analysisEligible: false,
+    saveEligible: true,
+    riskTags: ['low_confidence'],
+    normalizedProduct: {
+      categoryName: '现制茶饮',
+      brandName: '',
+      productName: '奶茶',
+      productScope: 'single_item',
+      itemRole: 'single_item',
+      matchLevel: 'category_product',
+      temperature: '去冰',
+      comboItems: [],
+      missingFields: [],
+    },
+  }));
+
+  assert.equal(summary.tone, 'low_confidence');
+  assert.equal(summary.confidenceLabel, '低置信');
+  assert.equal(summary.saveTarget.title, '正式分类容器');
+  assert.equal(summary.analysisMeta.title, '可保存但暂不分析');
+});
+
 test('buildDecisionWorkspaceSummary marks clarification cards as blocked for analysis', () => {
   const summary = buildDecisionWorkspaceSummary(createDecisionCard({
     confidenceLevel: 'low',

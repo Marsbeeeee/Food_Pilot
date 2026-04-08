@@ -13,6 +13,20 @@ TemplateSourceType = Literal["brand_template", "category_template", "generic_tem
 
 _SPACE_RE = re.compile(r"\s+")
 _CONFIG_PATH = Path(__file__).resolve().parents[1] / "data" / "brand_estimation_config.json"
+_TEMPLATE_GROUP_TO_SOURCE_TYPE = {
+    "brand": "brand_template",
+    "category": "category_template",
+    "generic": "generic_template",
+}
+_NUTRITION_FIELDS = ("calories", "protein", "carbs", "fat")
+_MISSING_CONFIGURATION_LABELS = {
+    "size_or_spec": "规格",
+    "sugar_level": "糖度",
+    "milk_base": "奶基底",
+    "temperature": "冰量/温度",
+    "quantity": "份量",
+    "addons": "加料",
+}
 
 
 def resolve_brand_estimation(
@@ -85,6 +99,7 @@ def resolve_brand_estimation(
         normalized_product=normalized_product,
         nutrition=nutrition,
         applied_rules=applied_rules,
+        missing_configuration=missing_configuration,
     )
     _apply_addon_modifiers(
         config=config,
@@ -97,6 +112,7 @@ def resolve_brand_estimation(
         nutrition=nutrition,
         applied_rules=applied_rules,
     )
+    missing_configuration = _dedupe_preserve_order(missing_configuration)
 
     confidence = _resolve_confidence(
         normalized_product=normalized_product,
@@ -152,11 +168,14 @@ def resolve_brand_estimation(
             "source_type": template["source_type"],
             "source_label": template["source_label"],
             "template_id": template["template_id"],
+            "template_version": _normalize_text(template.get("template_version")) or "unknown",
             "hit_level": template["source_type"].replace("_template", ""),
             "fallback_path": fallback_path,
             "confidence_reasons": confidence_reasons,
             "applied_rules": applied_rules,
             "missing_configuration": missing_configuration,
+            "config_version": _normalize_text(config.get("config_version")) or "unknown",
+            "config_updated_at": _normalize_text(config.get("updated_at")) or None,
         },
     }
 
@@ -165,7 +184,98 @@ def resolve_brand_estimation(
 def _load_estimation_config() -> dict[str, Any]:
     with _CONFIG_PATH.open("r", encoding="utf-8") as handle:
         payload = json.load(handle)
-    return payload if isinstance(payload, dict) else {}
+    if not isinstance(payload, dict):
+        return {}
+    _validate_estimation_config(payload)
+    return payload
+
+
+def _validate_estimation_config(config: dict[str, Any]) -> None:
+    config_version = _normalize_text(config.get("config_version"))
+    if not config_version:
+        raise ValueError("brand estimation config must define config_version")
+
+    fallback_order = config.get("fallback_order") or []
+    if list(fallback_order) != list(_TEMPLATE_GROUP_TO_SOURCE_TYPE.values()):
+        raise ValueError("brand estimation config fallback_order is invalid")
+
+    template_ids: set[str] = set()
+    templates = config.get("templates") or {}
+    modifiers = config.get("modifiers") or {}
+    for group_name, expected_source_type in _TEMPLATE_GROUP_TO_SOURCE_TYPE.items():
+        group_templates = templates.get(group_name) or []
+        if not isinstance(group_templates, list):
+            raise ValueError(f"{group_name} templates must be a list")
+        for template in group_templates:
+            if not isinstance(template, dict):
+                raise ValueError(f"{group_name} templates must be objects")
+
+            template_id = _normalize_text(template.get("template_id"))
+            if not template_id:
+                raise ValueError(f"{group_name} template missing template_id")
+            if template_id in template_ids:
+                raise ValueError(f"duplicate template_id: {template_id}")
+            template_ids.add(template_id)
+
+            source_type = _normalize_text(template.get("source_type"))
+            if source_type != expected_source_type:
+                raise ValueError(
+                    f"template {template_id} has invalid source_type {source_type or 'missing'}"
+                )
+
+            if not _normalize_text(template.get("template_version")):
+                raise ValueError(f"template {template_id} missing template_version")
+
+            nutrition = template.get("nutrition") or {}
+            missing_nutrients = [field for field in _NUTRITION_FIELDS if field not in nutrition]
+            if missing_nutrients:
+                raise ValueError(
+                    f"template {template_id} missing nutrition fields: {', '.join(missing_nutrients)}"
+                )
+
+            _validate_template_defaults(
+                template_id=template_id,
+                template=template,
+                modifiers=modifiers,
+            )
+
+
+def _validate_template_defaults(
+    *,
+    template_id: str,
+    template: dict[str, Any],
+    modifiers: dict[str, Any],
+) -> None:
+    category_id = _normalize_text(template.get("category_id"))
+    default_size = _normalize_text(template.get("default_size"))
+    if default_size:
+        size_modifiers = ((modifiers.get("size") or {}).get(category_id) or {})
+        if default_size not in size_modifiers:
+            raise ValueError(f"template {template_id} references unknown default_size {default_size}")
+
+    default_sugar = _normalize_text(template.get("default_sugar_level"))
+    if default_sugar:
+        sugar_modifiers = modifiers.get("sugar") or {}
+        if default_sugar not in sugar_modifiers:
+            raise ValueError(
+                f"template {template_id} references unknown default_sugar_level {default_sugar}"
+            )
+
+    default_temperature = _normalize_text(template.get("default_temperature"))
+    if default_temperature:
+        temperature_modifiers = modifiers.get("temperature") or {}
+        if default_temperature not in temperature_modifiers:
+            raise ValueError(
+                f"template {template_id} references unknown default_temperature {default_temperature}"
+            )
+
+    default_milk_base = _normalize_text(template.get("default_milk_base"))
+    if default_milk_base:
+        milk_base_modifiers = modifiers.get("milk_base") or {}
+        if default_milk_base not in milk_base_modifiers:
+            raise ValueError(
+                f"template {template_id} references unknown default_milk_base {default_milk_base}"
+            )
 
 
 def _select_template(
@@ -329,16 +439,21 @@ def _apply_milk_base_modifier(
     normalized_product: dict[str, Any],
     nutrition: dict[str, float],
     applied_rules: list[str],
+    missing_configuration: list[str],
 ) -> None:
     if not _is_drink_category(config=config, category_id=template.get("category_id")):
         return
 
     milk_base_modifiers = ((config.get("modifiers") or {}).get("milk_base") or {})
     milk_base = _normalize_text(normalized_product.get("milk_base"))
-    if not milk_base or milk_base not in milk_base_modifiers:
+    default_milk_base = _normalize_text(template.get("default_milk_base"))
+    if not milk_base:
+        if default_milk_base:
+            missing_configuration.append("milk_base")
+        return
+    if milk_base not in milk_base_modifiers:
         return
 
-    default_milk_base = _normalize_text(template.get("default_milk_base"))
     modifier = dict(milk_base_modifiers[milk_base])
     if default_milk_base and default_milk_base in milk_base_modifiers:
         for nutrient_name, value in milk_base_modifiers[default_milk_base].items():
@@ -425,7 +540,9 @@ def _build_confidence_reasons(
         f"估算依据：{template_level_labels[template['source_type']]}，来源 {template['source_label']}。",
     ]
     if missing_configuration:
-        reasons.append(f"关键配置缺失：{', '.join(missing_configuration)}，已按默认值估算。")
+        reasons.append(
+            f"关键配置缺失：{_format_missing_configuration_labels(missing_configuration)}，已按默认值估算。"
+        )
     elif confidence == "high":
         reasons.append("规格与主体信息明确，结果可按高置信处理。")
     elif confidence == "medium":
@@ -471,7 +588,7 @@ def _build_description(
     base = f"{template_level_labels[template['source_type']]}，来源 {template['source_label']}。"
     if missing_configuration:
         return (
-            f"{base} 当前缺少 {', '.join(missing_configuration)}，已按模板默认配置给出 {confidence} 置信估算。"
+            f"{base} 当前缺少 {_format_missing_configuration_labels(missing_configuration)}，已按模板默认配置给出 {confidence} 置信估算。"
         )
     if applied_rules:
         return f"{base} 已应用配置修正：{'；'.join(applied_rules)}。"
@@ -603,3 +720,22 @@ def _is_drink_category(*, config: dict[str, Any], category_id: object) -> bool:
 def _is_generic_product_name(*, config: dict[str, Any], value: str) -> bool:
     generic_product_names = {str(name).casefold() for name in config.get("generic_product_names", [])}
     return value in generic_product_names
+
+
+def _format_missing_configuration_labels(fields: list[str]) -> str:
+    labels = [
+        _MISSING_CONFIGURATION_LABELS.get(field, field)
+        for field in _dedupe_preserve_order(fields)
+        if _normalize_text(field)
+    ]
+    return "、".join(labels)
+
+
+def _dedupe_preserve_order(values: list[str]) -> list[str]:
+    deduped: list[str] = []
+    for value in values:
+        normalized = _normalize_text(value)
+        if not normalized or normalized in deduped:
+            continue
+        deduped.append(normalized)
+    return deduped

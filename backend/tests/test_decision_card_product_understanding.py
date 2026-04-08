@@ -40,6 +40,8 @@ class DecisionCardProductUnderstandingTests(unittest.TestCase):
         self.assertEqual(decision_card.estimation_meta.source_type, "brand_template")
         self.assertEqual(decision_card.estimation_meta.source_label, "霸王茶姬 / 伯牙绝弦")
         self.assertEqual(decision_card.estimation_meta.fallback_path, ["brand_template"])
+        self.assertEqual(decision_card.estimation_meta.template_version, "v1")
+        self.assertEqual(decision_card.estimation_meta.config_version, "task8.v2026-04-08")
         self.assertTrue(decision_card.analysis_eligible)
 
     def test_build_decision_card_detects_combo_scope_from_multi_item_estimate(self) -> None:
@@ -92,6 +94,34 @@ class DecisionCardProductUnderstandingTests(unittest.TestCase):
         self.assertEqual(decision_card.normalized_product.brand_name, "麦当劳")
         self.assertEqual(decision_card.normalized_product.match_level, "brand_only")
         self.assertGreaterEqual(len(decision_card.adjustments), 1)
+
+    def test_low_confidence_generic_estimate_can_stay_estimable_without_clarification(self) -> None:
+        decision_card = build_decision_card_from_estimate(
+            input_summary="奶茶 去冰",
+            title="奶茶",
+            confidence="low",
+            description="按通用模板估算。",
+            items=[
+                {
+                    "name": "奶茶",
+                    "portion": "1 杯",
+                    "energy": "260 kcal",
+                }
+            ],
+            total_calories="260 kcal",
+            suggestion="如果补充糖度，结果会更稳。",
+            container_type="chat_message",
+        )
+
+        self.assertEqual(decision_card.confidence_level, "low")
+        self.assertFalse(decision_card.needs_clarification)
+        self.assertTrue(decision_card.save_eligible)
+        self.assertIn("low_confidence", decision_card.risk_tags)
+        self.assertNotIn("needs_clarification", decision_card.risk_tags)
+        self.assertIsNotNone(decision_card.estimation_meta)
+        assert decision_card.estimation_meta is not None
+        self.assertEqual(decision_card.estimation_meta.source_type, "generic_template")
+        self.assertIn("sugar_level", decision_card.estimation_meta.missing_configuration)
 
 
 if __name__ == "__main__":

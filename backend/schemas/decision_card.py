@@ -155,6 +155,10 @@ class DecisionCardEstimationMeta(BaseModel):
         validation_alias=AliasChoices("template_id", "templateId"),
         serialization_alias="templateId",
     )
+    template_version: str = Field(
+        validation_alias=AliasChoices("template_version", "templateVersion"),
+        serialization_alias="templateVersion",
+    )
     hit_level: str = Field(
         validation_alias=AliasChoices("hit_level", "hitLevel"),
         serialization_alias="hitLevel",
@@ -178,6 +182,15 @@ class DecisionCardEstimationMeta(BaseModel):
         default_factory=list,
         validation_alias=AliasChoices("missing_configuration", "missingConfiguration"),
         serialization_alias="missingConfiguration",
+    )
+    config_version: str = Field(
+        validation_alias=AliasChoices("config_version", "configVersion"),
+        serialization_alias="configVersion",
+    )
+    config_updated_at: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("config_updated_at", "configUpdatedAt"),
+        serialization_alias="configUpdatedAt",
     )
 
 
@@ -317,7 +330,7 @@ def build_decision_card_from_estimate(
     if needs_clarification is None:
         needs_clarification = (
             bool(product_understanding["needs_clarification"])
-            or confidence_level in {"low", "unknown"}
+            or confidence_level == "unknown"
             or not has_nutrition_estimate
         )
 

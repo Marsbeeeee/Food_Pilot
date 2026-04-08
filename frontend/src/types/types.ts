@@ -74,11 +74,14 @@ export interface DecisionCardEstimationMeta {
   sourceType: 'brand_template' | 'category_template' | 'generic_template';
   sourceLabel: string;
   templateId: string;
+  templateVersion: string;
   hitLevel: 'brand' | 'category' | 'generic' | string;
   fallbackPath: Array<'brand_template' | 'category_template' | 'generic_template' | string>;
   confidenceReasons: string[];
   appliedRules: string[];
   missingConfiguration: string[];
+  configVersion: string;
+  configUpdatedAt?: string | null;
 }
 
 export interface DecisionCard {
@@ -268,9 +271,13 @@ export interface WorkspaceMealEstimatePresentation {
   summaryBadges: string[];
   templateHitLabel: string | null;
   templateSourceLabel: string | null;
+  templateVersionLabel: string | null;
+  configVersionLabel: string | null;
   fallbackPathLabels: string[];
   confidenceReasons: string[];
   appliedRules: string[];
+  missingConfiguration: string[];
+  missingConfigurationLabels: string[];
   recommendationLevel: string;
   recommendationLabel: string;
   riskTags: string[];

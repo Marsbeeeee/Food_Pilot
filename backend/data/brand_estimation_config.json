@@ -1,4 +1,6 @@
 {
+  "config_version": "task8.v2026-04-08",
+  "updated_at": "2026-04-08",
   "fallback_order": [
     "brand_template",
     "category_template",
@@ -20,7 +22,8 @@
     "盒",
     "袋",
     "瓶",
-    "罐"
+    "罐",
+    "碗"
   ],
   "chinese_numbers": {
     "一": 1,
@@ -38,12 +41,19 @@
     "美式",
     "汉堡",
     "薯条",
-    "可乐"
+    "可乐",
+    "便当",
+    "盖饭",
+    "沙拉",
+    "轻食",
+    "牛肉面",
+    "鸡肉沙拉"
   ],
   "templates": {
     "brand": [
       {
         "template_id": "brand.chagee.boya_juexian.v1",
+        "template_version": "v1",
         "source_type": "brand_template",
         "source_label": "霸王茶姬 / 伯牙绝弦",
         "brand_id": "chagee",
@@ -66,6 +76,7 @@
       },
       {
         "template_id": "brand.luckin.raw_coconut_latte.v1",
+        "template_version": "v1",
         "source_type": "brand_template",
         "source_label": "瑞幸 / 生椰拿铁",
         "brand_id": "luckin",
@@ -90,6 +101,7 @@
       },
       {
         "template_id": "brand.starbucks.latte.v1",
+        "template_version": "v1",
         "source_type": "brand_template",
         "source_label": "星巴克 / 拿铁",
         "brand_id": "starbucks",
@@ -113,6 +125,7 @@
       },
       {
         "template_id": "brand.mixue.pearl_milk_tea.v1",
+        "template_version": "v1",
         "source_type": "brand_template",
         "source_label": "蜜雪冰城 / 珍珠奶茶",
         "brand_id": "mixue",
@@ -133,11 +146,123 @@
           "carbs": 70.0,
           "fat": 14.0
         }
+      },
+      {
+        "template_id": "brand.heytea.duorou_grape.v1",
+        "template_version": "v1",
+        "source_type": "brand_template",
+        "source_label": "喜茶 / 多肉葡萄",
+        "brand_id": "heytea",
+        "product_keywords": [
+          "多肉葡萄",
+          "葡萄"
+        ],
+        "category_id": "tea_drink",
+        "title": "喜茶 多肉葡萄",
+        "item_name": "多肉葡萄",
+        "portion": "1 杯",
+        "default_size": "大杯",
+        "default_sugar_level": "七分糖",
+        "default_temperature": "冰",
+        "nutrition": {
+          "calories": 265.0,
+          "protein": 1.0,
+          "carbs": 58.0,
+          "fat": 1.0
+        }
+      },
+      {
+        "template_id": "brand.nayuki.berry_cream_strawberry.v1",
+        "template_version": "v1",
+        "source_type": "brand_template",
+        "source_label": "奈雪的茶 / 霸气芝士草莓",
+        "brand_id": "nayuki",
+        "product_keywords": [
+          "霸气芝士草莓",
+          "芝士草莓",
+          "草莓"
+        ],
+        "category_id": "tea_drink",
+        "title": "奈雪的茶 霸气芝士草莓",
+        "item_name": "霸气芝士草莓",
+        "portion": "1 杯",
+        "default_size": "大杯",
+        "default_sugar_level": "五分糖",
+        "default_temperature": "冰",
+        "nutrition": {
+          "calories": 295.0,
+          "protein": 2.0,
+          "carbs": 56.0,
+          "fat": 6.0
+        }
+      },
+      {
+        "template_id": "brand.mcdonalds.grilled_chicken_burger.v1",
+        "template_version": "v1",
+        "source_type": "brand_template",
+        "source_label": "麦当劳 / 板烧鸡腿堡",
+        "brand_id": "mcdonalds",
+        "product_keywords": [
+          "板烧鸡腿堡",
+          "鸡腿堡"
+        ],
+        "category_id": "fast_food",
+        "title": "麦当劳 板烧鸡腿堡",
+        "item_name": "板烧鸡腿堡",
+        "portion": "1 个",
+        "nutrition": {
+          "calories": 385.0,
+          "protein": 16.0,
+          "carbs": 40.0,
+          "fat": 18.0
+        }
+      },
+      {
+        "template_id": "brand.kfc.beijing_chicken_roll.v1",
+        "template_version": "v1",
+        "source_type": "brand_template",
+        "source_label": "肯德基 / 老北京鸡肉卷",
+        "brand_id": "kfc",
+        "product_keywords": [
+          "老北京鸡肉卷",
+          "鸡肉卷"
+        ],
+        "category_id": "fast_food",
+        "title": "肯德基 老北京鸡肉卷",
+        "item_name": "老北京鸡肉卷",
+        "portion": "1 个",
+        "nutrition": {
+          "calories": 495.0,
+          "protein": 18.0,
+          "carbs": 46.0,
+          "fat": 27.0
+        }
+      },
+      {
+        "template_id": "brand.burger_king.whopper.v1",
+        "template_version": "v1",
+        "source_type": "brand_template",
+        "source_label": "汉堡王 / 皇堡",
+        "brand_id": "burger_king",
+        "product_keywords": [
+          "皇堡"
+        ],
+        "category_id": "fast_food",
+        "title": "汉堡王 皇堡",
+        "item_name": "皇堡",
+        "portion": "1 个",
+        "nutrition": {
+          "calories": 660.0,
+          "protein": 29.0,
+          "carbs": 50.0,
+          "fat": 39.0
+        }
       }
     ],
     "category": [
       {
         "template_id": "category.tea_drink.pearl_milk_tea.v1",
+        "template_version": "v1",
         "source_type": "category_template",
         "source_label": "现制茶饮 / 珍珠奶茶",
         "category_id": "tea_drink",
@@ -159,6 +284,7 @@
       },
       {
         "template_id": "category.tea_drink.fruit_tea.v1",
+        "template_version": "v1",
         "source_type": "category_template",
         "source_label": "现制茶饮 / 果茶",
         "category_id": "tea_drink",
@@ -183,6 +309,7 @@
       },
       {
         "template_id": "category.coffee.latte.v1",
+        "template_version": "v1",
         "source_type": "category_template",
         "source_label": "咖啡饮品 / 拿铁",
         "category_id": "coffee",
@@ -206,6 +333,7 @@
       },
       {
         "template_id": "category.coffee.americano.v1",
+        "template_version": "v1",
         "source_type": "category_template",
         "source_label": "咖啡饮品 / 美式",
         "category_id": "coffee",
@@ -227,6 +355,7 @@
       },
       {
         "template_id": "category.fast_food.burger.v1",
+        "template_version": "v1",
         "source_type": "category_template",
         "source_label": "西式快餐 / 汉堡",
         "category_id": "fast_food",
@@ -248,6 +377,7 @@
       },
       {
         "template_id": "category.fast_food.fries.v1",
+        "template_version": "v1",
         "source_type": "category_template",
         "source_label": "西式快餐 / 薯条",
         "category_id": "fast_food",
@@ -266,6 +396,7 @@
       },
       {
         "template_id": "category.fast_food.cola.v1",
+        "template_version": "v1",
         "source_type": "category_template",
         "source_label": "西式快餐 / 可乐",
         "category_id": "fast_food",
@@ -281,11 +412,74 @@
           "carbs": 37.0,
           "fat": 0.0
         }
+      },
+      {
+        "template_id": "category.rice_meal.chicken_bento.v1",
+        "template_version": "v1",
+        "source_type": "category_template",
+        "source_label": "中式便当 / 鸡腿便当",
+        "category_id": "rice_meal",
+        "product_keywords": [
+          "鸡腿便当",
+          "便当",
+          "盖饭"
+        ],
+        "title": "鸡腿便当",
+        "item_name": "鸡腿便当",
+        "portion": "1 份",
+        "nutrition": {
+          "calories": 620.0,
+          "protein": 24.0,
+          "carbs": 78.0,
+          "fat": 20.0
+        }
+      },
+      {
+        "template_id": "category.noodle_meal.beef_noodle.v1",
+        "template_version": "v1",
+        "source_type": "category_template",
+        "source_label": "面食主食 / 牛肉面",
+        "category_id": "noodle_meal",
+        "product_keywords": [
+          "牛肉面",
+          "汤面"
+        ],
+        "title": "牛肉面",
+        "item_name": "牛肉面",
+        "portion": "1 碗",
+        "nutrition": {
+          "calories": 560.0,
+          "protein": 23.0,
+          "carbs": 68.0,
+          "fat": 18.0
+        }
+      },
+      {
+        "template_id": "category.light_meal.chicken_salad.v1",
+        "template_version": "v1",
+        "source_type": "category_template",
+        "source_label": "轻食 / 鸡肉沙拉",
+        "category_id": "light_meal",
+        "product_keywords": [
+          "鸡肉沙拉",
+          "鸡胸肉沙拉",
+          "沙拉"
+        ],
+        "title": "鸡肉沙拉",
+        "item_name": "鸡肉沙拉",
+        "portion": "1 份",
+        "nutrition": {
+          "calories": 320.0,
+          "protein": 27.0,
+          "carbs": 15.0,
+          "fat": 16.0
+        }
       }
     ],
     "generic": [
       {
         "template_id": "generic.tea_drink.v1",
+        "template_version": "v1",
         "source_type": "generic_template",
         "source_label": "通用饮品 / 现制茶饮",
         "category_id": "tea_drink",
@@ -304,6 +498,7 @@
       },
       {
         "template_id": "generic.coffee.v1",
+        "template_version": "v1",
         "source_type": "generic_template",
         "source_label": "通用饮品 / 咖啡",
         "category_id": "coffee",
@@ -322,6 +517,7 @@
       },
       {
         "template_id": "generic.fast_food.v1",
+        "template_version": "v1",
         "source_type": "generic_template",
         "source_label": "通用快餐 / 单品",
         "category_id": "fast_food",
@@ -333,6 +529,54 @@
           "protein": 15.0,
           "carbs": 35.0,
           "fat": 18.0
+        }
+      },
+      {
+        "template_id": "generic.rice_meal.v1",
+        "template_version": "v1",
+        "source_type": "generic_template",
+        "source_label": "通用正餐 / 便当",
+        "category_id": "rice_meal",
+        "title": "通用便当",
+        "item_name": "通用便当",
+        "portion": "1 份",
+        "nutrition": {
+          "calories": 580.0,
+          "protein": 20.0,
+          "carbs": 74.0,
+          "fat": 19.0
+        }
+      },
+      {
+        "template_id": "generic.noodle_meal.v1",
+        "template_version": "v1",
+        "source_type": "generic_template",
+        "source_label": "通用正餐 / 面食",
+        "category_id": "noodle_meal",
+        "title": "通用面食",
+        "item_name": "通用面食",
+        "portion": "1 碗",
+        "nutrition": {
+          "calories": 510.0,
+          "protein": 18.0,
+          "carbs": 64.0,
+          "fat": 16.0
+        }
+      },
+      {
+        "template_id": "generic.light_meal.v1",
+        "template_version": "v1",
+        "source_type": "generic_template",
+        "source_label": "通用轻食 / 沙拉",
+        "category_id": "light_meal",
+        "title": "通用轻食沙拉",
+        "item_name": "通用轻食沙拉",
+        "portion": "1 份",
+        "nutrition": {
+          "calories": 280.0,
+          "protein": 20.0,
+          "carbs": 14.0,
+          "fat": 14.0
         }
       }
     ]
