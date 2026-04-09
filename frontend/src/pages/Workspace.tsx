@@ -116,6 +116,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const screenshotFileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const inputModeMenuRef = useRef<HTMLDivElement>(null);
+  const decisionInputModeMenuRef = useRef<HTMLDivElement>(null);
   const previousSessionIdRef = useRef<string | null>(null);
   const previousMessageCountRef = useRef<number>(0);
   const shouldFollowNewMessagesRef = useRef(true);
@@ -176,10 +177,17 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsMenuOpen(false);
       }
-      if (inputModeMenuRef.current && !inputModeMenuRef.current.contains(event.target as Node)) {
+      const isInsidePrimaryInputModeMenu = Boolean(
+        inputModeMenuRef.current && inputModeMenuRef.current.contains(target),
+      );
+      const isInsideDecisionInputModeMenu = Boolean(
+        decisionInputModeMenuRef.current && decisionInputModeMenuRef.current.contains(target),
+      );
+      if (!isInsidePrimaryInputModeMenu && !isInsideDecisionInputModeMenu) {
         setIsInputModeMenuOpen(false);
       }
     };
@@ -249,7 +257,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     setInputMode('decision');
     setInputError('');
     setIsInputModeMenuOpen(false);
-    screenshotFileInputRef.current?.click();
+    setIsOcrDialogOpen(true);
+    setIsParsingScreenshot(false);
+    setOcrDialogError('');
+    setOcrPreviewUrl(null);
+    setOcrParseResult(null);
+    setOcrEditableText('');
   };
 
   const closeOcrDialog = () => {
@@ -284,6 +297,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     const validationMessage = validateWorkspaceScreenshotFile(file);
     if (validationMessage) {
       setInputError(validationMessage);
+      setIsOcrDialogOpen(true);
+      setIsParsingScreenshot(false);
+      setOcrDialogError(validationMessage);
+      setOcrPreviewUrl(null);
+      setOcrParseResult(null);
+      setOcrEditableText('');
       return;
     }
     if (!file) {
@@ -339,9 +358,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           screenshot_monitor
         </span>
         <span className="min-w-0">
-          <span className="block text-sm font-bold">截图识别</span>
+          <span className="block text-sm font-bold">上传图片识别</span>
           <span className="mt-1 block text-xs leading-5 text-[#4A453E]/55">
-            上传点单截图，确认 OCR 结果后继续进入点单决策。
+            从本地上传图片，确认 OCR 结果后继续进入点单决策。
           </span>
         </span>
         <span className="ml-auto pt-0.5 text-[#4A453E]/25">
@@ -1550,7 +1569,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     }`}>
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          <div ref={inputModeMenuRef} className="relative flex shrink-0 items-center">
+                          <div ref={decisionInputModeMenuRef} className="relative flex shrink-0 items-center">
                             <button
                               type="button"
                               onClick={() => setIsInputModeMenuOpen((current) => !current)}
@@ -1653,7 +1672,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         }}
         onClose={closeOcrDialog}
         onRetry={handleRetryScreenshotUpload}
-        onSwitchToText={handleSwitchToTextInput}
+        onChooseFile={handleRetryScreenshotUpload}
         onConfirm={() => void handleConfirmScreenshotOcr()}
       />
 

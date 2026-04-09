@@ -12,7 +12,7 @@ interface WorkspaceScreenshotOcrDialogProps {
   onChangeText: (value: string) => void;
   onClose: () => void;
   onRetry: () => void;
-  onSwitchToText: () => void;
+  onChooseFile: () => void;
   onConfirm: () => void;
 }
 
@@ -26,13 +26,14 @@ export const WorkspaceScreenshotOcrDialog: React.FC<WorkspaceScreenshotOcrDialog
   onChangeText,
   onClose,
   onRetry,
-  onSwitchToText,
+  onChooseFile,
   onConfirm,
 }) => {
   if (!open) {
     return null;
   }
 
+  const isEmptyState = !isParsing && !previewUrl && !parseResult && !errorMessage && !editableText.trim();
   const failedMessage = errorMessage || (
     parseResult?.status === 'failed'
       ? parseResult.failureReason || '这张截图暂时没识别出稳定的商品主体。'
@@ -53,11 +54,11 @@ export const WorkspaceScreenshotOcrDialog: React.FC<WorkspaceScreenshotOcrDialog
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#C95B3A]">
-                截图识别
+                本地上传
               </p>
-              <h3 className="mt-2 text-xl font-bold text-[#4A453E]">确认 OCR 结果后再继续决策</h3>
+              <h3 className="mt-2 text-xl font-bold text-[#4A453E]">上传图片后识别商品信息</h3>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#4A453E]/55">
-                截图只用于本次识别，不默认长期保存原图。请确认提取结果无误后，再进入点单决策。
+                图片只用于本次识别，不默认长期保存原图。请先从本地选择图片，确认提取结果无误后，再进入点单决策。
               </p>
             </div>
             <button
@@ -99,6 +100,24 @@ export const WorkspaceScreenshotOcrDialog: React.FC<WorkspaceScreenshotOcrDialog
                 <p className="mt-2 text-sm leading-6 text-[#4A453E]/50">
                   我会尽量忽略平台壳子、促销文案和页面噪声，只保留适合继续点单决策的文本。
                 </p>
+              </div>
+            ) : isEmptyState ? (
+              <div className="flex flex-1 flex-col items-center justify-center text-center">
+                <div className="flex size-16 items-center justify-center rounded-[22px] border border-[#FF8A65]/20 bg-[#FFF1EB] text-[#FF8A65]">
+                  <span className="material-symbols-outlined text-[30px]">upload_file</span>
+                </div>
+                <p className="mt-5 text-base font-semibold text-[#4A453E]">先从本地上传一张图片</p>
+                <p className="mt-2 max-w-md text-sm leading-6 text-[#4A453E]/55">
+                  支持 PNG、JPEG 和 WebP，大小不超过 5MB。选择本地图片后会先展示识别结果，你确认无误后再继续进入点单决策。
+                </p>
+                <button
+                  type="button"
+                  onClick={onChooseFile}
+                  className="mt-6 inline-flex items-center gap-2 rounded-[16px] bg-[#FF8A65] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#F77C55]"
+                >
+                  <span className="material-symbols-outlined text-[18px]">add_photo_alternate</span>
+                  选择本地图片
+                </button>
               </div>
             ) : failedMessage ? (
               <div className="flex flex-1 flex-col justify-center">
@@ -186,18 +205,11 @@ export const WorkspaceScreenshotOcrDialog: React.FC<WorkspaceScreenshotOcrDialog
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-[#4A453E]/8 bg-white px-5 py-4 sm:px-6">
-          <button
-            type="button"
-            onClick={onSwitchToText}
-            className="rounded-[16px] border border-[#4A453E]/10 bg-white px-4 py-2.5 text-sm font-semibold text-[#4A453E]/60 transition-colors hover:bg-[#F7F3E9]"
-          >
-            改用文本输入
-          </button>
+        <div className="flex items-center justify-end gap-3 border-t border-[#4A453E]/8 bg-white px-5 py-4 sm:px-6">
           <button
             type="button"
             onClick={onRetry}
-            className="rounded-[16px] border border-[#4A453E]/10 bg-white px-4 py-2.5 text-sm font-semibold text-[#4A453E]/70 transition-colors hover:bg-[#F7F3E9]"
+            className="ml-auto rounded-[16px] border border-[#4A453E]/10 bg-white px-4 py-2.5 text-sm font-semibold text-[#4A453E]/70 transition-colors hover:bg-[#F7F3E9]"
           >
             重新上传
           </button>
@@ -205,7 +217,7 @@ export const WorkspaceScreenshotOcrDialog: React.FC<WorkspaceScreenshotOcrDialog
             type="button"
             onClick={onConfirm}
             disabled={!canConfirm}
-            className={`rounded-[16px] px-4 py-2.5 text-sm font-semibold text-white transition-colors ${
+            className={`${canConfirm ? '' : 'hidden '}rounded-[16px] px-4 py-2.5 text-sm font-semibold text-white transition-colors ${
               canConfirm
                 ? 'bg-[#FF8A65] hover:bg-[#F77C55]'
                 : 'cursor-not-allowed bg-[#4A453E]/18'

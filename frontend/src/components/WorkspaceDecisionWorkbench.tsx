@@ -95,33 +95,33 @@ export const WorkspaceEstimateWorkbench: React.FC<WorkspaceEstimateWorkbenchProp
   const nutritionItems = presentation.items ?? [];
 
   return (
-    <div className={`w-full overflow-hidden rounded-[32px] border shadow-[0_18px_48px_rgba(74,69,62,0.08)] ${
+    <div className={`w-full overflow-hidden rounded-[28px] border shadow-[0_18px_48px_rgba(74,69,62,0.08)] ${
       summary.tone === 'low_confidence'
         ? 'border-[#F5C16C]/35 bg-white'
         : 'border-[#4A453E]/6 bg-white'
     }`}>
-      <div className="border-b border-[#4A453E]/6 bg-white px-5 py-6 md:px-8 md:py-8">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="min-w-0 flex-1">
-            <h3 className="text-balance font-serif-brand text-[28px] font-bold leading-[1.12] text-[#4A453E] md:text-[34px]">
+      <div className="border-b border-[#4A453E]/6 bg-white px-5 py-5 md:px-7 md:py-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0 flex-1 md:flex md:min-h-[112px] md:flex-col md:justify-center">
+            <h3 className="text-balance font-serif-brand text-[24px] font-bold leading-[1.16] text-[#4A453E] md:text-[28px]">
               {presentation.title || normalizedProduct?.productName || '本次决策结果'}
             </h3>
-            <p className="mt-3 max-w-3xl text-[14px] leading-7 text-[#4A453E]/70 md:text-[15px]">
+            <p className="mt-2.5 max-w-3xl text-[13px] leading-6 text-[#4A453E]/70 md:text-[14px]">
               {decisionCard?.adaptationNote || presentation.description || '当前结果已整理为可直接扫读的决策卡片。'}
             </p>
           </div>
-          <div className="w-fit max-w-full shrink-0 self-start rounded-[24px] border border-[#E8DCCB] bg-[#FFFDF7] px-5 py-4 shadow-sm md:text-right">
+          <div className="w-fit max-w-full shrink-0 self-start rounded-[20px] border border-[#E8DCCB] bg-[#FFFDF7] px-4 py-3 shadow-sm md:self-center md:text-right">
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#4A453E]/35">
               热量
             </p>
-            <p className="mt-2 font-serif-brand text-[30px] font-bold leading-none text-[#FF8A65]">
+            <p className="mt-1.5 whitespace-nowrap font-serif-brand text-[24px] font-bold leading-none text-[#FF8A65] md:text-[26px]">
               {formatEnergyInteger(presentation.total)}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="border-b border-[#4A453E]/6 px-5 py-5 md:px-8 md:py-6">
+      <div className="border-b border-[#4A453E]/6 px-5 py-4 md:px-7 md:py-5">
         <TagPanel
           title="分类标签"
           icon="sell"
@@ -244,17 +244,17 @@ export const WorkspaceClarificationWorkbench: React.FC<WorkspaceClarificationWor
     : [];
 
   return (
-      <div className="w-full overflow-hidden rounded-[32px] border border-[#F5C16C]/35 bg-white shadow-[0_18px_48px_rgba(74,69,62,0.08)]">
-      <div className="bg-white px-5 py-6 md:px-8 md:py-8">
+      <div className="w-full overflow-hidden rounded-[28px] border border-[#F5C16C]/35 bg-white shadow-[0_18px_48px_rgba(74,69,62,0.08)]">
+      <div className="bg-white px-5 py-5 md:px-7 md:py-6">
         <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#B5791A]">
           {summary.eyebrow}
         </p>
-        <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1">
-            <h3 className="text-balance font-serif-brand text-[28px] font-bold leading-[1.12] text-[#4A453E] md:text-[34px]">
+            <h3 className="text-balance font-serif-brand text-[24px] font-bold leading-[1.16] text-[#4A453E] md:text-[28px]">
               {presentation.title || '商品信息待补充'}
             </h3>
-            <p className="mt-3 max-w-3xl text-[14px] leading-7 text-[#4A453E]/72 md:text-[15px]">
+            <p className="mt-2.5 max-w-3xl text-[13px] leading-6 text-[#4A453E]/72 md:text-[14px]">
               {presentation.description || presentation.content || summary.description}
             </p>
             {presentation.inputSummary && (
@@ -303,7 +303,7 @@ export const WorkspaceClarificationWorkbench: React.FC<WorkspaceClarificationWor
         </div>
       </div>
 
-      <div className="border-b border-[#F5C16C]/20 px-5 py-5 md:px-8 md:py-6">
+      <div className="border-b border-[#F5C16C]/20 px-5 py-4 md:px-7 md:py-5">
         <TagPanel
           title="分类标签"
           icon="sell"
@@ -744,18 +744,18 @@ const TagPanel: React.FC<{
   emptyText: string;
   tone?: 'warn' | 'neutral';
 }> = ({ title, icon, tags, emptyText, tone = 'neutral' }) => (
-  <div className={`rounded-[24px] border px-5 py-5 shadow-sm ${
+  <div className={`rounded-[22px] border px-4 py-4 shadow-sm ${
     tone === 'warn'
       ? 'border-[#F5C16C]/20 bg-[#FFF8EE]'
       : 'border-[#E8DCCB] bg-[#FFFDF7]'
   }`}>
     <SectionHeading icon={icon} title={title} tone={tone} />
     {tags.length > 0 ? (
-      <div className="mt-4 flex flex-wrap gap-3">
+      <div className="mt-3 flex flex-wrap gap-2.5">
         {tags.map((tag) => (
           <span
             key={tag}
-            className={`inline-flex items-center rounded-full px-4 py-2 text-[13px] font-semibold ${
+            className={`inline-flex items-center rounded-full px-3.5 py-1.5 text-[12px] font-semibold ${
               tone === 'warn'
                 ? 'border border-[#F5C16C]/28 bg-[#FFF1D9] text-[#8C6517]'
                 : 'border border-[#FF8A65]/18 bg-[#FFF1EB] text-[#C95B3A]'
