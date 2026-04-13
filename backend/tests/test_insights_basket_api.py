@@ -119,22 +119,89 @@ class InsightsBasketApiTests(unittest.TestCase):
                 }
             )
 
+    def test_put_rejects_snapshot_with_ineligible_decision_card(self) -> None:
+        with self.assertRaises(ValidationError):
+            InsightsBasketSyncRequest.model_validate(
+                {
+                    "items": [
+                        build_basket_item(
+                            "basket-a",
+                            "2026-03-20",
+                            "101",
+                            "Needs Clarification",
+                            {
+                                "decisionCard": {
+                                    "inputSummary": "奶茶",
+                                    "normalizedProduct": {
+                                        "productName": "奶茶",
+                                        "productScope": "single_item",
+                                        "itemRole": "single_item",
+                                    },
+                                    "nutritionEstimate": {
+                                        "items": [
+                                            {
+                                                "name": "奶茶",
+                                                "portion": "1 杯",
+                                                "energy": "320 kcal",
+                                            }
+                                        ],
+                                        "totalCalories": "320 kcal",
+                                    },
+                                    "confidenceLevel": "low",
+                                    "recommendationLevel": "needs_review",
+                                    "riskTags": ["needs_clarification"],
+                                    "adjustments": [],
+                                    "alternatives": [],
+                                    "isPersonalized": False,
+                                    "needsClarification": True,
+                                    "saveContainerKey": "chat_message:demo",
+                                    "containerType": "chat_message",
+                                    "analysisEligible": False,
+                                    "saveEligible": True,
+                                },
+                            },
+                        ),
+                    ]
+                }
+            )
+
+    def test_put_rejects_deleted_snapshot(self) -> None:
+        with self.assertRaises(ValidationError):
+            InsightsBasketSyncRequest.model_validate(
+                {
+                    "items": [
+                        build_basket_item(
+                            "basket-a",
+                            "2026-03-20",
+                            "101",
+                            "Deleted Entry",
+                            {"status": "deleted"},
+                        ),
+                    ]
+                }
+            )
+
 
 def build_basket_item(
     basket_id: str,
     analysis_date: str,
     entry_id: str,
     name: str,
+    snapshot_overrides: dict[str, object] | None = None,
 ) -> dict[str, object]:
     return {
         "basketId": basket_id,
         "analysisDate": analysis_date,
-        "snapshot": build_snapshot(entry_id, name),
+        "snapshot": build_snapshot(entry_id, name, snapshot_overrides),
     }
 
 
-def build_snapshot(entry_id: str, name: str) -> dict[str, object]:
-    return {
+def build_snapshot(
+    entry_id: str,
+    name: str,
+    overrides: dict[str, object] | None = None,
+) -> dict[str, object]:
+    payload = {
         "id": entry_id,
         "name": name,
         "description": f"{name} description",
@@ -154,6 +221,9 @@ def build_snapshot(entry_id: str, name: str) -> dict[str, object]:
             }
         ],
     }
+    if overrides:
+        payload.update(overrides)
+    return payload
 
 
 def _dump_response(model) -> dict[str, object]:

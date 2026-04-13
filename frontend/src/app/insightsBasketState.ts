@@ -80,6 +80,9 @@ export function autoSaveAnalysisBasket(
 ): void {
   const byDate: SavedAnalysisSelections = {};
   for (const item of basket) {
+    if (!isEntryAnalysisEligible(item)) {
+      continue;
+    }
     if (!byDate[item.analysisDate]) {
       byDate[item.analysisDate] = [];
     }
@@ -107,7 +110,7 @@ export function restoreAllAnalysisItems(
           ? snapshot
           : null
       );
-      if (!entry) continue;
+      if (!entry || !isEntryAnalysisEligible(entry)) continue;
       result.push({
         ...entry,
         basketId: createAnalysisBasketItemId(),
@@ -122,14 +125,16 @@ export function restoreAllAnalysisItems(
 export function serializeAnalysisBasketForSync(
   basket: AnalysisSelectionItem[],
 ): InsightsBasketItem[] {
-  return basket.map((item) => {
-    const { basketId, analysisDate, ...snapshot } = item;
-    return {
-      basketId,
-      analysisDate,
-      snapshot: snapshot as FoodLogEntry,
-    };
-  });
+  return basket
+    .filter((item) => isEntryAnalysisEligible(item))
+    .map((item) => {
+      const { basketId, analysisDate, ...snapshot } = item;
+      return {
+        basketId,
+        analysisDate,
+        snapshot: snapshot as FoodLogEntry,
+      };
+    });
 }
 
 export function restoreAnalysisItemsFromSyncedBasket(
@@ -141,7 +146,7 @@ export function restoreAnalysisItemsFromSyncedBasket(
 
   for (const item of items) {
     const entry = entriesById.get(item.snapshot.id) ?? item.snapshot;
-    if (!entry) continue;
+    if (!entry || !isEntryAnalysisEligible(entry)) continue;
     result.push({
       ...entry,
       basketId: item.basketId || createAnalysisBasketItemId(),
@@ -150,4 +155,15 @@ export function restoreAnalysisItemsFromSyncedBasket(
   }
 
   return result;
+}
+
+function isEntryAnalysisEligible(entry: FoodLogEntry): boolean {
+  if (entry.status !== 'active') {
+    return false;
+  }
+  const decisionCard = entry.decisionCard;
+  if (!decisionCard) {
+    return true;
+  }
+  return decisionCard.analysisEligible !== false;
 }

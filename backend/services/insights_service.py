@@ -78,6 +78,23 @@ class IncompleteDataError(InsightsServiceError):
         )
 
 
+class AnalysisEligibilityError(InsightsServiceError):
+    def __init__(self, blocked_ids: list[int] | None = None) -> None:
+        blocked_suffix = ""
+        if blocked_ids:
+            blocked_suffix = f" Blocked ids: {', '.join(str(item) for item in blocked_ids)}."
+        super().__init__(
+            code="INSIGHTS_ANALYSIS_NOT_ELIGIBLE",
+            status_code=422,
+            message=(
+                "Selected food log entries are not eligible for insights analysis."
+                f"{blocked_suffix}"
+            ),
+            user_message="所选条目中包含暂不可分析的已保存记录，请先补充信息后再加入分析。",
+            retryable=False,
+        )
+
+
 class AIConfigMissingError(InsightsServiceError):
     def __init__(self) -> None:
         super().__init__(
@@ -174,20 +191,63 @@ def _fetch_food_log_entries(
     try:
         if selected_log_ids:
             entries = []
+            blocked_ids: list[int] = []
             for log_id in selected_log_ids:
                 entry = get_food_log_by_id_record(conn, log_id, user_id)
                 if entry is not None:
+                    if not _is_food_log_analysis_eligible(entry):
+                        blocked_ids.append(log_id)
+                        continue
                     entries.append(entry)
+            if blocked_ids:
+                raise AnalysisEligibilityError(blocked_ids)
             return entries
 
-        return list_food_logs_by_user_record(
+        entries = list_food_logs_by_user_record(
             conn,
             user_id,
             date_from=date_start,
             date_to=date_end,
         )
+        return [
+            entry
+            for entry in entries
+            if _is_food_log_analysis_eligible(entry)
+        ]
     finally:
         conn.close()
+
+
+def _is_food_log_analysis_eligible(entry: dict[str, object]) -> bool:
+    raw_decision_card = entry.get("decision_card_json")
+    if not isinstance(raw_decision_card, str) or not raw_decision_card.strip():
+        return True
+
+    try:
+        payload = json.loads(raw_decision_card)
+    except (json.JSONDecodeError, TypeError):
+        return True
+
+    if not isinstance(payload, dict):
+        return True
+
+    eligibility_value = payload.get("analysisEligible")
+    if eligibility_value is None:
+        eligibility_value = payload.get("analysis_eligible")
+    if eligibility_value is None:
+        return True
+
+    if isinstance(eligibility_value, bool):
+        return eligibility_value
+    if isinstance(eligibility_value, (int, float)):
+        return bool(eligibility_value)
+    if isinstance(eligibility_value, str):
+        normalized = eligibility_value.strip().lower()
+        if normalized in {"false", "0", "no"}:
+            return False
+        if normalized in {"true", "1", "yes"}:
+            return True
+    return bool(eligibility_value)
 
 
 # ---------------------------------------------------------------------------

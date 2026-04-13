@@ -155,6 +155,14 @@ class InsightsBasketItem(BaseModel):
             raise ValueError("basketId cannot be empty")
         return normalized
 
+    @model_validator(mode="after")
+    def validate_snapshot_analysis_eligibility(self) -> "InsightsBasketItem":
+        if self.snapshot.status != "active":
+            raise ValueError("snapshot must reference an active food log entry")
+        if self.snapshot.decision_card is not None and not self.snapshot.decision_card.analysis_eligible:
+            raise ValueError("snapshot decision card is not analysis eligible")
+        return self
+
 
 class InsightsBasketSyncRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="forbid")

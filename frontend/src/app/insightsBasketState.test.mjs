@@ -85,6 +85,75 @@ test('serializeAnalysisBasketForSync and restoreAnalysisItemsFromSyncedBasket pr
   assert.equal(restored[0].calories, '350');
 });
 
+test('analysis basket helpers ignore ineligible or deleted snapshots', () => {
+  const cleanup = installMockWindow();
+  try {
+    const eligibleEntry = buildEntry('101', 'Oatmeal');
+    const ineligibleEntry = buildEntry('202', 'Needs Clarification', {
+      decisionCard: {
+        analysisEligible: false,
+      },
+    });
+    const deletedEntry = buildEntry('303', 'Deleted Item', {
+      status: 'deleted',
+    });
+
+    autoSaveAnalysisBasket('user-3', [
+      {
+        ...eligibleEntry,
+        basketId: 'basket-a',
+        analysisDate: '2026-03-20',
+      },
+      {
+        ...ineligibleEntry,
+        basketId: 'basket-b',
+        analysisDate: '2026-03-20',
+      },
+      {
+        ...deletedEntry,
+        basketId: 'basket-c',
+        analysisDate: '2026-03-20',
+      },
+    ]);
+
+    const restored = restoreAllAnalysisItems('user-3', [eligibleEntry, ineligibleEntry, deletedEntry]);
+    assert.equal(restored.length, 1);
+    assert.equal(restored[0].id, '101');
+
+    const serialized = serializeAnalysisBasketForSync([
+      {
+        ...eligibleEntry,
+        basketId: 'basket-a',
+        analysisDate: '2026-03-20',
+      },
+      {
+        ...ineligibleEntry,
+        basketId: 'basket-b',
+        analysisDate: '2026-03-20',
+      },
+    ]);
+    assert.equal(serialized.length, 1);
+    assert.equal(serialized[0].snapshot.id, '101');
+
+    const restoredFromSync = restoreAnalysisItemsFromSyncedBasket([
+      {
+        basketId: 'basket-a',
+        analysisDate: '2026-03-20',
+        snapshot: eligibleEntry,
+      },
+      {
+        basketId: 'basket-b',
+        analysisDate: '2026-03-20',
+        snapshot: ineligibleEntry,
+      },
+    ], [eligibleEntry, ineligibleEntry]);
+    assert.equal(restoredFromSync.length, 1);
+    assert.equal(restoredFromSync[0].id, '101');
+  } finally {
+    cleanup();
+  }
+});
+
 function installMockWindow(initial = {}) {
   const previousWindow = globalThis.window;
   const storage = new Map(Object.entries(initial));
@@ -115,7 +184,7 @@ function installMockWindow(initial = {}) {
   };
 }
 
-function buildEntry(id, name) {
+function buildEntry(id, name, overrides = {}) {
   return {
     id,
     name,
@@ -135,5 +204,6 @@ function buildEntry(id, name) {
         energy: '320 kcal',
       },
     ],
+    ...overrides,
   };
 }

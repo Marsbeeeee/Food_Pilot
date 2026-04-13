@@ -85,7 +85,7 @@ function getSaveTarget(decisionCard) {
   return {
     title: '正式分类容器',
     detail: catalogLabel
-      ? `保存后会按 ${catalogLabel} 归档，便于在收藏夹继续回看和复用。`
+      ? `保存后会按 ${catalogLabel} 归档，便于在已保存记录中继续回看和复用。`
       : '保存后会进入正式分类容器，并保留当前识别到的分类标签。',
   };
 }
@@ -204,7 +204,7 @@ export function buildDecisionAnalysisAction(
     return {
       label: '保存并加入分析',
       disabled: false,
-      helperText: '会先保存到收藏夹，再加入今天的分析篮子。',
+      helperText: '会先保存到饮食记录，再加入今天的分析篮子。',
     };
   }
 
