@@ -136,6 +136,17 @@ class FoodLogApiTests(unittest.TestCase):
                 "status": "active",
                 "sourceType": "estimate_api",
                 "isManual": False,
+                "category": {
+                    "id": "dining",
+                    "name": "美食餐厅",
+                    "sortOrder": 999,
+                },
+                "brandGroup": {
+                    "id": "unknown_source",
+                    "name": "来源未明确",
+                    "type": "unknown_source",
+                    "sortOrder": 930,
+                },
                 "breakdown": [
                     {
                         "name": "Oats",
@@ -162,6 +173,60 @@ class FoodLogApiTests(unittest.TestCase):
         self.assertEqual(linked_entry["status"], "active")
         self.assertEqual(linked_entry["sourceType"], "chat_message")
         self.assertFalse(linked_entry["isManual"])
+        self.assertEqual(linked_entry["category"]["id"], "dining")
+        self.assertEqual(linked_entry["brandGroup"]["id"], "unknown_source")
+
+    def test_get_food_logs_exposes_stable_category_and_brand_group_from_decision_card(self) -> None:
+        create_food_log(
+            self.user_id,
+            "estimate_api",
+            meal_description="霸王茶姬 伯牙绝弦 大杯 三分糖",
+            result_title="霸王茶姬 伯牙绝弦",
+            result_description="标准糖度现制茶饮。",
+            total_calories="310 kcal",
+            ingredients=[
+                {
+                    "name": "奶茶",
+                    "portion": "1 杯",
+                    "energy": "310 kcal",
+                }
+            ],
+            decision_card_json=json.dumps(
+                {
+                    "inputSummary": "霸王茶姬 伯牙绝弦 大杯 三分糖",
+                    "normalizedProduct": {
+                        "categoryId": "tea_drink",
+                        "categoryName": "现制茶饮",
+                        "brandId": "chagee",
+                        "brandName": "霸王茶姬",
+                        "productName": "伯牙绝弦",
+                    },
+                    "nutritionEstimate": {
+                        "items": [{"name": "奶茶", "portion": "1 杯", "energy": "310 kcal"}],
+                        "totalCalories": "310 kcal",
+                    },
+                    "saveContainerKey": "estimate_api:test",
+                    "containerType": "estimate_api",
+                    "analysisEligible": True,
+                    "saveEligible": True,
+                },
+                ensure_ascii=False,
+            ),
+            logged_at="2026-03-14 10:00:00",
+            created_at="2026-03-14 10:00:00",
+        )
+
+        entries = list_food_log_entries(
+            filters=FoodLogListQuery(),
+            current_user=self.user,
+        )
+        payload = entries[0].model_dump(by_alias=True, exclude_none=True)
+
+        self.assertEqual(payload["category"]["id"], "coffee_tea")
+        self.assertEqual(payload["category"]["name"], "咖啡奶茶")
+        self.assertEqual(payload["brandGroup"]["id"], "chagee")
+        self.assertEqual(payload["brandGroup"]["name"], "霸王茶姬")
+        self.assertEqual(payload["brandGroup"]["type"], "brand")
 
     def test_get_food_logs_supports_session_limit_date_query_sort_source_and_image_filters(self) -> None:
         lunch_session = create_empty_session(self.user_id)

@@ -380,6 +380,23 @@ export interface FoodLogEntry {
   sessionId?: string;
   sourceMessageId?: string;
   decisionCard?: DecisionCard;
+  category?: FoodLogPrimaryCategory;
+  brandGroup?: FoodLogBrandGroup;
+}
+
+export interface FoodLogPrimaryCategory {
+  id: string;
+  name: string;
+  cover?: string;
+  sortOrder?: number;
+}
+
+export interface FoodLogBrandGroup {
+  id: string;
+  name: string;
+  type: 'brand' | 'no_brand' | 'small_shop' | 'unknown_source' | 'homemade' | string;
+  logo?: string;
+  sortOrder?: number;
 }
 
 export interface FoodLogListParams {

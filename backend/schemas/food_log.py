@@ -1,6 +1,7 @@
 import json
 import re
 from datetime import date, datetime
+from hashlib import sha1
 from typing import Literal
 
 from pydantic import (
@@ -31,6 +32,107 @@ MONTH_ABBREVIATIONS = (
     "Dec",
 )
 
+PRIMARY_CATEGORY_DEFINITIONS = (
+    {
+        "id": "coffee_tea",
+        "name": "咖啡奶茶",
+        "sort_order": 10,
+        "category_names": {"现制茶饮", "咖啡饮品", "通用饮品"},
+        "keywords": ("奶茶", "茶饮", "果茶", "咖啡", "拿铁", "美式", "摩卡", "澳白", "生椰"),
+    },
+    {
+        "id": "hot_pot",
+        "name": "火锅",
+        "sort_order": 20,
+        "category_names": {"火锅"},
+        "keywords": ("火锅", "串串", "冒菜", "毛肚", "鸭肠"),
+    },
+    {
+        "id": "dessert_bakery",
+        "name": "甜品蛋糕",
+        "sort_order": 30,
+        "category_names": {"甜品蛋糕"},
+        "keywords": ("蛋糕", "甜品", "布丁", "冰淇淋", "提拉米苏", "甜甜圈"),
+    },
+    {
+        "id": "japanese_food",
+        "name": "日式料理",
+        "sort_order": 40,
+        "category_names": {"日式料理"},
+        "keywords": ("寿司", "刺身", "日式", "丼", "乌冬", "天妇罗"),
+    },
+    {
+        "id": "western_food",
+        "name": "西餐",
+        "sort_order": 50,
+        "category_names": {"西式快餐", "轻食沙拉", "西餐"},
+        "keywords": ("汉堡", "薯条", "披萨", "意面", "牛排", "三明治", "沙拉"),
+    },
+    {
+        "id": "snack_meal",
+        "name": "小吃简餐",
+        "sort_order": 60,
+        "category_names": {"饭类主食", "面食主食", "小吃简餐"},
+        "keywords": ("盖饭", "炒饭", "拌饭", "米饭", "米线", "面", "粉", "拉面", "馄饨", "饺子", "黄焖鸡"),
+    },
+    {
+        "id": "bbq_grill",
+        "name": "烧烤烤肉",
+        "sort_order": 70,
+        "category_names": {"烧烤烤肉"},
+        "keywords": ("烧烤", "烤肉", "烤串", "bbq"),
+    },
+    {
+        "id": "korean_food",
+        "name": "韩式料理",
+        "sort_order": 80,
+        "category_names": {"韩式料理"},
+        "keywords": ("韩式", "石锅拌饭", "泡菜", "部队锅", "炸酱面"),
+    },
+    {
+        "id": "fresh_grocery",
+        "name": "食品生鲜",
+        "sort_order": 90,
+        "category_names": {"食品生鲜"},
+        "keywords": ("生鲜", "水果", "酸奶", "牛奶", "零食", "面包", "燕麦"),
+    },
+)
+
+DEFAULT_PRIMARY_CATEGORY = {
+    "id": "dining",
+    "name": "美食餐厅",
+    "sort_order": 999,
+}
+
+HOMEMADE_MARKERS = ("自制", "自家", "homemade", "home made")
+
+
+class FoodLogPrimaryCategoryOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    id: str
+    name: str
+    cover: str | None = None
+    sort_order: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("sort_order", "sortOrder"),
+        serialization_alias="sortOrder",
+    )
+
+
+class FoodLogBrandGroupOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    id: str
+    name: str
+    type: str
+    logo: str | None = None
+    sort_order: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("sort_order", "sortOrder"),
+        serialization_alias="sortOrder",
+    )
+
 
 class FoodLogEntryOut(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
@@ -57,6 +159,11 @@ class FoodLogEntryOut(BaseModel):
         default=None,
         validation_alias=AliasChoices("decision_card", "decisionCard"),
         serialization_alias="decisionCard",
+    )
+    category: FoodLogPrimaryCategoryOut
+    brand_group: FoodLogBrandGroupOut = Field(
+        validation_alias=AliasChoices("brand_group", "brandGroup"),
+        serialization_alias="brandGroup",
     )
     standard_dish_id: str | None = Field(
         default=None,
@@ -505,6 +612,11 @@ def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
     timestamp = _parse_timestamp(meal_occurred_at)
     breakdown = parse_food_log_items(entry["ingredients_json"])
     protein, carbs, fat = _sum_macros_from_items(breakdown)
+    decision_card = _deserialize_food_log_decision_card(entry.get("decision_card_json"))
+    category, brand_group = _resolve_food_log_hierarchy(
+        entry,
+        decision_card=decision_card,
+    )
 
     return FoodLogEntryOut.model_validate(
         {
@@ -543,7 +655,9 @@ def serialize_food_log_entry(entry: dict[str, object]) -> FoodLogEntryOut:
                 if entry.get("source_message_id") is not None
                 else None
             ),
-            "decision_card": _deserialize_food_log_decision_card(entry.get("decision_card_json")),
+            "decision_card": decision_card,
+            "category": category,
+            "brand_group": brand_group,
         }
     )
 
@@ -573,6 +687,155 @@ def _deserialize_food_log_decision_card(value: object) -> dict[str, object] | No
         return None
 
     return decision_card.model_dump(by_alias=True)
+
+
+def _resolve_food_log_hierarchy(
+    entry: dict[str, object],
+    *,
+    decision_card: dict[str, object] | None,
+) -> tuple[dict[str, object], dict[str, object]]:
+    normalized_product = _extract_normalized_product(decision_card)
+    category = _resolve_primary_category(entry, normalized_product=normalized_product)
+    brand_group = _resolve_brand_group(
+        entry,
+        normalized_product=normalized_product,
+        primary_category=category,
+    )
+    return category, brand_group
+
+
+def _extract_normalized_product(
+    decision_card: dict[str, object] | None,
+) -> dict[str, object]:
+    if not isinstance(decision_card, dict):
+        return {}
+
+    normalized_product = decision_card.get("normalizedProduct")
+    if not isinstance(normalized_product, dict):
+        normalized_product = decision_card.get("normalized_product")
+    return normalized_product if isinstance(normalized_product, dict) else {}
+
+
+def _resolve_primary_category(
+    entry: dict[str, object],
+    *,
+    normalized_product: dict[str, object],
+) -> dict[str, object]:
+    normalized_category_name = _normalize_optional_text(
+        normalized_product.get("categoryName") or normalized_product.get("category_name")
+    )
+    if normalized_category_name:
+        for definition in PRIMARY_CATEGORY_DEFINITIONS:
+            if normalized_category_name in definition["category_names"]:
+                return _build_primary_category_payload(definition)
+
+    combined_text = _build_food_log_hierarchy_text(entry, normalized_product=normalized_product)
+    combined_text_lower = combined_text.casefold()
+    for definition in PRIMARY_CATEGORY_DEFINITIONS:
+        if any(keyword.casefold() in combined_text_lower for keyword in definition["keywords"]):
+            return _build_primary_category_payload(definition)
+
+    return _build_primary_category_payload(DEFAULT_PRIMARY_CATEGORY)
+
+
+def _build_primary_category_payload(
+    definition: dict[str, object],
+) -> dict[str, object]:
+    return {
+        "id": str(definition["id"]),
+        "name": str(definition["name"]),
+        "sort_order": int(definition["sort_order"]),
+    }
+
+
+def _resolve_brand_group(
+    entry: dict[str, object],
+    *,
+    normalized_product: dict[str, object],
+    primary_category: dict[str, object],
+) -> dict[str, object]:
+    brand_name = _normalize_optional_text(
+        normalized_product.get("brandName") or normalized_product.get("brand_name")
+    )
+    brand_id = _normalize_optional_text(
+        normalized_product.get("brandId") or normalized_product.get("brand_id")
+    )
+    if brand_name:
+        resolved_brand_id = brand_id or f"brand:{_slugify_hierarchy_token(brand_name)}"
+        return {
+            "id": resolved_brand_id,
+            "name": brand_name,
+            "type": "brand",
+            "sort_order": 10,
+        }
+
+    combined_text = _build_food_log_hierarchy_text(entry, normalized_product=normalized_product)
+    combined_text_lower = combined_text.casefold()
+    if any(marker in combined_text_lower for marker in HOMEMADE_MARKERS):
+        return {
+            "id": "homemade",
+            "name": "自制餐食",
+            "type": "homemade",
+            "sort_order": 905,
+        }
+
+    if entry.get("source_type") == "manual":
+        return {
+            "id": "small_shop",
+            "name": "小店菜品",
+            "type": "small_shop",
+            "sort_order": 910,
+        }
+
+    if primary_category["id"] == DEFAULT_PRIMARY_CATEGORY["id"]:
+        return {
+            "id": "unknown_source",
+            "name": "来源未明确",
+            "type": "unknown_source",
+            "sort_order": 930,
+        }
+
+    return {
+        "id": "no_brand",
+        "name": "无品牌",
+        "type": "no_brand",
+        "sort_order": 920,
+    }
+
+
+def _build_food_log_hierarchy_text(
+    entry: dict[str, object],
+    *,
+    normalized_product: dict[str, object],
+) -> str:
+    parts = [
+        _normalize_optional_text(entry.get("meal_description")),
+        _normalize_optional_text(entry.get("result_title")),
+        _normalize_optional_text(entry.get("standard_dish_name")),
+        _normalize_optional_text(
+            normalized_product.get("productName") or normalized_product.get("product_name")
+        ),
+        _normalize_optional_text(
+            normalized_product.get("normalizedName") or normalized_product.get("normalized_name")
+        ),
+    ]
+    return " ".join(part for part in parts if part)
+
+
+def _normalize_optional_text(value: object) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _slugify_hierarchy_token(value: str) -> str:
+    normalized = value.strip().casefold()
+    normalized = re.sub(r"\s+", "_", normalized)
+    normalized = re.sub(r"[^\w\u4e00-\u9fff-]+", "", normalized)
+    if normalized:
+        return normalized
+    return sha1(value.encode("utf-8")).hexdigest()[:12]
 
 
 def parse_food_log_items(value: object) -> list[EstimateItem]:

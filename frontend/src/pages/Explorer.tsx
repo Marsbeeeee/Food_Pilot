@@ -7,6 +7,11 @@ import {
   formatSavedMoment,
 } from '../app/foodLogFavorites';
 import {
+  buildFoodLogHierarchy,
+  type FoodLogHierarchyBrandGroup,
+  type FoodLogHierarchyCategory,
+} from '../app/foodLogHierarchy';
+import {
   AnalysisSelectionItem,
   autoSaveAnalysisBasket,
   createAnalysisBasketItemId,
@@ -166,6 +171,8 @@ export const Explorer: React.FC<ExplorerProps> = ({
     || customMaxCalories.trim(),
   );
   const [selectedEntry, setSelectedEntry] = useState<FoodLogEntry | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedBrandGroupId, setSelectedBrandGroupId] = useState<string | null>(null);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
@@ -293,9 +300,30 @@ export const Explorer: React.FC<ExplorerProps> = ({
   }, [currentUserId, onInsightsCacheUpdateProp]);
 
   const collectionStats = buildFoodLogCollectionStats(logEntries);
+  const hierarchy = React.useMemo(
+    () => buildFoodLogHierarchy(filteredEntries),
+    [filteredEntries],
+  );
+  const selectedCategory = React.useMemo(
+    () => hierarchy.find((item) => item.id === selectedCategoryId) ?? null,
+    [hierarchy, selectedCategoryId],
+  );
+  const visibleBrandGroups = selectedCategory?.brands ?? [];
+  const selectedBrandGroup = React.useMemo(
+    () => visibleBrandGroups.find((item) => item.id === selectedBrandGroupId) ?? null,
+    [visibleBrandGroups, selectedBrandGroupId],
+  );
+  const visibleEntries = selectedBrandGroup?.entries ?? [];
+  const hierarchyLevel = selectedBrandGroup
+    ? 'items'
+    : selectedCategory
+      ? 'brands'
+      : 'categories';
 
   useEffect(() => {
     if (filteredEntries.length === 0) {
+      setSelectedCategoryId(null);
+      setSelectedBrandGroupId(null);
       setSelectedEntry(null);
       setIsMobileDetailOpen(false);
       setIsEditing(false);
@@ -304,14 +332,48 @@ export const Explorer: React.FC<ExplorerProps> = ({
       return;
     }
 
+    setSelectedEntry((current) => (
+      current
+        ? filteredEntries.find((entry) => entry.id === current.id) ?? null
+        : null
+    ));
+  }, [filteredEntries]);
+
+  useEffect(() => {
+    if (!selectedCategoryId) {
+      return;
+    }
+    if (hierarchy.some((item) => item.id === selectedCategoryId)) {
+      return;
+    }
+    setSelectedCategoryId(null);
+    setSelectedBrandGroupId(null);
+  }, [hierarchy, selectedCategoryId]);
+
+  useEffect(() => {
+    if (!selectedBrandGroupId) {
+      return;
+    }
+    if (visibleBrandGroups.some((item) => item.id === selectedBrandGroupId)) {
+      return;
+    }
+    setSelectedBrandGroupId(null);
+  }, [selectedBrandGroupId, visibleBrandGroups]);
+
+  useEffect(() => {
     setSelectedEntry((current) => {
       if (!current) {
         return null;
       }
-
-      return filteredEntries.find((entry) => entry.id === current.id) ?? null;
+      if (!selectedBrandGroup) {
+        return null;
+      }
+      return visibleEntries.find((entry) => entry.id === current.id) ?? null;
     });
-  }, [filteredEntries]);
+    if (!selectedBrandGroup) {
+      setIsMobileDetailOpen(false);
+    }
+  }, [selectedBrandGroup, visibleEntries]);
 
   const handleDeleteSelectedEntry = async () => {
     if (!selectedEntry || deletingEntryId) {
@@ -479,6 +541,39 @@ export const Explorer: React.FC<ExplorerProps> = ({
     setAnalysisBasket((current) => current.filter((item) => item.basketId !== basketId));
   };
 
+  const handleSelectCategory = (category: FoodLogHierarchyCategory) => {
+    setSelectedCategoryId(category.id);
+    setSelectedBrandGroupId(null);
+    setSelectedEntry(null);
+    setIsMobileDetailOpen(false);
+    setIsEditing(false);
+    setIsDeleteDialogOpen(false);
+    setEditDraft(null);
+  };
+
+  const handleSelectBrandGroup = (brandGroup: FoodLogHierarchyBrandGroup) => {
+    setSelectedBrandGroupId(brandGroup.id);
+    setSelectedEntry(null);
+    setIsMobileDetailOpen(false);
+    setIsEditing(false);
+    setIsDeleteDialogOpen(false);
+    setEditDraft(null);
+  };
+
+  const handleStepBack = () => {
+    if (selectedBrandGroupId) {
+      setSelectedBrandGroupId(null);
+      setSelectedEntry(null);
+      setIsMobileDetailOpen(false);
+      return;
+    }
+    if (selectedCategoryId) {
+      setSelectedCategoryId(null);
+      setSelectedEntry(null);
+      setIsMobileDetailOpen(false);
+    }
+  };
+
   const currentDayAnalysisItems = analysisBasket.filter(
     (item) => item.analysisDate === analysisDate,
   );
@@ -500,6 +595,413 @@ export const Explorer: React.FC<ExplorerProps> = ({
       />
     );
   }
+
+  return (
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#FFFDF5] lg:flex-row">
+      <main className="relative custom-scrollbar flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10 xl:px-12">
+        <div className="relative mx-auto w-full max-w-4xl pb-10">
+          <div className="mb-10 flex flex-col gap-3">
+            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#FF8A65]/70">
+              饮食记录
+            </span>
+            <h1 className="font-serif-brand text-[2.5rem] font-bold leading-[1.18] text-[#4A453E] md:text-[2.9rem]">
+              {getHierarchyHeadline(hierarchyLevel, selectedCategory, selectedBrandGroup)}
+            </h1>
+            <p className="max-w-2xl text-[15px] leading-8 text-[#4A453E]/60 md:text-[16px]">
+              {getHierarchyDescription(hierarchyLevel, selectedCategory, selectedBrandGroup)}
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <span className="rounded-full border border-[#FF8A65]/20 bg-[#FFF7F2] px-3 py-1 text-[11px] font-semibold text-[#FF8A65]">
+                本周更新 {collectionStats.updatedThisWeek} 条
+              </span>
+              <span className="rounded-full border border-[#4A453E]/10 bg-white/70 px-3 py-1 text-[11px] font-semibold text-[#4A453E]/55">
+                可回看原会话 {collectionStats.chatLinked} 条
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <FoodLogSearchToolbar
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              sort={listSort}
+              onSortChange={setListSort}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              onDateFromChange={setDateFrom}
+              onDateToChange={setDateTo}
+              caloriePreset={caloriePreset}
+              customMinCalories={customMinCalories}
+              customMaxCalories={customMaxCalories}
+              onCaloriePresetChange={(value) => {
+                setCaloriePreset(value);
+                setCustomMinCalories('');
+                setCustomMaxCalories('');
+              }}
+              onCustomMinCaloriesChange={(value) => {
+                setCustomMinCalories(value);
+              }}
+              onCustomMaxCaloriesChange={(value) => {
+                setCustomMaxCalories(value);
+              }}
+              hasActiveFilters={hasActiveFilters}
+              onClearFilters={() => {
+                setSearchQuery('');
+                setDateFrom('');
+                setDateTo('');
+                setListSort('created_desc');
+                setCaloriePreset('any');
+                setCustomMinCalories('');
+                setCustomMaxCalories('');
+              }}
+            />
+
+            {(selectedCategory || selectedBrandGroup) && (
+              <div className="flex items-center gap-3 px-1">
+                <button
+                  type="button"
+                  onClick={handleStepBack}
+                  className="inline-flex items-center gap-1 rounded-full border border-[#4A453E]/10 bg-white px-3 py-1.5 text-[11px] font-bold text-[#4A453E]/55 transition-all hover:border-[#FF8A65]/20 hover:text-[#FF8A65]"
+                >
+                  <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                  返回上一级
+                </button>
+                <div className="flex min-w-0 items-center gap-2 text-[11px] font-semibold text-[#4A453E]/45">
+                  <span>大类</span>
+                  {selectedCategory && (
+                    <>
+                      <span>/</span>
+                      <span className="truncate">{selectedCategory.name}</span>
+                    </>
+                  )}
+                  {selectedBrandGroup && (
+                    <>
+                      <span>/</span>
+                      <span className="truncate">{selectedBrandGroup.name}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[#4A453E]/30">
+                {hierarchyLevel === 'categories'
+                  ? '一级目录'
+                  : hierarchyLevel === 'brands'
+                    ? '品牌目录'
+                    : '菜品卡片'}
+              </h2>
+              <span className="text-[11px] font-semibold text-[#4A453E]/35">
+                {hierarchyLevel === 'categories'
+                  ? `共 ${hierarchy.length} 个大类`
+                  : hierarchyLevel === 'brands'
+                    ? `共 ${visibleBrandGroups.length} 个品牌分组`
+                    : `共 ${visibleEntries.length} 条记录`}
+              </span>
+            </div>
+
+            {filteredEntries.length === 0 ? (
+              <div className="rounded-[32px] border border-dashed border-[#4A453E]/10 bg-white/40 py-20 text-center">
+                <div className="mb-4 inline-flex size-16 items-center justify-center rounded-full bg-white">
+                  <span className="material-symbols-outlined text-4xl text-[#4A453E]/20">
+                    history_toggle_off
+                  </span>
+                </div>
+                <p className="text-base font-bold text-[#4A453E]/45">
+                  {logEntries.length === 0 ? '饮食记录中还没有内容。' : '当前筛选条件下没有匹配项。'}
+                </p>
+                <p className="mt-2 text-sm text-[#4A453E]/35">
+                  {logEntries.length === 0
+                    ? '先保存一条分析结果。饮食记录只保留你主动选择保存的结果。'
+                    : '试试更宽泛的关键词、日期范围或筛选条件。'}
+                </p>
+              </div>
+            ) : hierarchyLevel === 'categories' ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {hierarchy.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => handleSelectCategory(category)}
+                    className="group rounded-[28px] border border-[#E7DED0] bg-[#FFFEFB] p-6 text-left shadow-[0_16px_34px_rgba(74,69,62,0.07)] transition-all hover:-translate-y-0.5 hover:border-[#FF8A65]/25 hover:shadow-[0_20px_42px_rgba(255,138,101,0.12)]"
+                  >
+                    <div className="mb-6 flex items-start justify-between gap-4">
+                      <div className="inline-flex size-14 items-center justify-center rounded-[18px] bg-[#FFF2EC] text-[#FF8A65]">
+                        <span className="text-xl font-bold">{category.name.slice(0, 2)}</span>
+                      </div>
+                      <span className="rounded-full bg-[#F7F3E9] px-3 py-1 text-[11px] font-semibold text-[#4A453E]/50">
+                        {category.itemCount} 条
+                      </span>
+                    </div>
+                    <h3 className="text-xl font-bold text-[#4A453E] transition-colors group-hover:text-[#FF8A65]">
+                      {category.name}
+                    </h3>
+                    <p className="mt-3 text-sm leading-7 text-[#4A453E]/55">
+                      继续按品牌查看这个大类下的保存记录。
+                    </p>
+                    <div className="mt-6 flex items-center justify-between text-[11px] font-semibold text-[#4A453E]/40">
+                      <span>{category.brands.length} 个品牌分组</span>
+                      <span className="inline-flex items-center gap-1 text-[#FF8A65]">
+                        进入
+                        <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : hierarchyLevel === 'brands' ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {visibleBrandGroups.map((brandGroup) => (
+                  <button
+                    key={brandGroup.id}
+                    type="button"
+                    onClick={() => handleSelectBrandGroup(brandGroup)}
+                    className="group flex items-center gap-4 rounded-[28px] border border-[#E7DED0] bg-[#FFFEFB] px-5 py-5 text-left shadow-[0_16px_34px_rgba(74,69,62,0.07)] transition-all hover:border-[#FF8A65]/25 hover:bg-[#FFF8F3]"
+                  >
+                    <div className="flex size-14 shrink-0 items-center justify-center rounded-[18px] bg-[#F7F3E9] text-lg font-bold text-[#4A453E]/60">
+                      {brandGroup.name.slice(0, 2)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="truncate text-lg font-bold text-[#4A453E] transition-colors group-hover:text-[#FF8A65]">
+                          {brandGroup.name}
+                        </h3>
+                        <span className="rounded-full bg-[#FFF2EC] px-2.5 py-1 text-[10px] font-bold text-[#FF8A65]">
+                          {getBrandGroupLabel(brandGroup.type)}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm text-[#4A453E]/55">
+                        {brandGroup.itemCount} 条记录
+                      </p>
+                    </div>
+                    <span className="material-symbols-outlined text-[#4A453E]/25 transition-colors group-hover:text-[#FF8A65]">
+                      arrow_forward
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-[28px] border border-[#E7DED0] bg-[#FFFEFB] shadow-[0_16px_34px_rgba(74,69,62,0.09)]">
+                {visibleEntries.map((entry, index) => {
+                  const isActive = selectedEntry?.id === entry.id;
+                  const savedMoment = formatSavedMoment(entry.savedAt);
+                  const canAddToAnalysis = canAddFoodLogToAnalysis(entry);
+
+                  return (
+                    <div
+                      key={entry.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleSelectEntry(entry)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          handleSelectEntry(entry);
+                        }
+                      }}
+                      className={`group flex w-full cursor-pointer flex-col gap-4 px-4 py-4 text-left transition-colors md:flex-row md:items-center md:gap-4 md:px-5 ${
+                        index < visibleEntries.length - 1 ? 'border-b border-[#ECE3D5]' : ''
+                      } ${
+                        isActive
+                          ? 'bg-[#FFF4EC]'
+                          : 'bg-transparent hover:bg-[#F7F3E9]'
+                      }`}
+                    >
+                      <div className="mb-2 h-40 w-full overflow-hidden rounded-[16px] border border-[#E7DDD0] bg-[#F8F2E8] md:mb-0 md:h-14 md:w-14 md:shrink-0">
+                        <FoodLogImage
+                          src={entry.image}
+                          alt={entry.name}
+                          compact
+                          className="h-full w-full object-cover transition-all group-hover:scale-[1.02]"
+                        />
+                      </div>
+
+                      <div className="min-w-0 flex-1 md:px-5">
+                        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-[#4A453E]/36">
+                          {savedMoment.date} / {savedMoment.time}
+                        </p>
+                        <h4 className="truncate text-lg font-bold text-[#4A453E]">{entry.name}</h4>
+                        <p className="mt-1 truncate text-xs text-[#4A453E]/55">{entry.description}</p>
+                      </div>
+
+                      <div className="mt-2 flex items-center justify-between gap-3 md:mt-0 md:gap-4">
+                        <div className="flex min-w-[88px] flex-col items-start md:items-end">
+                          <div className="flex items-baseline gap-1">
+                            <span className="font-serif-brand text-2xl font-bold text-[#4A453E]">
+                              {formatCalories(entry.calories)}
+                            </span>
+                            <span className="text-[10px] font-bold uppercase text-[#4A453E]/35">
+                              kcal
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleAddToAnalysis(entry);
+                          }}
+                          disabled={!canAddToAnalysis}
+                          className={`flex size-10 items-center justify-center rounded-full transition-all ${
+                            canAddToAnalysis
+                              ? 'bg-[#FFF2EC] text-[#FF8A65] hover:scale-[1.03] hover:bg-[#FF8A65] hover:text-white'
+                              : 'cursor-not-allowed bg-[#4A453E]/8 text-[#4A453E]/25'
+                          }`}
+                          title="添加到今日分析"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">add</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {selectedEntry && (
+        <>
+          <aside className="hidden min-h-0 bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.02)] lg:flex lg:w-[400px] lg:shrink-0 lg:border-l lg:border-[#4A453E]/05 xl:w-[450px]">
+            <SelectedEntryPanel
+              entry={selectedEntry}
+              isEditing={isEditing}
+              editDraft={editDraft}
+              isSavingEdit={isSavingEdit}
+              isDeleting={deletingEntryId === selectedEntry.id}
+              onClose={() => {
+                setSelectedEntry(null);
+                setIsEditing(false);
+                setIsDeleteDialogOpen(false);
+                setEditDraft(null);
+              }}
+              onEdit={handleOpenEditModal}
+              onCancelEdit={handleCloseEditModal}
+              onSaveEdit={() => void handleSaveEdit()}
+              onIngredientGramsChange={handleIngredientGramsChange}
+              onDelete={() => setIsDeleteDialogOpen(true)}
+              onOpenChat={() => selectedEntry.sessionId && onNavigateToSession(selectedEntry.sessionId)}
+              onAddToAnalysis={() => handleAddToAnalysis(selectedEntry)}
+            />
+          </aside>
+
+          {isMobileDetailOpen && (
+            <div
+              className="fixed inset-0 z-[90] bg-[#4A453E]/18 px-4 pb-4 pt-20 lg:hidden"
+              onClick={() => setIsMobileDetailOpen(false)}
+            >
+              <div
+                className="mx-auto flex h-full w-full max-w-3xl overflow-hidden rounded-[32px] border border-[#4A453E]/8 bg-white shadow-[0_32px_90px_rgba(74,69,62,0.18)]"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <SelectedEntryPanel
+                  entry={selectedEntry}
+                  isEditing={isEditing}
+                  editDraft={editDraft}
+                  isSavingEdit={isSavingEdit}
+                  isDeleting={deletingEntryId === selectedEntry.id}
+                  onClose={() => {
+                    setIsMobileDetailOpen(false);
+                    setIsEditing(false);
+                    setIsDeleteDialogOpen(false);
+                    setEditDraft(null);
+                  }}
+                  onEdit={handleOpenEditModal}
+                  onCancelEdit={handleCloseEditModal}
+                  onSaveEdit={() => void handleSaveEdit()}
+                  onIngredientGramsChange={handleIngredientGramsChange}
+                  onDelete={() => setIsDeleteDialogOpen(true)}
+                  onOpenChat={() => selectedEntry.sessionId && onNavigateToSession(selectedEntry.sessionId)}
+                  onAddToAnalysis={() => handleAddToAnalysis(selectedEntry)}
+                />
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {currentDayAnalysisItems.length > 0 && !selectedEntry && (
+        <button
+          type="button"
+          onClick={() => {
+            onNavigateToInsights?.();
+            setShowAnalysisView(true);
+          }}
+          className="fixed bottom-6 right-6 z-[120] flex h-12 w-12 items-center justify-center rounded-full bg-[#FF8A65] text-white shadow-[0_14px_40px_rgba(255,138,101,0.35)] transition-all hover:scale-[1.03] hover:bg-[#FF7A50]"
+          title="打开今日分析"
+        >
+          <div className="relative flex items-center justify-center">
+            <span className="material-symbols-outlined text-[22px] leading-none">pie_chart</span>
+            <span className="absolute -right-4 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-[#FF8A65] bg-white px-1 text-[9px] font-bold text-[#FF8A65]">
+              {currentDayAnalysisItems.length}
+            </span>
+          </div>
+        </button>
+      )}
+
+      {undoableDeletedEntry && (
+        <div className="pointer-events-none fixed bottom-6 left-1/2 z-[110] w-full max-w-xl -translate-x-1/2 px-6">
+          <div className="pointer-events-auto flex items-center justify-between gap-4 rounded-[24px] border border-[#4A453E]/10 bg-white px-5 py-4 shadow-[0_20px_60px_rgba(74,69,62,0.15)]">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-[#4A453E]">
+                已从饮食记录移除
+              </p>
+              <p className="mt-1 text-xs leading-5 text-[#4A453E]/55">
+                {undoableDeletedEntry.name} 已被软删除。聊天关联与审计信息仍可恢复。
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setUndoableDeletedEntry(null)}
+                disabled={Boolean(restoringEntryId)}
+                className="rounded-full border border-[#4A453E]/10 px-3 py-2 text-xs font-bold text-[#4A453E]/55 transition-colors hover:bg-[#F7F3E9] disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                关闭
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleUndoDelete()}
+                disabled={Boolean(restoringEntryId)}
+                className={`rounded-full px-3 py-2 text-xs font-bold text-white transition-colors ${
+                  restoringEntryId
+                    ? 'cursor-wait bg-[#4A453E]/25'
+                    : 'bg-[#FF8A65] hover:bg-[#FF8A65]/90'
+                }`}
+              >
+                {restoringEntryId ? '恢复中...' : '撤销删除'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={Boolean(selectedEntry) && isDeleteDialogOpen}
+        title="移除这条记录？"
+        description={(
+          <>
+            <span className="font-bold text-[#4A453E]">
+              {selectedEntry?.name ?? '这条已保存记录'}
+            </span>{' '}
+            将从饮食记录中移除，但之后仍可在新的分析里再次保存。
+          </>
+        )}
+        confirmLabel={deletingEntryId ? '移除中...' : '移除记录'}
+        icon="delete"
+        isConfirming={Boolean(deletingEntryId)}
+        onClose={() => {
+          if (!deletingEntryId) {
+            setIsDeleteDialogOpen(false);
+          }
+        }}
+        onConfirm={() => void handleDeleteSelectedEntry()}
+      />
+    </div>
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#FFFDF5] lg:flex-row">
@@ -801,6 +1303,50 @@ export const Explorer: React.FC<ExplorerProps> = ({
     </div>
   );
 };
+
+function getHierarchyHeadline(
+  level: 'categories' | 'brands' | 'items',
+  category: FoodLogHierarchyCategory | null,
+  brandGroup: FoodLogHierarchyBrandGroup | null,
+): string {
+  if (level === 'items' && brandGroup) {
+    return brandGroup.name;
+  }
+  if (level === 'brands' && category) {
+    return category.name;
+  }
+  return '收藏夹';
+}
+
+function getHierarchyDescription(
+  level: 'categories' | 'brands' | 'items',
+  category: FoodLogHierarchyCategory | null,
+  brandGroup: FoodLogHierarchyBrandGroup | null,
+): string {
+  if (level === 'items' && brandGroup) {
+    return `当前展示 ${brandGroup.name} 下面的菜品卡片，详情区继续复用原有记录卡片和编辑能力。`;
+  }
+  if (level === 'brands' && category) {
+    return `先从 ${category.name} 里挑一个品牌分组，再进入第三层查看具体菜品卡片。`;
+  }
+  return '这里收着你主动保存的餐食分析。现在先按通用大类浏览，再进入品牌和具体菜品，回看路径比原来的平铺列表更清晰。';
+}
+
+function getBrandGroupLabel(type: string): string {
+  if (type === 'brand') {
+    return '品牌';
+  }
+  if (type === 'small_shop') {
+    return '小店';
+  }
+  if (type === 'homemade') {
+    return '自制';
+  }
+  if (type === 'unknown_source') {
+    return '待归类';
+  }
+  return '兜底';
+}
 
 type AnalysisState =
   | { status: 'idle' }
