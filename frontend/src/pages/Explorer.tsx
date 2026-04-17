@@ -87,6 +87,201 @@ interface FoodLogEditDraft {
   originalIngredients: IngredientResult[];
 }
 
+interface FoodLogCategoryVisualSpec {
+  subtitle: string;
+  background: string;
+  overlayTint: string;
+  mockScene:
+    | 'feast'
+    | 'plate'
+    | 'noodles'
+    | 'drink'
+    | 'grill'
+    | 'burger'
+    | 'hotpot'
+    | 'dessert'
+    | 'salad'
+    | 'grocery'
+    | 'assorted';
+  mockPalette: {
+    bgTop: string;
+    bgBottom: string;
+    surface: string;
+    primary: string;
+    secondary: string;
+    highlight: string;
+  };
+  fallbackIcons: string[];
+}
+
+const FOOD_LOG_CATEGORY_VISUALS: Record<string, FoodLogCategoryVisualSpec> = {
+  all_food: {
+    subtitle: '总览全部已保存饮食',
+    background: 'linear-gradient(135deg, #E9CBA5 0%, #D49858 48%, #8C6239 100%)',
+    overlayTint: 'rgba(101, 64, 28, 0.58)',
+    mockScene: 'feast',
+    mockPalette: {
+      bgTop: '#F8E5CC',
+      bgBottom: '#C8894F',
+      surface: '#F8F3EA',
+      primary: '#B96A2F',
+      secondary: '#7C4C2D',
+      highlight: '#E6B86A',
+    },
+    fallbackIcons: ['restaurant', 'local_cafe', 'bakery_dining', 'ramen_dining'],
+  },
+  beverage: {
+    subtitle: '奶茶 咖啡 果茶',
+    background: 'linear-gradient(135deg, #E7C7A7 0%, #D78F62 42%, #8C4E35 100%)',
+    overlayTint: 'rgba(109, 59, 37, 0.58)',
+    mockScene: 'drink',
+    mockPalette: {
+      bgTop: '#F6E0CE',
+      bgBottom: '#C47A52',
+      surface: '#FFF8F1',
+      primary: '#A95A2A',
+      secondary: '#5A311F',
+      highlight: '#E9C27E',
+    },
+    fallbackIcons: ['local_cafe', 'emoji_food_beverage', 'wine_bar', 'local_bar'],
+  },
+  regional_chinese: {
+    subtitle: '川湘粤与地方风味',
+    background: 'linear-gradient(135deg, #D4C08A 0%, #B77D42 45%, #7E4B25 100%)',
+    overlayTint: 'rgba(95, 56, 23, 0.58)',
+    mockScene: 'plate',
+    mockPalette: {
+      bgTop: '#EFE1BD',
+      bgBottom: '#A86A36',
+      surface: '#FBF6EE',
+      primary: '#B5522B',
+      secondary: '#5B7D3C',
+      highlight: '#E6A956',
+    },
+    fallbackIcons: ['set_meal', 'skillet', 'room_service', 'lunch_dining'],
+  },
+  international_cuisine: {
+    subtitle: '日料 韩餐 西餐',
+    background: 'linear-gradient(135deg, #E3D0B5 0%, #C69768 50%, #926747 100%)',
+    overlayTint: 'rgba(92, 63, 38, 0.56)',
+    mockScene: 'noodles',
+    mockPalette: {
+      bgTop: '#F0E2CF',
+      bgBottom: '#B88760',
+      surface: '#FBF7F2',
+      primary: '#D59A4D',
+      secondary: '#6A7B3F',
+      highlight: '#C34F3D',
+    },
+    fallbackIcons: ['ramen_dining', 'tempura', 'lunch_dining', 'dinner_dining'],
+  },
+  bbq_grill: {
+    subtitle: '烤串 烤肉 BBQ',
+    background: 'linear-gradient(135deg, #E5B47A 0%, #C97B38 46%, #6C3C22 100%)',
+    overlayTint: 'rgba(88, 45, 22, 0.62)',
+    mockScene: 'grill',
+    mockPalette: {
+      bgTop: '#F0D1A4',
+      bgBottom: '#9B562E',
+      surface: '#59433B',
+      primary: '#CB6B37',
+      secondary: '#7A2E1E',
+      highlight: '#F1C56B',
+    },
+    fallbackIcons: ['outdoor_grill', 'skillet', 'local_fire_department', 'set_meal'],
+  },
+  fast_food_snack: {
+    subtitle: '汉堡 盖饭 面食',
+    background: 'linear-gradient(135deg, #E8C98F 0%, #C98E47 44%, #8B5A2A 100%)',
+    overlayTint: 'rgba(101, 64, 28, 0.6)',
+    mockScene: 'burger',
+    mockPalette: {
+      bgTop: '#F6DFB8',
+      bgBottom: '#C07A35',
+      surface: '#FFF7EC',
+      primary: '#BC6E2F',
+      secondary: '#5F9B4A',
+      highlight: '#F0C35D',
+    },
+    fallbackIcons: ['lunch_dining', 'ramen_dining', 'fastfood', 'takeout_dining'],
+  },
+  hot_pot: {
+    subtitle: '锅底 配菜 热气',
+    background: 'linear-gradient(135deg, #D7A27A 0%, #B55B34 42%, #6D271D 100%)',
+    overlayTint: 'rgba(96, 33, 25, 0.64)',
+    mockScene: 'hotpot',
+    mockPalette: {
+      bgTop: '#E8C1A5',
+      bgBottom: '#A4442D',
+      surface: '#5C3A34',
+      primary: '#B24C2E',
+      secondary: '#6C8C49',
+      highlight: '#F0C56D',
+    },
+    fallbackIcons: ['soup_kitchen', 'local_fire_department', 'set_meal', 'skillet'],
+  },
+  bakery_dessert: {
+    subtitle: '蛋糕 面包 甜点',
+    background: 'linear-gradient(135deg, #F0DDC0 0%, #DDB37C 45%, #AA7C46 100%)',
+    overlayTint: 'rgba(118, 82, 41, 0.52)',
+    mockScene: 'dessert',
+    mockPalette: {
+      bgTop: '#F7EAD8',
+      bgBottom: '#D3A06A',
+      surface: '#FFF8F0',
+      primary: '#E7B27A',
+      secondary: '#B56A47',
+      highlight: '#FFF0C7',
+    },
+    fallbackIcons: ['bakery_dining', 'cake', 'icecream', 'emoji_food_beverage'],
+  },
+  light_salad: {
+    subtitle: '沙拉 轻食 健身餐',
+    background: 'linear-gradient(135deg, #D7D6A6 0%, #A6A05A 42%, #6A6934 100%)',
+    overlayTint: 'rgba(73, 76, 33, 0.54)',
+    mockScene: 'salad',
+    mockPalette: {
+      bgTop: '#E7E7BC',
+      bgBottom: '#8F8C4B',
+      surface: '#F7F6EE',
+      primary: '#6FA24E',
+      secondary: '#E6A84C',
+      highlight: '#CFE3A2',
+    },
+    fallbackIcons: ['nutrition', 'lunch_dining', 'egg_alt', 'eco'],
+  },
+  grocery_snack: {
+    subtitle: '水果 酸奶 坚果',
+    background: 'linear-gradient(135deg, #F0D2A5 0%, #D69A58 45%, #95622F 100%)',
+    overlayTint: 'rgba(104, 67, 31, 0.54)',
+    mockScene: 'grocery',
+    mockPalette: {
+      bgTop: '#F7DFC0',
+      bgBottom: '#C58343',
+      surface: '#F6E8D5',
+      primary: '#E79D45',
+      secondary: '#8DB34A',
+      highlight: '#D85D49',
+    },
+    fallbackIcons: ['grocery', 'nutrition', 'shopping_basket', 'cookie'],
+  },
+  other: {
+    subtitle: '暂未归入明确类目',
+    background: 'linear-gradient(135deg, #D9CFC1 0%, #A89986 45%, #695C4E 100%)',
+    overlayTint: 'rgba(76, 68, 59, 0.54)',
+    mockScene: 'assorted',
+    mockPalette: {
+      bgTop: '#E9E0D5',
+      bgBottom: '#9A8A77',
+      surface: '#F6F2ED',
+      primary: '#A97352',
+      secondary: '#7B6956',
+      highlight: '#D5B48A',
+    },
+    fallbackIcons: ['category', 'restaurant_menu', 'inventory_2', 'more_horiz'],
+  },
+};
+
 function getSelectedLogIdsForAnalysis(
   analyzeItems: AnalysisSelectionItem[],
   logEntryIds: Set<string>,
@@ -718,34 +913,51 @@ export const Explorer: React.FC<ExplorerProps> = ({
                 </p>
               </div>
             ) : hierarchyLevel === 'categories' ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {hierarchy.map((category) => (
                   <button
                     key={category.id}
                     type="button"
                     onClick={() => handleSelectCategory(category)}
-                    className="group rounded-[28px] border border-[#E7DED0] bg-[#FFFEFB] p-6 text-left shadow-[0_16px_34px_rgba(74,69,62,0.07)] transition-all hover:-translate-y-0.5 hover:border-[#FF8A65]/25 hover:shadow-[0_20px_42px_rgba(255,138,101,0.12)]"
+                    className="group overflow-hidden rounded-[30px] border border-[#E7DED0] bg-[#FFFEFB] text-left shadow-[0_16px_34px_rgba(74,69,62,0.08)] transition-all duration-300 hover:-translate-y-1 hover:border-[#FF8A65]/28 hover:shadow-[0_24px_48px_rgba(255,138,101,0.14)]"
                   >
-                    <div className="mb-6 flex items-start justify-between gap-4">
-                      <div className="inline-flex size-14 items-center justify-center rounded-[18px] bg-[#FFF2EC] text-[#FF8A65]">
-                        <span className="text-xl font-bold">{category.name.slice(0, 2)}</span>
+                    <div className="relative aspect-square overflow-hidden bg-[#F4EBDD]">
+                      <FoodLogCategoryShowcase category={category} />
+                      <div
+                        className="pointer-events-none absolute inset-0 opacity-100"
+                        style={{
+                          background: `linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.03) 30%, rgba(255,255,255,0.08) 46%, ${getFoodLogCategoryVisualSpec(category.id).overlayTint} 78%, ${getFoodLogCategoryVisualSpec(category.id).overlayTint} 100%)`,
+                        }}
+                      />
+                      <div
+                        className="pointer-events-none absolute inset-x-[-2%] bottom-[-4%] h-[54%] opacity-100 blur-[24px]"
+                        style={{
+                          background:
+                            'linear-gradient(180deg, rgba(255,255,255,0.00) 0%, rgba(255,255,255,0.02) 16%, rgba(255,255,255,0.08) 30%, rgba(255,255,255,0.18) 46%, rgba(255,255,255,0.34) 64%, rgba(255,255,255,0.50) 82%, rgba(255,255,255,0.62) 100%)',
+                          WebkitMaskImage:
+                            'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.10) 16%, rgba(0,0,0,0.36) 30%, rgba(0,0,0,0.72) 46%, #000 62%, #000 100%)',
+                          maskImage:
+                            'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.10) 16%, rgba(0,0,0,0.36) 30%, rgba(0,0,0,0.72) 46%, #000 62%, #000 100%)',
+                        }}
+                      />
+                      <div className="absolute inset-x-0 top-0 flex items-start justify-between p-3">
+                        <span className="rounded-full border border-white/22 bg-black/12 px-2.5 py-1 text-[10px] font-semibold text-white/92 backdrop-blur-sm">
+                          {category.itemCount} 条
+                        </span>
+                        <span className="rounded-full border border-white/16 bg-white/12 px-2.5 py-1 text-[10px] font-semibold text-white/88 backdrop-blur-sm">
+                          {category.brands.length} 组
+                        </span>
                       </div>
-                      <span className="rounded-full bg-[#F7F3E9] px-3 py-1 text-[11px] font-semibold text-[#4A453E]/50">
-                        {category.itemCount} 条
-                      </span>
-                    </div>
-                    <h3 className="text-xl font-bold text-[#4A453E] transition-colors group-hover:text-[#FF8A65]">
-                      {category.name}
-                    </h3>
-                    <p className="mt-3 text-sm leading-7 text-[#4A453E]/55">
-                      继续按品牌查看这个大类下的保存记录。
-                    </p>
-                    <div className="mt-6 flex items-center justify-between text-[11px] font-semibold text-[#4A453E]/40">
-                      <span>{category.brands.length} 个品牌分组</span>
-                      <span className="inline-flex items-center gap-1 text-[#FF8A65]">
-                        进入
-                        <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                      </span>
+                      <div className="absolute inset-x-0 bottom-0 p-4 md:p-5">
+                        <div className="px-1 pb-1">
+                          <h3 className="text-[1.45rem] font-bold leading-none tracking-[-0.03em] text-white drop-shadow-[0_4px_14px_rgba(0,0,0,0.34)] md:text-[1.6rem]">
+                            {category.name}
+                          </h3>
+                          <p className="mt-3 text-[11px] font-semibold tracking-[0.04em] text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.24)] md:text-xs">
+                            {getFoodLogCategoryVisualSpec(category.id).subtitle}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -1347,6 +1559,54 @@ function getBrandGroupLabel(type: string): string {
   }
   return '兜底';
 }
+
+function getFoodLogCategoryVisualSpec(categoryId: string): FoodLogCategoryVisualSpec {
+  return FOOD_LOG_CATEGORY_VISUALS[categoryId] ?? FOOD_LOG_CATEGORY_VISUALS.other;
+}
+
+function getFoodLogCategoryPreviewImage(category: FoodLogHierarchyCategory): string | undefined {
+  for (const brand of category.brands) {
+    for (const entry of brand.entries) {
+      if (entry.image) {
+        return entry.image;
+      }
+    }
+  }
+  return undefined;
+}
+
+const FoodLogCategoryShowcase: React.FC<{ category: FoodLogHierarchyCategory }> = ({
+  category,
+}) => {
+  const visual = getFoodLogCategoryVisualSpec(category.id);
+  const previewImage = getFoodLogCategoryPreviewImage(category);
+
+  if (previewImage) {
+    return (
+      <div className="absolute inset-0">
+        <FoodLogImage
+          src={previewImage}
+          alt={category.name}
+          compact
+          className="h-full w-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="absolute inset-0" style={{ background: visual.background }}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.32),transparent_44%)]" />
+      <div className="absolute inset-x-[16%] top-[18%] bottom-[24%] overflow-hidden rounded-[28px] border border-white/20 bg-white/12 shadow-[0_18px_30px_rgba(44,32,19,0.18)] backdrop-blur-[3px]">
+        <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(180deg,rgba(255,255,255,0.26),rgba(255,255,255,0.04))]">
+          <span className="material-symbols-outlined text-[3.2rem] text-white/92 drop-shadow-[0_4px_10px_rgba(0,0,0,0.18)]">
+            {visual.fallbackIcons[0] ?? 'restaurant'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 type AnalysisState =
   | { status: 'idle' }

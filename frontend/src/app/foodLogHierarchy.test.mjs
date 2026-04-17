@@ -12,7 +12,7 @@ test('buildFoodLogHierarchy groups entries by category then brand group', () => 
       calories: '280',
       savedAt: '2026-04-14 10:00:00',
       mealOccurredAt: '2026-04-14 10:00:00',
-      category: { id: 'coffee_tea', name: '咖啡奶茶', sortOrder: 10 },
+      category: { id: 'beverage', name: '饮品', sortOrder: 10 },
       brandGroup: { id: 'brand:luckin', name: '瑞幸', type: 'brand', sortOrder: 10 },
       breakdown: [],
     },
@@ -23,7 +23,7 @@ test('buildFoodLogHierarchy groups entries by category then brand group', () => 
       calories: '310',
       savedAt: '2026-04-14 11:00:00',
       mealOccurredAt: '2026-04-14 11:00:00',
-      category: { id: 'coffee_tea', name: '咖啡奶茶', sortOrder: 10 },
+      category: { id: 'beverage', name: '饮品', sortOrder: 10 },
       brandGroup: { id: 'brand:luckin', name: '瑞幸', type: 'brand', sortOrder: 10 },
       breakdown: [],
     },
@@ -34,21 +34,27 @@ test('buildFoodLogHierarchy groups entries by category then brand group', () => 
       calories: '520',
       savedAt: '2026-04-14 12:00:00',
       mealOccurredAt: '2026-04-14 12:00:00',
-      category: { id: 'snack_meal', name: '小吃简餐', sortOrder: 60 },
+      category: { id: 'fast_food_snack', name: '小吃快餐', sortOrder: 80 },
       brandGroup: { id: 'no_brand', name: '无品牌', type: 'no_brand', sortOrder: 920 },
       breakdown: [],
     },
   ]);
 
-  assert.equal(hierarchy.length, 2);
-  assert.equal(hierarchy[0].name, '咖啡奶茶');
-  assert.equal(hierarchy[0].itemCount, 2);
-  assert.equal(hierarchy[0].brands.length, 1);
+  assert.equal(hierarchy.length, 3);
+  assert.equal(hierarchy[0].id, 'all_food');
+  assert.equal(hierarchy[0].name, '全部饮食');
+  assert.equal(hierarchy[0].itemCount, 3);
+  assert.equal(hierarchy[0].brands.length, 2);
   assert.equal(hierarchy[0].brands[0].name, '瑞幸');
   assert.equal(hierarchy[0].brands[0].itemCount, 2);
-  assert.deepEqual(hierarchy[0].brands[0].entries.map((entry) => entry.id), ['1', '2']);
-  assert.equal(hierarchy[1].name, '小吃简餐');
-  assert.equal(hierarchy[1].brands[0].name, '无品牌');
+  assert.equal(hierarchy[1].name, '饮品');
+  assert.equal(hierarchy[1].itemCount, 2);
+  assert.equal(hierarchy[1].brands.length, 1);
+  assert.equal(hierarchy[1].brands[0].name, '瑞幸');
+  assert.equal(hierarchy[1].brands[0].itemCount, 2);
+  assert.deepEqual(hierarchy[1].brands[0].entries.map((entry) => entry.id), ['1', '2']);
+  assert.equal(hierarchy[2].name, '小吃快餐');
+  assert.equal(hierarchy[2].brands[0].name, '无品牌');
 });
 
 test('buildFoodLogHierarchy falls back to safe unknown buckets when hierarchy fields are missing', () => {
@@ -64,9 +70,10 @@ test('buildFoodLogHierarchy falls back to safe unknown buckets when hierarchy fi
     },
   ]);
 
-  assert.equal(hierarchy.length, 1);
-  assert.equal(hierarchy[0].id, 'dining');
+  assert.equal(hierarchy.length, 2);
+  assert.equal(hierarchy[0].id, 'all_food');
   assert.equal(hierarchy[0].brands.length, 1);
   assert.equal(hierarchy[0].brands[0].id, 'unknown_source');
-  assert.equal(hierarchy[0].brands[0].entries[0].name, 'Mystery Meal');
+  assert.equal(hierarchy[1].id, 'other');
+  assert.equal(hierarchy[1].brands[0].entries[0].name, 'Mystery Meal');
 });

@@ -15,9 +15,15 @@ export interface FoodLogHierarchyCategory extends FoodLogPrimaryCategory {
 }
 
 const DEFAULT_CATEGORY: FoodLogPrimaryCategory = {
-  id: 'dining',
-  name: '美食餐厅',
+  id: 'other',
+  name: '其他',
   sortOrder: 999,
+};
+
+const ALL_FOOD_CATEGORY: FoodLogPrimaryCategory = {
+  id: 'all_food',
+  name: '全部饮食',
+  sortOrder: 0,
 };
 
 const DEFAULT_BRAND_GROUP: FoodLogBrandGroup = {
@@ -66,13 +72,26 @@ export function buildFoodLogHierarchy(entries: FoodLogEntry[]): FoodLogHierarchy
     });
   });
 
-  return Array.from(categoryMap.values())
+  const categories = Array.from(categoryMap.values())
     .map(({ category, itemCount, brands }) => ({
       ...category,
       itemCount,
       brands: Array.from(brands.values()).sort(compareBrandGroups),
     }))
     .sort(compareCategories);
+
+  if (entries.length === 0) {
+    return categories;
+  }
+
+  return [
+    {
+      ...ALL_FOOD_CATEGORY,
+      itemCount: entries.length,
+      brands: buildBrandGroups(entries),
+    },
+    ...categories,
+  ];
 }
 
 function compareCategories(
@@ -97,4 +116,26 @@ function compareBySortOrder(left?: number, right?: number): number {
   const normalizedLeft = Number.isFinite(left) ? Number(left) : Number.MAX_SAFE_INTEGER;
   const normalizedRight = Number.isFinite(right) ? Number(right) : Number.MAX_SAFE_INTEGER;
   return normalizedLeft - normalizedRight;
+}
+
+function buildBrandGroups(entries: FoodLogEntry[]): FoodLogHierarchyBrandGroup[] {
+  const brandMap = new Map<string, FoodLogHierarchyBrandGroup>();
+
+  entries.forEach((entry) => {
+    const brandGroup = entry.brandGroup ?? DEFAULT_BRAND_GROUP;
+    const existingBrandGroup = brandMap.get(brandGroup.id);
+    if (existingBrandGroup) {
+      existingBrandGroup.entries.push(entry);
+      existingBrandGroup.itemCount += 1;
+      return;
+    }
+
+    brandMap.set(brandGroup.id, {
+      ...brandGroup,
+      entries: [entry],
+      itemCount: 1,
+    });
+  });
+
+  return Array.from(brandMap.values()).sort(compareBrandGroups);
 }

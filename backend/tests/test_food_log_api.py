@@ -137,8 +137,8 @@ class FoodLogApiTests(unittest.TestCase):
                 "sourceType": "estimate_api",
                 "isManual": False,
                 "category": {
-                    "id": "dining",
-                    "name": "美食餐厅",
+                    "id": "other",
+                    "name": "其他",
                     "sortOrder": 999,
                 },
                 "brandGroup": {
@@ -173,7 +173,7 @@ class FoodLogApiTests(unittest.TestCase):
         self.assertEqual(linked_entry["status"], "active")
         self.assertEqual(linked_entry["sourceType"], "chat_message")
         self.assertFalse(linked_entry["isManual"])
-        self.assertEqual(linked_entry["category"]["id"], "dining")
+        self.assertEqual(linked_entry["category"]["id"], "other")
         self.assertEqual(linked_entry["brandGroup"]["id"], "unknown_source")
 
     def test_get_food_logs_exposes_stable_category_and_brand_group_from_decision_card(self) -> None:
@@ -222,8 +222,8 @@ class FoodLogApiTests(unittest.TestCase):
         )
         payload = entries[0].model_dump(by_alias=True, exclude_none=True)
 
-        self.assertEqual(payload["category"]["id"], "coffee_tea")
-        self.assertEqual(payload["category"]["name"], "咖啡奶茶")
+        self.assertEqual(payload["category"]["id"], "beverage")
+        self.assertEqual(payload["category"]["name"], "饮品")
         self.assertEqual(payload["brandGroup"]["id"], "chagee")
         self.assertEqual(payload["brandGroup"]["name"], "霸王茶姬")
         self.assertEqual(payload["brandGroup"]["type"], "brand")
