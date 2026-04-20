@@ -3,6 +3,7 @@ import type {
   FoodLogEntry,
   FoodLogPrimaryCategory,
 } from '../types/types';
+import { API_BASE_URL } from '../config/api.ts';
 
 export interface FoodLogHierarchyBrandGroup extends FoodLogBrandGroup {
   entries: FoodLogEntry[];
@@ -23,6 +24,7 @@ const DEFAULT_CATEGORY: FoodLogPrimaryCategory = {
 const ALL_FOOD_CATEGORY: FoodLogPrimaryCategory = {
   id: 'all_food',
   name: '全部饮食',
+  cover: `${API_BASE_URL}/generated-assets/category-covers/all_food.png`,
   sortOrder: 0,
 };
 

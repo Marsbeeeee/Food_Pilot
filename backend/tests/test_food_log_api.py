@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from fastapi import HTTPException
 
+from backend.config.image_generation import get_standard_dish_image_generation_config
 from backend.database.connection import get_db_connection
 from backend.database.init_db import init_db
 from backend.routers.food_log import (
@@ -75,6 +76,10 @@ class FoodLogApiTests(unittest.TestCase):
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
 
+    def _category_cover_url(self, category_id: str) -> str:
+        config = get_standard_dish_image_generation_config()
+        return f"{config.public_base_url.rstrip('/')}/generated-assets/category-covers/{category_id}.png"
+
     def test_get_food_logs_returns_explorer_ready_fields(self) -> None:
         session = create_empty_session(self.user_id)
         create_food_log(
@@ -139,6 +144,7 @@ class FoodLogApiTests(unittest.TestCase):
                 "category": {
                     "id": "other",
                     "name": "其他",
+                    "cover": self._category_cover_url("other"),
                     "sortOrder": 999,
                 },
                 "brandGroup": {
@@ -224,6 +230,7 @@ class FoodLogApiTests(unittest.TestCase):
 
         self.assertEqual(payload["category"]["id"], "beverage")
         self.assertEqual(payload["category"]["name"], "饮品")
+        self.assertEqual(payload["category"]["cover"], self._category_cover_url("beverage"))
         self.assertEqual(payload["brandGroup"]["id"], "chagee")
         self.assertEqual(payload["brandGroup"]["name"], "霸王茶姬")
         self.assertEqual(payload["brandGroup"]["type"], "brand")

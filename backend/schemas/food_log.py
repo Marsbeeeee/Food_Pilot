@@ -1,7 +1,9 @@
 import json
 import re
 from datetime import date, datetime
+from functools import lru_cache
 from hashlib import sha1
+from pathlib import Path
 from typing import Literal
 
 from pydantic import (
@@ -13,6 +15,7 @@ from pydantic import (
     model_validator,
 )
 
+from backend.config.image_generation import get_standard_dish_image_generation_config
 from backend.schemas.decision_card import DecisionCard
 from backend.schemas.estimate import EstimateItem, EstimateResult
 
@@ -153,6 +156,9 @@ DEFAULT_PRIMARY_CATEGORY = {
 }
 
 HOMEMADE_MARKERS = ("自制", "自家", "homemade", "home made")
+
+
+SUPPORTED_CATEGORY_COVER_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp", ".avif")
 
 
 class FoodLogPrimaryCategoryOut(BaseModel):
@@ -789,11 +795,38 @@ def _resolve_primary_category(
 def _build_primary_category_payload(
     definition: dict[str, object],
 ) -> dict[str, object]:
+    category_id = str(definition["id"])
     return {
-        "id": str(definition["id"]),
+        "id": category_id,
         "name": str(definition["name"]),
+        "cover": _resolve_primary_category_cover_url(category_id),
         "sort_order": int(definition["sort_order"]),
     }
+
+
+@lru_cache(maxsize=1)
+def _get_primary_category_cover_directory() -> Path:
+    config = get_standard_dish_image_generation_config()
+    return Path(config.storage_dir).resolve().parent / "category_covers"
+
+
+@lru_cache(maxsize=1)
+def _get_primary_category_cover_public_base_url() -> str:
+    config = get_standard_dish_image_generation_config()
+    return f"{config.public_base_url.rstrip('/')}/generated-assets/category-covers"
+
+
+@lru_cache(maxsize=None)
+def _resolve_primary_category_cover_url(category_id: str) -> str | None:
+    cover_dir = _get_primary_category_cover_directory()
+    public_base_url = _get_primary_category_cover_public_base_url()
+
+    for suffix in SUPPORTED_CATEGORY_COVER_SUFFIXES:
+        candidate = cover_dir / f"{category_id}{suffix}"
+        if candidate.exists():
+            return f"{public_base_url}/{candidate.name}"
+
+    return None
 
 
 def _resolve_brand_group(

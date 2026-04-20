@@ -42,6 +42,7 @@ test('buildFoodLogHierarchy groups entries by category then brand group', () => 
 
   assert.equal(hierarchy.length, 3);
   assert.equal(hierarchy[0].id, 'all_food');
+  assert.equal(hierarchy[0].cover, 'http://localhost:8000/generated-assets/category-covers/all_food.png');
   assert.equal(hierarchy[0].name, '全部饮食');
   assert.equal(hierarchy[0].itemCount, 3);
   assert.equal(hierarchy[0].brands.length, 2);

@@ -31,10 +31,17 @@ init_db()
 
 image_generation_config = get_standard_dish_image_generation_config()
 Path(image_generation_config.storage_dir).mkdir(parents=True, exist_ok=True)
+category_cover_dir = Path(image_generation_config.storage_dir).resolve().parent / "category_covers"
+category_cover_dir.mkdir(parents=True, exist_ok=True)
 app.mount(
     "/generated-assets/standard-dish-images",
     StaticFiles(directory=image_generation_config.storage_dir),
     name="standard-dish-images",
+)
+app.mount(
+    "/generated-assets/category-covers",
+    StaticFiles(directory=category_cover_dir),
+    name="category-covers",
 )
 
 app.add_middleware(

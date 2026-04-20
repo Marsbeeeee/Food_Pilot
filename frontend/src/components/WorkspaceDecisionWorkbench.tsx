@@ -42,12 +42,14 @@ interface DecisionWorkbenchActionProps {
   isAddingToAnalysis: boolean;
   analysisActionLabel: string;
   analysisActionDisabled: boolean;
+  analysisHelperText?: string;
   onSave: () => void;
   onUndoSave: () => void;
   onAddToAnalysis: () => void;
   onRerun: () => void;
   onEditQuery: () => void;
   onContinueCompare: () => void;
+  onOpenExplorer?: (() => void) | null;
 }
 
 interface WorkspaceEstimateWorkbenchProps extends DecisionWorkbenchActionProps {
@@ -74,12 +76,14 @@ export const WorkspaceEstimateWorkbench: React.FC<WorkspaceEstimateWorkbenchProp
   isAddingToAnalysis,
   analysisActionLabel,
   analysisActionDisabled,
+  analysisHelperText,
   onSave,
   onUndoSave,
   onAddToAnalysis,
   onRerun,
   onEditQuery,
   onContinueCompare,
+  onOpenExplorer,
 }) => {
   const decisionCard = presentation.decisionCard;
   const summary = buildDecisionWorkspaceSummary(decisionCard, {
@@ -199,12 +203,14 @@ export const WorkspaceEstimateWorkbench: React.FC<WorkspaceEstimateWorkbenchProp
           isAddingToAnalysis={isAddingToAnalysis}
           analysisActionLabel={analysisActionLabel}
           analysisActionDisabled={analysisActionDisabled}
+          analysisHelperText={analysisHelperText}
           onSave={onSave}
           onUndoSave={onUndoSave}
           onAddToAnalysis={onAddToAnalysis}
           onRerun={onRerun}
           onEditQuery={onEditQuery}
           onContinueCompare={onContinueCompare}
+          onOpenExplorer={onOpenExplorer}
         />
       </div>
 
@@ -225,12 +231,14 @@ export const WorkspaceClarificationWorkbench: React.FC<WorkspaceClarificationWor
   isAddingToAnalysis,
   analysisActionLabel,
   analysisActionDisabled,
+  analysisHelperText,
   onSave,
   onUndoSave,
   onAddToAnalysis,
   onRerun,
   onEditQuery,
   onContinueCompare,
+  onOpenExplorer,
 }) => {
   const decisionCard = presentation.decisionCard;
   const summary = buildDecisionWorkspaceSummary(decisionCard, {
@@ -378,12 +386,14 @@ export const WorkspaceClarificationWorkbench: React.FC<WorkspaceClarificationWor
           isAddingToAnalysis={isAddingToAnalysis}
           analysisActionLabel={analysisActionLabel}
           analysisActionDisabled={analysisActionDisabled}
+          analysisHelperText={analysisHelperText}
           onSave={onSave}
           onUndoSave={onUndoSave}
           onAddToAnalysis={onAddToAnalysis}
           onRerun={onRerun}
           onEditQuery={onEditQuery}
           onContinueCompare={onContinueCompare}
+          onOpenExplorer={onOpenExplorer}
           tone="warn"
         />
       </div>
@@ -403,12 +413,14 @@ const DecisionWorkbenchActions: React.FC<DecisionWorkbenchActionProps & { tone?:
   isAddingToAnalysis,
   analysisActionLabel,
   analysisActionDisabled,
+  analysisHelperText,
   onSave,
   onUndoSave,
   onAddToAnalysis,
   onRerun,
   onEditQuery,
   onContinueCompare,
+  onOpenExplorer,
   tone = 'neutral',
 }) => (
   <div className={`rounded-[28px] border px-4 py-4 md:px-5 md:py-5 ${
@@ -979,4 +991,3 @@ function normalizeCategoryTag(categoryName?: string | null): string | null {
 
   return normalized;
 }
-

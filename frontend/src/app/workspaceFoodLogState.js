@@ -1,8 +1,30 @@
+/**
+ * @typedef {'saved' | 'saving' | 'failed' | 'not_saved'} SavePresentationStateValue
+ *
+ * @typedef {{
+ *   state: SavePresentationStateValue,
+ *   badgeIcon: string,
+ *   badgeLabel: string,
+ *   saveActionIcon: string,
+ *   saveActionLabel: string,
+ *   helperText: string,
+ * }} SavePresentationState
+ */
+
+/**
+ * @param {{
+ *   savedEntryId?: string | null,
+ *   isSaving?: boolean,
+ *   failedMessage?: string | undefined,
+ * }} params
+ * @returns {SavePresentationState}
+ */
 export function resolveFoodLogSavePresentation({
   savedEntryId,
   isSaving,
   failedMessage,
 }) {
+  /** @type {SavePresentationStateValue} */
   const state = savedEntryId
     ? 'saved'
     : isSaving

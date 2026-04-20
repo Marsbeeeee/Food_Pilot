@@ -360,7 +360,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         <span className="min-w-0">
           <span className="block text-sm font-bold">上传图片识别</span>
           <span className="mt-1 block text-xs leading-5 text-[#4A453E]/55">
-            从本地上传图片，确认 OCR 结果后继续进入点单决策。
+            上传一张图片，帮你提取你的饮食信息。
           </span>
         </span>
         <span className="ml-auto pt-0.5 text-[#4A453E]/25">
@@ -760,6 +760,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     message: Message,
     mealDescription: string | null,
   ) => {
+    if (!activeSession) {
+      window.alert('当前会话还没准备好，暂时不能加入分析。');
+      return;
+    }
+
     const decisionCard = message.payload?.decisionCard ?? message.decisionCard;
     if (!decisionCard?.analysisEligible) {
       if (decisionCard?.needsClarification) {
@@ -1026,7 +1031,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     <div className={`flex max-w-[95%] flex-col gap-3 ${message.role === 'user' ? 'items-end max-w-[80%]' : 'items-start'}`}>
                       {isMealEstimate ? (
                         <WorkspaceEstimateWorkbench
-                          presentation={estimatePresentation}
+                          presentation={estimatePresentation!}
                           renderedEstimates={renderedEstimates}
                           mealDescription={mealDescription}
                           messageTime={message.time || '刚刚'}
@@ -1056,7 +1061,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                         />
                       ) : isClarification ? (
                         <WorkspaceClarificationWorkbench
-                          presentation={clarificationPresentation}
+                          presentation={clarificationPresentation!}
                           messageTime={message.time || '刚刚'}
                           savePresentation={savePresentation}
                           canSaveFromWorkspace={canSaveFromWorkspace}
@@ -1129,12 +1134,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                   <table className="w-full text-left">
                                     <thead className="bg-[#F7F3E9]/30 text-[10px] font-bold uppercase tracking-widest text-[#4A453E]/40">
                                       <tr>
-                                        <th className="px-6 py-4">{estimatePresentation?.ingredientColumnLabel}</th>
-                                        <th className="px-4 py-4">{estimatePresentation?.portionColumnLabel}</th>
-                                        <th className="px-4 py-4 text-right">{estimatePresentation?.energyColumnLabel}</th>
-                                        <th className="px-4 py-4 text-right">{estimatePresentation?.proteinColumnLabel}</th>
-                                        <th className="px-4 py-4 text-right">{estimatePresentation?.carbsColumnLabel}</th>
-                                        <th className="px-4 py-4 text-right">{estimatePresentation?.fatColumnLabel}</th>
+                                        <th className="px-6 py-4">{estimatePresentation && estimatePresentation.ingredientColumnLabel}</th>
+                                        <th className="px-4 py-4">{estimatePresentation && estimatePresentation.portionColumnLabel}</th>
+                                        <th className="px-4 py-4 text-right">{estimatePresentation && estimatePresentation.energyColumnLabel}</th>
+                                        <th className="px-4 py-4 text-right">{estimatePresentation && estimatePresentation.proteinColumnLabel}</th>
+                                        <th className="px-4 py-4 text-right">{estimatePresentation && estimatePresentation.carbsColumnLabel}</th>
+                                        <th className="px-4 py-4 text-right">{estimatePresentation && estimatePresentation.fatColumnLabel}</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#4A453E]/5 text-[14px]">
@@ -1933,7 +1938,7 @@ function fmtNum(v: number): string {
   return Number.isInteger(v) ? String(v) : v.toFixed(1);
 }
 
-function formatEnergyInteger(energy: string): string {
+function formatEnergyInteger(energy?: string | null): string {
   const num = extractMacroNum(energy);
   return `${Math.round(num)} kcal`;
 }

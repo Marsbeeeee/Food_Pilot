@@ -1,3 +1,6 @@
+/** @typedef {import('../types/types').WorkspaceInputMode} WorkspaceInputMode */
+
+/** @type {WorkspaceInputMode} */
 export const DEFAULT_WORKSPACE_INPUT_MODE = 'chat';
 export const WORKSPACE_INPUT_MODE_STORAGE_KEY = 'foodpilot.workspace.inputMode';
 
@@ -76,10 +79,17 @@ const DECISION_PRODUCT_HINTS = [
   '两杯',
 ];
 
+/**
+ * @param {unknown} value
+ * @returns {value is WorkspaceInputMode}
+ */
 export function isWorkspaceInputMode(value) {
   return value === 'chat' || value === 'decision';
 }
 
+/**
+ * @param {unknown} mode
+ */
 export function getWorkspaceInputModeConfig(mode) {
   if (isWorkspaceInputMode(mode)) {
     return WORKSPACE_INPUT_MODE_CONFIG[mode];
@@ -88,6 +98,10 @@ export function getWorkspaceInputModeConfig(mode) {
   return WORKSPACE_INPUT_MODE_CONFIG[DEFAULT_WORKSPACE_INPUT_MODE];
 }
 
+/**
+ * @param {Storage | null | undefined} [storage]
+ * @returns {WorkspaceInputMode}
+ */
 export function getStoredWorkspaceInputMode(storage = getDefaultStorage()) {
   if (!storage || typeof storage.getItem !== 'function') {
     return DEFAULT_WORKSPACE_INPUT_MODE;
@@ -97,6 +111,10 @@ export function getStoredWorkspaceInputMode(storage = getDefaultStorage()) {
   return isWorkspaceInputMode(storedMode) ? storedMode : DEFAULT_WORKSPACE_INPUT_MODE;
 }
 
+/**
+ * @param {unknown} mode
+ * @param {Storage | null | undefined} [storage]
+ */
 export function persistWorkspaceInputMode(mode, storage = getDefaultStorage()) {
   if (!storage || typeof storage.setItem !== 'function' || !isWorkspaceInputMode(mode)) {
     return;
@@ -105,6 +123,11 @@ export function persistWorkspaceInputMode(mode, storage = getDefaultStorage()) {
   storage.setItem(WORKSPACE_INPUT_MODE_STORAGE_KEY, mode);
 }
 
+/**
+ * @param {string} content
+ * @param {number | undefined} profileId
+ * @param {unknown} [mode]
+ */
 export function buildWorkspaceMessageRequest(content, profileId, mode = DEFAULT_WORKSPACE_INPUT_MODE) {
   const payload = {
     content,
@@ -118,6 +141,11 @@ export function buildWorkspaceMessageRequest(content, profileId, mode = DEFAULT_
   return payload;
 }
 
+/**
+ * @param {unknown} mode
+ * @param {unknown} rawValue
+ * @returns {string}
+ */
 export function validateWorkspaceInput(mode, rawValue) {
   const normalizedValue = normalizeInput(rawValue);
   if (!normalizedValue) {
@@ -159,6 +187,7 @@ function normalizeInput(value) {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
 }
 
+/** @returns {Storage | null} */
 function getDefaultStorage() {
   return typeof window !== 'undefined' ? window.localStorage : null;
 }

@@ -1565,6 +1565,9 @@ function getFoodLogCategoryVisualSpec(categoryId: string): FoodLogCategoryVisual
 }
 
 function getFoodLogCategoryPreviewImage(category: FoodLogHierarchyCategory): string | undefined {
+  if (typeof category.cover === 'string' && category.cover.trim()) {
+    return category.cover;
+  }
   for (const brand of category.brands) {
     for (const entry of brand.entries) {
       if (entry.image) {
