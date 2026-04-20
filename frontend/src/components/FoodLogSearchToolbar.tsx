@@ -217,7 +217,7 @@ export const FoodLogSearchToolbar: React.FC<FoodLogSearchToolbarProps> = ({
   return (
     <div
       ref={toolbarRef}
-      className="rounded-[28px] border border-[#E7DED0] bg-white/95 p-4 shadow-[0_14px_36px_rgba(74,69,62,0.10)] backdrop-blur-sm md:p-5"
+      className="relative z-20 rounded-[28px] border border-[#E7DED0] bg-white/95 p-4 shadow-[0_14px_36px_rgba(74,69,62,0.10)] backdrop-blur-sm md:p-5"
     >
       <style>{PANEL_ANIMATION_STYLE}</style>
 
